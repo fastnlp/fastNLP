@@ -75,6 +75,9 @@ class Saver:
             model_save_fn=self.model_save_fn,
             **self.kwargs
         )
+        # TODO 如果 Metric 没有进行聚集操作，此时会创建出多个文件夹且只在 rank 0 的文件夹中进行保存
+        # 可能的解决方法：检测出空文件夹并且删除
+
         return str(os.path.abspath(folder))
 
     @rank_zero_call

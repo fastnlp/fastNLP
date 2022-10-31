@@ -11,6 +11,7 @@ import numpy as np
 
 from fastNLP.core.metrics.backend import Backend, AutoBackend
 from fastNLP.core.metrics.element import Element
+from fastNLP.envs import is_cur_env_distributed
 from fastNLP.core.log import logger
 
 
@@ -42,11 +43,9 @@ class Metric:
         self.get_metric = self._sync_get_metric(self.get_metric)
         self.update = self._wrap_update(self.update)
         self.reset = self._wrap_auto_reset_elements(self.reset)
-        self.get_metric = self._wrap_check_get_metric(self.get_metric)
         self.aggregate_when_get_metric = aggregate_when_get_metric
         self._cannot_change_element = False
-        self._call_gather_object = False
-        self._check_get_metric = False
+        self._call_gather_object = False # 用于检查用户是否在 get_metric 中调用了 all_gather_object
         self._elements = {}
 
     @property
@@ -108,7 +107,18 @@ class Metric:
             assert self._updated, f"You have to call `{self.__class__.__name__}'s update() function before calling " \
                                   f"get_metric()."
             with self.sync(recover=True, aggregate=self.aggregate_when_get_metric):
+                self._call_gather_object = False
                 results = get_metric(*args, **kwargs)
+                
+                # elements 为空、没有 call 则准备报错
+                if len(self._elements) == 0 and not self._call_gather_object:
+                    # 需要 aggregate 并且在多卡环境下
+                    if self.aggregate_when_get_metric and is_cur_env_distributed():
+                        logger.rank_zero_warning("There is no `<class 'Element'>` registered in metric `{}` and you didn't call "
+                                                "`Metric.all_gather_object()` in method `get_metric()` either. Therefore your "
+                                                "results may not be aggregated in distributed training."
+                                                .format(self.__class__), once=True)
+
             return results
 
         return _wrap_get_metric

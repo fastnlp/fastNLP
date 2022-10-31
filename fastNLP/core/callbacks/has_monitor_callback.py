@@ -218,9 +218,10 @@ class HasMonitorCallback(ResultsMonitor, Callback):
         if self.must_have_monitor and self.monitor is None:
             raise RuntimeError(f"No `monitor` is set for {self.log_name}. "
                                f"You can set it in the initialization or through Trainer.")
-        if self.must_have_monitor and self.monitor is not None and trainer.evaluator is None:
-            raise RuntimeError(f"No `evaluate_dataloaders` is set for Trainer. But Callback: {self.log_name}"
-                               f" need to watch the monitor:`{self.monitor_name}`.")
+        # 用户可能会在自定义 Callback 中自行 evaluate 结果并且不使用 Evaluator，此时该限制会变得不合理，暂时注释掉
+        # if self.must_have_monitor and self.monitor is not None and trainer.evaluator is None:
+        #     raise RuntimeError(f"No `evaluate_dataloaders` is set for Trainer. But Callback: {self.log_name}"
+        #                        f" need to watch the monitor:`{self.monitor_name}`.")
 
     def on_sanity_check_end(self, trainer, sanity_check_res):
         # 主要核对一下 monitor 是否存在。
