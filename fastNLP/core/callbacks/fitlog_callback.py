@@ -1,6 +1,8 @@
 __all__ = [
     'FitlogCallback'
 ]
+
+import json
 import os
 
 from .has_monitor_callback import HasMonitorCallback
@@ -47,6 +49,19 @@ class FitlogCallback(HasMonitorCallback):
             fitlog.debug()
         super().on_after_trainer_initialized(trainer, driver)
         fitlog.add_other(name='launch_time', value=os.environ['FASTNLP_LAUNCH_TIME'])
+        if get_global_rank()==0:
+            # 这里主要为那种重新运行代码，需要延续之前的fitlog记录
+            log_dir = fitlog.get_log_folder(absolute=True)
+            if log_dir is not None:
+                best_metric_fp = os.path.join(log_dir, 'best_metric.log')
+                if os.path.exists(best_metric_fp):
+                    results = {}
+                    with open(best_metric_fp, 'r') as f:
+                        for line in f:
+                            _results = json.loads(line.strip())['metric']
+                            results.update(_results)
+                    if results:
+                        self.is_better_results(results, keep_if_better=True)
 
     def on_sanity_check_end(self, trainer, sanity_check_res):
         super(FitlogCallback, self).on_sanity_check_end(trainer, sanity_check_res)
