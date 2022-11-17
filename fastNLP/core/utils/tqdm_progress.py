@@ -136,8 +136,8 @@ class TqdmProgress(metaclass=Singleton):
     def reset(self, task_id):
         self.bars[task_id].reset()
 
-    def print(self):
-        tqdm.write('')
+    def print(self, content: str = ''):
+        tqdm.write(content)
 
     def not_empty(self):
         return len(self.bars) != 0

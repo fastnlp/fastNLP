@@ -1,5 +1,5 @@
 import json
-from typing import Union
+from typing import Union, List, Callable, Dict, Any
 
 __all__ = [
     'choose_progress_callback',
@@ -79,9 +79,20 @@ class RichCallback(ProgressCallback):
 
     :param larger_better: 是否是 monitor 的结果越大越好。
     :param format_json: 是否格式化 json 再打印
+    :param extra_show_keys: 每个 batch 训练结束后需要额外显示的内容。
+
+        * 为 ``str``
+         从 train_step 的返回 的 dict 中寻找该名称的内容，如果找到则打印出来。
+        * 为 ``List[str]``
+         与 ``str`` 类似，但是可以打印多个内容。
+        * 为 ``Dict[str, Any]``
+         将该参数原封不动地打印出来。
+        * 为 ``Callable``
+         用户可以自定义一个函数，接受参数为 train_step 的返回的 dict，返回一个 ``dict`` 作为需要打印的内容。
+
     """
     def __init__(self, print_every:int = 1, loss_round_ndigit:int = 6, monitor:str=None, larger_better:bool=True,
-                 format_json=True):
+                 format_json=True, extra_show_keys: Union[str, List[str], Dict[str, Any], Callable, None]=None):
         super().__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=False)
         self.print_every = print_every
         self.progress_bar = f_rich_progress
@@ -89,6 +100,7 @@ class RichCallback(ProgressCallback):
         self.loss = 0
         self.loss_round_ndigit = loss_round_ndigit
         self.format_json = format_json
+        self.extra_show_keys = extra_show_keys
 
     def on_after_trainer_initialized(self, trainer, driver):
         if not self.progress_bar.disable:
@@ -123,13 +135,32 @@ class RichCallback(ProgressCallback):
         loss = trainer.driver.tensor_to_numeric(loss, reduce='sum')
         self.loss += loss
 
+        # 如果有额外的信息需要显示
+        if self.extra_show_keys is not None:
+            if isinstance(self.extra_show_keys, str) and self.extra_show_keys in outputs:
+                self.extra_show_keys = {self.extra_show_keys: outputs[self.extra_show_keys]}
+            elif isinstance(self.extra_show_keys, list):
+                self.extra_show_keys = {key: outputs[key] for key in self.extra_show_keys if key in outputs}
+            elif isinstance(self.extra_show_keys, dict):
+                pass
+            elif callable(self.extra_show_keys):
+                self.extra_show_keys = self.extra_show_keys(outputs)
+
+            if not isinstance(self.extra_show_keys, dict):
+                self.extra_show_keys = dict()
+
     def on_train_batch_end(self, trainer):
         if trainer.global_forward_batches % self.print_every == 0:
             loss = self.loss/self.print_every
             self.loss = 0
+            # 默认情况下进度条后只有 Loss 信息
+            post_desc = f'Loss:{loss:.{self.loss_round_ndigit}f}'
+            # 进度条后附加上用户希望的额外信息
+            if isinstance(self.extra_show_keys, dict):
+                post_desc = post_desc + ''.join([f"\n, {key}:{value}" for key, value in self.extra_show_keys.items()])
             self.progress_bar.update(self.task2id['batch'], description=f'Batch:{trainer.batch_idx_in_epoch}',
                                      advance=self.print_every,
-                                     post_desc=f'Loss:{round(loss, self.loss_round_ndigit)}', refresh=True)
+                                     post_desc=post_desc, refresh=True)
             self.progress_bar.update(self.task2id['epoch'], description=f'Epoch:{trainer.cur_epoch_idx}',
                                      advance=self.epoch_bar_update_advance, refresh=True)
 
@@ -187,10 +218,21 @@ class RawTextCallback(ProgressCallback):
             接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
             的 ``monitor`` 值请返回 ``None`` 。
     :param larger_better: 是否是monitor的结果越大越好。
-    :param format_json: 是否format json再打印
+    :param format_json: 是否format json再打印。
+    :param extra_show_keys: 每个 batch 训练结束后需要额外显示的内容。
+
+        * 为 ``str``
+         从 train_step 的返回 的 dict 中寻找该名称的内容，如果找到则打印出来。
+        * 为 ``List[str]``
+         与 ``str`` 类似，但是可以打印多个内容。
+        * 为 ``Dict[str, Any]``
+         将该参数原封不动地打印出来。
+        * 为 ``Callable``
+         用户可以自定义一个函数，接受参数为 train_step 的返回的 dict，返回一个 ``dict`` 作为需要打印的内容。
+
     """
     def __init__(self, print_every:int = 1, loss_round_ndigit:int = 6, monitor:str=None, larger_better:bool=True,
-                 format_json=True):
+                 format_json=True, extra_show_keys: Union[str, List[str], Dict[str, Any], Callable, None]=None):
         super().__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=False)
         self.print_every = print_every
         self.task2id = {}
@@ -199,6 +241,7 @@ class RawTextCallback(ProgressCallback):
         self.set_monitor(monitor, larger_better)
         self.format_json = format_json
         self.num_signs = 10
+        self.extra_show_keys = extra_show_keys
 
     def on_train_epoch_begin(self, trainer):
         logger.info('\n' + "*"*self.num_signs + f'Epoch:{trainer.cur_epoch_idx} starts' + '*'*self.num_signs)
@@ -208,13 +251,31 @@ class RawTextCallback(ProgressCallback):
         loss = trainer.driver.tensor_to_numeric(loss, reduce='sum')
         self.loss += loss
 
+        # 如果有额外的信息需要显示
+        if self.extra_show_keys is not None:
+            if isinstance(self.extra_show_keys, str) and self.extra_show_keys in outputs:
+                self.extra_show_keys = {self.extra_show_keys: outputs[self.extra_show_keys]}
+            elif isinstance(self.extra_show_keys, list):
+                self.extra_show_keys = {key: outputs[key] for key in self.extra_show_keys if key in outputs}
+            elif isinstance(self.extra_show_keys, dict):
+                pass
+            elif callable(self.extra_show_keys):
+                self.extra_show_keys = self.extra_show_keys(outputs)
+
+            if not isinstance(self.extra_show_keys, dict):
+                self.extra_show_keys = dict()
+
     def on_train_batch_end(self, trainer):
         if trainer.global_forward_batches % self.print_every == 0:
             loss = self.loss/self.print_every
             self.loss = 0
+            # 默认情况下进度条后只有 Loss 信息
+            post_desc = f'Loss:{loss:.{self.loss_round_ndigit}f}'
+            # 进度条后附加上用户希望的额外信息
+            post_desc = post_desc + ''.join([f", {key}:{value}" for key, value in self.extra_show_keys.items()])
             text = f'Epoch:{trainer.cur_epoch_idx}/{trainer.n_epochs}, Batch:{trainer.batch_idx_in_epoch}, ' \
-                   f'loss:{round(loss, self.loss_round_ndigit)}, ' \
-                   f'finished {round(trainer.global_forward_batches/trainer.n_batches*100, 2)}%.'
+                   + post_desc + \
+                   f', finished {round(trainer.global_forward_batches/trainer.n_batches*100, 2)}%.'
             logger.info(text)
 
     def on_evaluate_end(self, trainer, results):
@@ -262,9 +323,19 @@ class TqdmCallback(ProgressCallback):
          的 ``monitor`` 值请返回 ``None`` 。
     :param larger_better: 是否是 monitor 的结果越大越好。
     :param format_json: 是否格式化 json 再打印
+    :param extra_show_keys: 每个 batch 训练结束后需要额外显示的内容。
+
+        * 为 ``str``
+         从 train_step 的返回 的 dict 中寻找该名称的内容，如果找到则打印出来。
+        * 为 ``List[str]``
+         与 ``str`` 类似，但是可以打印多个内容。
+        * 为 ``Dict[str, Any]``
+         将该参数原封不动地打印出来。
+        * 为 ``Callable``
+         用户可以自定义一个函数，接受参数为 train_step 的返回的 dict，返回一个 ``dict`` 作为需要打印的内容。
     """
     def __init__(self, print_every:int = 1, loss_round_ndigit:int = 6, monitor:str=None, larger_better:bool=True,
-                 format_json=True):
+                 format_json=True, extra_show_keys: Union[str, List[str], Dict[str, Any], Callable, None]=None):
         super().__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=False)
         self.print_every = print_every
         self.progress_bar = f_tqdm_progress
@@ -273,10 +344,11 @@ class TqdmCallback(ProgressCallback):
         self.loss_round_ndigit = loss_round_ndigit
         self.format_json = format_json
         self.num_signs = 10
+        self.extra_show_keys = extra_show_keys
 
     def on_train_begin(self, trainer):
         self.task2id['epoch'] = self.progress_bar.add_task(description=f'Epoch:{trainer.cur_epoch_idx}',
-                                                           total=trainer.n_epochs,
+                                                           total=trainer.n_epochs, dynamic_ncols=True,
             bar_format='{desc}: {percentage:3.0f}%|{bar}| [{elapsed}<{remaining}, {rate_fmt}, {postfix}]',
             initial=trainer.global_forward_batches/(trainer.n_batches+1e-6)*trainer.n_epochs)
 
@@ -298,13 +370,33 @@ class TqdmCallback(ProgressCallback):
         loss = trainer.driver.tensor_to_numeric(loss, reduce='sum')
         self.loss += loss
 
+        # 如果有额外的信息需要显示
+        if self.extra_show_keys is not None:
+            if isinstance(self.extra_show_keys, str) and self.extra_show_keys in outputs:
+                self.extra_show_keys = {self.extra_show_keys: outputs[self.extra_show_keys]}
+            elif isinstance(self.extra_show_keys, list):
+                self.extra_show_keys = {key: outputs[key] for key in self.extra_show_keys if key in outputs}
+            elif isinstance(self.extra_show_keys, dict):
+                pass
+            elif callable(self.extra_show_keys):
+                self.extra_show_keys = self.extra_show_keys(outputs)
+            
+            if not isinstance(self.extra_show_keys, dict):
+                self.extra_show_keys = dict()
+
     def on_train_batch_end(self, trainer):
         if trainer.global_forward_batches % self.print_every == 0:
             loss = self.loss/self.print_every
             self.loss = 0
+            # 默认情况下进度条后只有 Loss 信息
+            post_desc = f'Loss:{loss:.{self.loss_round_ndigit}f}'
+            # 进度条后附加上用户希望的额外信息
+            post_desc = post_desc + ''.join([f", {key}:{value}" for key, value in self.extra_show_keys.items()])
             self.progress_bar.update(self.task2id['batch'], advance=self.print_every, refresh=True)
-            self.progress_bar.set_postfix_str(self.task2id['batch'], f'Loss:{round(loss, self.loss_round_ndigit)}')
+            self.progress_bar.set_postfix_str(self.task2id['batch'], post_desc)
             self.progress_bar.update(self.task2id['epoch'], advance=self.epoch_bar_update_advance, refresh=True)
+
+
 
     def on_evaluate_end(self, trainer, results):
         if len(results) == 0:
