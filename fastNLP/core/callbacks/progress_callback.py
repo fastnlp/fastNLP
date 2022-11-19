@@ -1,7 +1,8 @@
 import json
-from typing import Union, Dict, Any, Sequence
+from collections import defaultdict
+from typing import Union, Dict, Sequence
 from abc import abstractmethod
-import functools
+
 
 __all__ = [
     'choose_progress_callback',
@@ -71,30 +72,79 @@ class ExtraInfoStatistics:
         * 为 ``Sequence[str]``
          与 ``str`` 类似，但是可以打印多个内容。
     """
-
-    def __init__(self, extra_show_keys: Union[str, Sequence[str]]):
-        self.extra_show_keys = extra_show_keys if isinstance(extra_show_keys, Sequence) else [extra_show_keys]
-        self.extra_info_collection = []
-
     @abstractmethod
     def update(self, outputs: dict) -> None:
         r"""
-        每个 batch 训练结束后调用，更新 extra_info_collection 中的内容，extra_info_collection 默认是 ``List``，保存每次迭代的输出结果。。
+        每个 batch 训练结束后调用。
 
-        :param outputs: 一个 batch 的输出结果，要将其累积到 extra_info_collection 中。
+        :param outputs: 一般是直接来自于模型的输出或经过 output_mapping 的结果。
 
         """
-        self.extra_info_collection.append({key: outputs[key] for key in outputs.keys() if key in self.extra_show_keys})
 
     @abstractmethod
     def get_stat(self) -> Dict:
         r"""
-        每个 log 周期调用一次，将 extra_info_collection 中的内容转换为需要显示的内容 ``dict``，默认为相加后求平均。
+        每个打印周期调用一次，返回的字典中的内容将被显示到进度条。
         """
-        return {key: value / len(self.extra_info_collection) for key, value in
-                dict(functools.reduce(lambda x, y: {x[key] + y[key] for key in x.keys()},
-                                      self.extra_info_collection)).items()}
 
+
+class DefaultExtraInfoStatistics(ExtraInfoStatistics):
+    """
+    用于记录要显示的额外信息的统计工具类
+    :param extra_show_keys: 要显示的额外信息的key
+
+        * 为 ``str``
+         从 train_step 的返回 的 dict 中寻找该名称的内容，如果找到则打印出来。
+        * 为 ``Sequence[str]``
+         与 ``str`` 类似，但是可以打印多个内容。
+    """
+
+    def __init__(self, extra_show_keys: Union[str, Sequence[str]], round_ndigit=6):
+        self.extra_show_keys = [extra_show_keys] if isinstance(extra_show_keys, str) else extra_show_keys
+        self.extra_info_collection = {}
+        self.extra_info_collection_counter = defaultdict(int)
+        self.round_ndigit = round_ndigit
+        self.driver = None
+
+    def update(self, outputs: dict) -> None:
+        r"""
+        每个 batch 训练结束后调用。
+
+        :param outputs: 一般是直接来自于模型的输出或经过 output_mapping 的结果。
+
+        """
+        for k in self.extra_show_keys:
+            if k not in outputs:
+                continue
+            v = outputs[k]
+            if self.driver is not None:
+                v = self.driver.tensor_to_numeric(v, reduce='sum')
+            if k in self.extra_info_collection:
+                self.extra_info_collection[k] += v
+            else:
+                self.extra_info_collection[k] = v
+            self.extra_info_collection_counter[k] += 1
+
+    def get_stat(self) -> Dict:
+        r"""
+        每个打印周期调用一次，返回的字典中的内容将被显示到进度条。
+        """
+        res = {}
+        for k, v in self.extra_info_collection.items():
+            v = v/self.extra_info_collection_counter[k]
+            res[k] = round(v, self.round_ndigit)
+        self.extra_info_collection.clear()
+        self.extra_info_collection_counter.clear()
+        return res
+
+    def set_driver(self, driver):
+        """
+        设置 Driver 对象，用于方便将 tensor 类型的数据转为数字
+
+        :param driver:
+        :return:
+        """
+        self.driver = driver
 
 def _get_beautiful_extra_string(extra_info_collection: dict, progress_type: str) -> str:
     """
@@ -137,8 +187,7 @@ class RichCallback(ProgressCallback):
 
     :param larger_better: 是否是 monitor 的结果越大越好。
     :param format_json: 是否格式化 json 再打印
-    :param extra_show_keys: 每个 batch 训练结束后需要额外显示的内容。
-
+    :param extra_show_keys: 每个 batch 训练结束后除了 loss 以外需要额外显示的内容。
         * 为 ``str``
          从 train_step 的返回 的 dict 中寻找该名称的内容，如果找到则打印出来。
         * 为 ``Sequence[str]``
@@ -163,15 +212,18 @@ class RichCallback(ProgressCallback):
         self.loss_round_ndigit = loss_round_ndigit
         self.format_json = format_json
         # 用于在进度条中显示额外信息
+        self.extra_show_keys = None
         if isinstance(extra_show_keys, ExtraInfoStatistics):
             self.extra_show_keys = extra_show_keys
         elif isinstance(extra_show_keys, str) or isinstance(extra_show_keys, Sequence):
-            self.extra_show_keys = ExtraInfoStatistics(extra_show_keys)
+            self.extra_show_keys = DefaultExtraInfoStatistics(extra_show_keys, round_ndigit=self.loss_round_ndigit)
 
     def on_after_trainer_initialized(self, trainer, driver):
         if not self.progress_bar.disable:
             self.progress_bar.set_disable(flag=trainer.driver.get_local_rank() != 0)
         super(RichCallback, self).on_after_trainer_initialized(trainer, driver)
+        if isinstance(self.extra_show_keys, DefaultExtraInfoStatistics):
+            self.extra_show_keys.set_driver(driver)
 
     def on_train_begin(self, trainer):
         self.task2id['epoch'] = self.progress_bar.add_task(description=f'Epoch:{trainer.cur_epoch_idx}',
@@ -277,7 +329,7 @@ class RawTextCallback(ProgressCallback):
             的 ``monitor`` 值请返回 ``None`` 。
     :param larger_better: 是否是monitor的结果越大越好。
     :param format_json: 是否format json再打印。
-    :param extra_show_keys: 每个 batch 训练结束后需要额外显示的内容。
+    :param extra_show_keys: 每个 batch 训练结束后除了 loss 以外需要额外显示的内容。
 
         * 为 ``str``
          从 train_step 的返回 的 dict 中寻找该名称的内容，如果找到则打印出来。
@@ -304,10 +356,15 @@ class RawTextCallback(ProgressCallback):
         self.format_json = format_json
         self.num_signs = 10
         # 用于在进度条中显示额外信息
+        self.extra_show_keys = None
         if isinstance(extra_show_keys, ExtraInfoStatistics):
             self.extra_show_keys = extra_show_keys
         elif isinstance(extra_show_keys, str) or isinstance(extra_show_keys, Sequence):
-            self.extra_show_keys = ExtraInfoStatistics(extra_show_keys)
+            self.extra_show_keys = DefaultExtraInfoStatistics(extra_show_keys, round_ndigit=self.loss_round_ndigit)
+
+    def on_after_trainer_initialized(self, trainer, driver):
+        if isinstance(self.extra_show_keys, DefaultExtraInfoStatistics):
+            self.extra_show_keys.set_driver(driver)
 
     def on_train_epoch_begin(self, trainer):
         logger.info('\n' + "*" * self.num_signs + f'Epoch:{trainer.cur_epoch_idx} starts' + '*' * self.num_signs)
@@ -381,7 +438,7 @@ class TqdmCallback(ProgressCallback):
          的 ``monitor`` 值请返回 ``None`` 。
     :param larger_better: 是否是 monitor 的结果越大越好。
     :param format_json: 是否格式化 json 再打印
-    :param extra_show_keys: 每个 batch 训练结束后需要额外显示的内容。
+    :param extra_show_keys: 每个 batch 训练结束后除了 loss 以外需要额外显示的内容。
 
         * 为 ``str``
          从 train_step 的返回 的 dict 中寻找该名称的内容，如果找到则打印出来。
@@ -408,10 +465,15 @@ class TqdmCallback(ProgressCallback):
         self.format_json = format_json
         self.num_signs = 10
         # 用于在进度条中显示额外信息
+        self.extra_show_keys = None
         if isinstance(extra_show_keys, ExtraInfoStatistics):
             self.extra_show_keys = extra_show_keys
         elif isinstance(extra_show_keys, str) or isinstance(extra_show_keys, Sequence):
-            self.extra_show_keys = ExtraInfoStatistics(extra_show_keys)
+            self.extra_show_keys = DefaultExtraInfoStatistics(extra_show_keys, round_ndigit=self.loss_round_ndigit)
+
+    def on_after_trainer_initialized(self, trainer, driver):
+        if isinstance(self.extra_show_keys, DefaultExtraInfoStatistics):
+            self.extra_show_keys.set_driver(driver)
 
     def on_train_begin(self, trainer):
         self.task2id['epoch'] = self.progress_bar.add_task(description=f'Epoch:{trainer.cur_epoch_idx}',
