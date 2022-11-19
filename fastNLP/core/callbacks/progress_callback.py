@@ -1,14 +1,16 @@
 import json
-from typing import Union
+from typing import Union, Dict, Any, Sequence
+from abc import abstractmethod
+import functools
 
 __all__ = [
     'choose_progress_callback',
     'ProgressCallback',
     'RichCallback',
     'TqdmCallback',
-    'RawTextCallback'
+    'RawTextCallback',
+    'ExtraInfoStatistics'
 ]
-
 
 from .has_monitor_callback import HasMonitorCallback
 from fastNLP.core.utils import f_rich_progress, f_tqdm_progress
@@ -59,6 +61,62 @@ def choose_progress_callback(progress_bar: Union[str, ProgressCallback]) -> Prog
         return None
 
 
+class ExtraInfoStatistics:
+    """
+    用于记录要显示的额外信息的统计工具类
+    :param extra_show_keys: 要显示的额外信息的key
+
+        * 为 ``str``
+         从 train_step 的返回 的 dict 中寻找该名称的内容，如果找到则打印出来。
+        * 为 ``Sequence[str]``
+         与 ``str`` 类似，但是可以打印多个内容。
+    """
+
+    def __init__(self, extra_show_keys: Union[str, Sequence[str]]):
+        self.extra_show_keys = extra_show_keys if isinstance(extra_show_keys, Sequence) else [extra_show_keys]
+        self.extra_info_collection = []
+
+    @abstractmethod
+    def update(self, outputs: dict) -> None:
+        r"""
+        每个 batch 训练结束后调用，更新 extra_info_collection 中的内容，extra_info_collection 默认是 ``List``，保存每次迭代的输出结果。。
+
+        :param outputs: 一个 batch 的输出结果，要将其累积到 extra_info_collection 中。
+
+        """
+        self.extra_info_collection.append({key: outputs[key] for key in outputs.keys() if key in self.extra_show_keys})
+
+    @abstractmethod
+    def get_stat(self) -> Dict:
+        r"""
+        每个 log 周期调用一次，将 extra_info_collection 中的内容转换为需要显示的内容 ``dict``，默认为相加后求平均。
+        """
+        return {key: value / len(self.extra_info_collection) for key, value in
+                dict(functools.reduce(lambda x, y: {x[key] + y[key] for key in x.keys()},
+                                      self.extra_info_collection)).items()}
+
+
+def _get_beautiful_extra_string(extra_info_collection: dict, progress_type: str) -> str:
+    """
+    用户有额外信息需要打印的情况下，将额外信息转换为字符串。
+    """
+    original = ''.join([f", {key}:{value}" for key, value in extra_info_collection.items()])
+    if progress_type == 'rich':
+        try:
+            import os
+            width = os.get_terminal_size().columns
+            if width - 60 < len(original):
+                # 60 是为进度条预留的宽度，此时较为美观。
+                original = original.replace(',', ',\n')
+        except OSError:
+            # 某些特殊情况，系统并不支持获取控制台宽度的
+            pass
+    elif progress_type == 'tqdm':
+        # TODO 使用 TQDM 进度条时，额外信息过长，控制台太小时会导致额外信息显示不全，且无法和 RICH 一样通过换行规避。
+        pass
+    return original
+
+
 class RichCallback(ProgressCallback):
     """
     在训练过程中打印 *rich* progress bar 的 callback 。在 Trainer 中，默认就会使用这个 callback 来显示进度。如果需要定制这个 Callback 的
@@ -79,9 +137,24 @@ class RichCallback(ProgressCallback):
 
     :param larger_better: 是否是 monitor 的结果越大越好。
     :param format_json: 是否格式化 json 再打印
+    :param extra_show_keys: 每个 batch 训练结束后需要额外显示的内容。
+
+        * 为 ``str``
+         从 train_step 的返回 的 dict 中寻找该名称的内容，如果找到则打印出来。
+        * 为 ``Sequence[str]``
+         与 ``str`` 类似，但是可以打印多个内容。
+        * 为 ``None``
+         进度条不进行额外信息的展示。
+        * 为 :class:`~fastNLP.core.callbacks.ExtraInfoStatistics` 及其子类
+         必须实现 ``update`` 和 ``get_stat`` 方法，在未进行打印的轮次，将额外信息相加累积，并在输出前求平均。可以手动重写
+         ``update`` 和 ``get_stat`` 方法来实现自己的累积平均方式。
+
     """
-    def __init__(self, print_every:int = 1, loss_round_ndigit:int = 6, monitor:str=None, larger_better:bool=True,
-                 format_json=True):
+
+    def __init__(self, print_every: int = 1, loss_round_ndigit: int = 6, monitor: str = None,
+                 larger_better: bool = True,
+                 format_json=True,
+                 extra_show_keys: Union[str, Sequence[str], ExtraInfoStatistics, None] = None):
         super().__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=False)
         self.print_every = print_every
         self.progress_bar = f_rich_progress
@@ -89,6 +162,11 @@ class RichCallback(ProgressCallback):
         self.loss = 0
         self.loss_round_ndigit = loss_round_ndigit
         self.format_json = format_json
+        # 用于在进度条中显示额外信息
+        if isinstance(extra_show_keys, ExtraInfoStatistics):
+            self.extra_show_keys = extra_show_keys
+        elif isinstance(extra_show_keys, str) or isinstance(extra_show_keys, Sequence):
+            self.extra_show_keys = ExtraInfoStatistics(extra_show_keys)
 
     def on_after_trainer_initialized(self, trainer, driver):
         if not self.progress_bar.disable:
@@ -98,11 +176,12 @@ class RichCallback(ProgressCallback):
     def on_train_begin(self, trainer):
         self.task2id['epoch'] = self.progress_bar.add_task(description=f'Epoch:{trainer.cur_epoch_idx}',
                                                            total=trainer.n_epochs,
-                                                           completed=trainer.global_forward_batches/(trainer.n_batches+1e-6)*
-                                                           trainer.n_epochs)
+                                                           completed=trainer.global_forward_batches / (
+                                                                   trainer.n_batches + 1e-6) *
+                                                                     trainer.n_epochs)
 
     def on_train_epoch_begin(self, trainer):
-        self.epoch_bar_update_advance = self.print_every/(trainer.num_batches_per_epoch + 1e-6)
+        self.epoch_bar_update_advance = self.print_every / (trainer.num_batches_per_epoch + 1e-6)
         if 'batch' in self.task2id:
             self.progress_bar.reset(self.task2id['batch'], completed=trainer.batch_idx_in_epoch)
         else:
@@ -123,18 +202,28 @@ class RichCallback(ProgressCallback):
         loss = trainer.driver.tensor_to_numeric(loss, reduce='sum')
         self.loss += loss
 
+        # 如果有额外的信息需要显示
+        if self.extra_show_keys is not None:
+            self.extra_show_keys.update(outputs)
+
     def on_train_batch_end(self, trainer):
         if trainer.global_forward_batches % self.print_every == 0:
-            loss = self.loss/self.print_every
+            loss = self.loss / self.print_every
             self.loss = 0
+            # 默认情况下进度条后只有 Loss 信息
+            post_desc = f'Loss:{loss:.{self.loss_round_ndigit}f}'
+            # 进度条后附加上用户希望的额外信息
+            if self.extra_show_keys is not None:
+                post_desc = post_desc + \
+                            _get_beautiful_extra_string(self.extra_show_keys.get_stat(), progress_type='rich')
             self.progress_bar.update(self.task2id['batch'], description=f'Batch:{trainer.batch_idx_in_epoch}',
                                      advance=self.print_every,
-                                     post_desc=f'Loss:{round(loss, self.loss_round_ndigit)}', refresh=True)
+                                     post_desc=post_desc, refresh=True)
             self.progress_bar.update(self.task2id['epoch'], description=f'Epoch:{trainer.cur_epoch_idx}',
                                      advance=self.epoch_bar_update_advance, refresh=True)
 
     def on_evaluate_end(self, trainer, results):
-        if len(results)==0:
+        if len(results) == 0:
             return
         rule_style = ''
         text_style = ''
@@ -147,10 +236,10 @@ class RichCallback(ProgressCallback):
                     text_style = '[bold]'
                     characters = '+'
         self.progress_bar.print()
-        self.progress_bar.console.rule(text_style+f"Eval. results on Epoch:{trainer.cur_epoch_idx}, "
-                                                  f"Batch:{trainer.batch_idx_in_epoch}",
+        self.progress_bar.console.rule(text_style + f"Eval. results on Epoch:{trainer.cur_epoch_idx}, "
+                                                    f"Batch:{trainer.batch_idx_in_epoch}",
                                        style=rule_style, characters=characters)
-        results = {key:trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
+        results = {key: trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
                    not key.startswith('_')}
         if self.format_json:
             results = json.dumps(results)
@@ -187,10 +276,25 @@ class RawTextCallback(ProgressCallback):
             接受参数为 ``evaluation`` 的结果(字典类型)，返回一个 ``float`` 值作为 ``monitor`` 的结果，如果当前结果中没有相关
             的 ``monitor`` 值请返回 ``None`` 。
     :param larger_better: 是否是monitor的结果越大越好。
-    :param format_json: 是否format json再打印
+    :param format_json: 是否format json再打印。
+    :param extra_show_keys: 每个 batch 训练结束后需要额外显示的内容。
+
+        * 为 ``str``
+         从 train_step 的返回 的 dict 中寻找该名称的内容，如果找到则打印出来。
+        * 为 ``Sequence[str]``
+         与 ``str`` 类似，但是可以打印多个内容。
+        * 为 ``None``
+         进度条不进行额外信息的展示。
+        * 为 :class:`~fastNLP.core.callbacks.ExtraInfoStatistics` 及其子类
+         必须实现 ``update`` 和 ``get_stat`` 方法，在未进行打印的轮次，将额外信息相加累积，并在输出前求平均。可以手动重写
+         ``update`` 和 ``get_stat`` 方法来实现自己的累积平均方式。
+
     """
-    def __init__(self, print_every:int = 1, loss_round_ndigit:int = 6, monitor:str=None, larger_better:bool=True,
-                 format_json=True):
+
+    def __init__(self, print_every: int = 1, loss_round_ndigit: int = 6, monitor: str = None,
+                 larger_better: bool = True,
+                 format_json=True,
+                 extra_show_keys: Union[str, Sequence[str], ExtraInfoStatistics, None] = None):
         super().__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=False)
         self.print_every = print_every
         self.task2id = {}
@@ -199,26 +303,41 @@ class RawTextCallback(ProgressCallback):
         self.set_monitor(monitor, larger_better)
         self.format_json = format_json
         self.num_signs = 10
+        # 用于在进度条中显示额外信息
+        if isinstance(extra_show_keys, ExtraInfoStatistics):
+            self.extra_show_keys = extra_show_keys
+        elif isinstance(extra_show_keys, str) or isinstance(extra_show_keys, Sequence):
+            self.extra_show_keys = ExtraInfoStatistics(extra_show_keys)
 
     def on_train_epoch_begin(self, trainer):
-        logger.info('\n' + "*"*self.num_signs + f'Epoch:{trainer.cur_epoch_idx} starts' + '*'*self.num_signs)
+        logger.info('\n' + "*" * self.num_signs + f'Epoch:{trainer.cur_epoch_idx} starts' + '*' * self.num_signs)
 
     def on_before_backward(self, trainer, outputs):
         loss = trainer.extract_loss_from_outputs(outputs)
         loss = trainer.driver.tensor_to_numeric(loss, reduce='sum')
         self.loss += loss
 
+        # 如果有额外的信息需要显示
+        if self.extra_show_keys is not None:
+            self.extra_show_keys.update(outputs)
+
     def on_train_batch_end(self, trainer):
         if trainer.global_forward_batches % self.print_every == 0:
-            loss = self.loss/self.print_every
+            loss = self.loss / self.print_every
             self.loss = 0
+            # 默认情况下进度条后只有 Loss 信息
+            post_desc = f'Loss:{loss:.{self.loss_round_ndigit}f}'
+            # 进度条后附加上用户希望的额外信息
+            if self.extra_show_keys is not None:
+                post_desc = post_desc + \
+                            _get_beautiful_extra_string(self.extra_show_keys.get_stat(), progress_type='raw')
             text = f'Epoch:{trainer.cur_epoch_idx}/{trainer.n_epochs}, Batch:{trainer.batch_idx_in_epoch}, ' \
-                   f'loss:{round(loss, self.loss_round_ndigit)}, ' \
-                   f'finished {round(trainer.global_forward_batches/trainer.n_batches*100, 2)}%.'
+                   + post_desc + \
+                   f', finished {round(trainer.global_forward_batches / trainer.n_batches * 100, 2)}%.'
             logger.info(text)
 
     def on_evaluate_end(self, trainer, results):
-        if len(results)==0:
+        if len(results) == 0:
             return
         base_text = f'Eval. results on Epoch:{trainer.cur_epoch_idx}, Batch:{trainer.batch_idx_in_epoch}'
         text = ''
@@ -226,12 +345,12 @@ class RawTextCallback(ProgressCallback):
             if self.is_better_results(results, keep_if_better=True):
                 self.record_better_monitor(trainer, results)
                 if abs(self.monitor_value) != float('inf'):
-                    text = '+'*self.num_signs + base_text + '+'*self.num_signs
+                    text = '+' * self.num_signs + base_text + '+' * self.num_signs
         if len(text) == 0:
-            text = '-'*self.num_signs + base_text + '-'*self.num_signs
+            text = '-' * self.num_signs + base_text + '-' * self.num_signs
 
         logger.info(text)
-        results = {key:trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
+        results = {key: trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
                    not key.startswith('_')}
         if self.format_json:
             results = json.dumps(results)
@@ -262,9 +381,24 @@ class TqdmCallback(ProgressCallback):
          的 ``monitor`` 值请返回 ``None`` 。
     :param larger_better: 是否是 monitor 的结果越大越好。
     :param format_json: 是否格式化 json 再打印
+    :param extra_show_keys: 每个 batch 训练结束后需要额外显示的内容。
+
+        * 为 ``str``
+         从 train_step 的返回 的 dict 中寻找该名称的内容，如果找到则打印出来。
+        * 为 ``Sequence[str]``
+         与 ``str`` 类似，但是可以打印多个内容。
+        * 为 ``None``
+         进度条不进行额外信息的展示。
+        * 为 :class:`~fastNLP.core.callbacks.ExtraInfoStatistics` 及其子类
+         必须实现 ``update`` 和 ``get_stat`` 方法，在未进行打印的轮次，将额外信息相加累积，并在输出前求平均。可以手动重写
+         ``update`` 和 ``get_stat`` 方法来实现自己的累积平均方式。
+
     """
-    def __init__(self, print_every:int = 1, loss_round_ndigit:int = 6, monitor:str=None, larger_better:bool=True,
-                 format_json=True):
+
+    def __init__(self, print_every: int = 1, loss_round_ndigit: int = 6, monitor: str = None,
+                 larger_better: bool = True,
+                 format_json=True,
+                 extra_show_keys: Union[str, Sequence[str], ExtraInfoStatistics, None] = None):
         super().__init__(monitor=monitor, larger_better=larger_better, must_have_monitor=False)
         self.print_every = print_every
         self.progress_bar = f_tqdm_progress
@@ -273,15 +407,21 @@ class TqdmCallback(ProgressCallback):
         self.loss_round_ndigit = loss_round_ndigit
         self.format_json = format_json
         self.num_signs = 10
+        # 用于在进度条中显示额外信息
+        if isinstance(extra_show_keys, ExtraInfoStatistics):
+            self.extra_show_keys = extra_show_keys
+        elif isinstance(extra_show_keys, str) or isinstance(extra_show_keys, Sequence):
+            self.extra_show_keys = ExtraInfoStatistics(extra_show_keys)
 
     def on_train_begin(self, trainer):
         self.task2id['epoch'] = self.progress_bar.add_task(description=f'Epoch:{trainer.cur_epoch_idx}',
-                                                           total=trainer.n_epochs,
-            bar_format='{desc}: {percentage:3.0f}%|{bar}| [{elapsed}<{remaining}, {rate_fmt}, {postfix}]',
-            initial=trainer.global_forward_batches/(trainer.n_batches+1e-6)*trainer.n_epochs)
+                                                           total=trainer.n_epochs, dynamic_ncols=True,
+                                                           bar_format='{desc}: {percentage:3.0f}%|{bar}| [{elapsed}<{remaining}, {rate_fmt}, {postfix}]',
+                                                           initial=trainer.global_forward_batches / (
+                                                                   trainer.n_batches + 1e-6) * trainer.n_epochs)
 
     def on_train_epoch_begin(self, trainer):
-        self.epoch_bar_update_advance = self.print_every/(trainer.num_batches_per_epoch + 1e-6)
+        self.epoch_bar_update_advance = self.print_every / (trainer.num_batches_per_epoch + 1e-6)
         if 'batch' in self.task2id:
             self.progress_bar.reset(self.task2id['batch'])
         else:
@@ -298,12 +438,22 @@ class TqdmCallback(ProgressCallback):
         loss = trainer.driver.tensor_to_numeric(loss, reduce='sum')
         self.loss += loss
 
+        # 如果有额外的信息需要显示
+        if self.extra_show_keys is not None:
+            self.extra_show_keys.update(outputs)
+
     def on_train_batch_end(self, trainer):
         if trainer.global_forward_batches % self.print_every == 0:
-            loss = self.loss/self.print_every
+            loss = self.loss / self.print_every
             self.loss = 0
+            # 默认情况下进度条后只有 Loss 信息
+            post_desc = f'Loss:{loss:.{self.loss_round_ndigit}f}'
+            # 进度条后附加上用户希望的额外信息
+            if self.extra_show_keys is not None:
+                post_desc = post_desc + \
+                            _get_beautiful_extra_string(self.extra_show_keys.get_stat(), progress_type='tqdm')
             self.progress_bar.update(self.task2id['batch'], advance=self.print_every, refresh=True)
-            self.progress_bar.set_postfix_str(self.task2id['batch'], f'Loss:{round(loss, self.loss_round_ndigit)}')
+            self.progress_bar.set_postfix_str(self.task2id['batch'], post_desc)
             self.progress_bar.update(self.task2id['epoch'], advance=self.epoch_bar_update_advance, refresh=True)
 
     def on_evaluate_end(self, trainer, results):
@@ -315,12 +465,12 @@ class TqdmCallback(ProgressCallback):
             if self.is_better_results(results, keep_if_better=True):
                 self.record_better_monitor(trainer, results)
                 if abs(self.monitor_value) != float('inf'):
-                    text = '+'*self.num_signs + base_text + '+'*self.num_signs
+                    text = '+' * self.num_signs + base_text + '+' * self.num_signs
         if len(text) == 0:
-            text = '-'*self.num_signs + base_text + '-'*self.num_signs
+            text = '-' * self.num_signs + base_text + '-' * self.num_signs
 
         logger.info(text)
-        results = {key:trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
+        results = {key: trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
                    not key.startswith('_')}
         if self.format_json:
             results = json.dumps(results)
