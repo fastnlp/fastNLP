@@ -33,7 +33,8 @@ class TorchBackend(Backend):
 
         """
         if isinstance(tensor, torch.Tensor):
-            if dist.is_initialized():
+            # 为了规避和这个issue类似的问题https://github.com/facebookresearch/maskrcnn-benchmark/issues/280
+            if dist.is_available() and dist.is_initialized():
                 if method is None:
                     raise AggregateMethodError(should_have_aggregate_method=True)
                 tensor = self.all_gather_object(tensor)

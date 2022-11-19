@@ -13,6 +13,7 @@ from fastNLP.core.metrics.backend import Backend, AutoBackend
 from fastNLP.core.metrics.element import Element
 from fastNLP.envs import is_cur_env_distributed
 from fastNLP.core.log import logger
+from fastNLP.core.utils import apply_to_collection
 
 
 class Metric:
@@ -109,7 +110,8 @@ class Metric:
             with self.sync(recover=True, aggregate=self.aggregate_when_get_metric):
                 self._call_gather_object = False
                 results = get_metric(*args, **kwargs)
-                
+                # 如果直接返回了Element，帮他转录一下，不然的话会在reset()之后就被重置为0了
+                results = apply_to_collection(results, dtype=Element, function=lambda x:x.get_scalar(), include_none=False)
                 # elements 为空、没有 call 则准备报错
                 if len(self._elements) == 0 and not self._call_gather_object:
                     # 需要 aggregate 并且在多卡环境下

@@ -1,11 +1,11 @@
 import inspect
-from typing import List, Optional, Dict, Sequence
+from typing import List, Optional, Dict, Sequence, Union
 from collections import defaultdict
 
 from .callback_event import Event
 from .callback import Callback
 from fastNLP.core.log import logger
-from .progress_callback import ProgressCallback, choose_progress_callback
+from .progress_callback import ProgressCallback, choose_progress_callback, ExtraInfoStatistics
 from ..utils.exceptions import EarlyStopException
 from ..utils.utils import _get_fun_msg
 
@@ -29,10 +29,11 @@ def _transfer(func):
     return wrapper
 
 
-def prepare_callbacks(callbacks, progress_bar: str):
+def prepare_callbacks(callbacks, progress_bar: str, extra_show_keys: Union[str, Sequence[str], ExtraInfoStatistics, None]):
     """
     :param callbacks: 对用户传入的类 ``callback`` 进行检查，查看是否是否继承了我们的 ``Callback`` 类；
     :param progress_bar: 选择怎样的 ``progress_bar`` 给 ``Trainer`` 使用；
+    :param extra_show_keys: 传递给 ``ProgressBarCallback`` 额外显示的 ``key`` 。
     :return:
     """
     _callbacks = []
@@ -52,7 +53,7 @@ def prepare_callbacks(callbacks, progress_bar: str):
         if isinstance(_callback, ProgressCallback):
             has_no_progress = False
     if has_no_progress and progress_bar is not None:
-        callback = choose_progress_callback(progress_bar)
+        callback = choose_progress_callback(progress_bar, extra_show_keys)
         if callback is not None:
             _callbacks = [callback] + _callbacks  # 放在最前面，方便分割不同 epoch
             has_no_progress = False
