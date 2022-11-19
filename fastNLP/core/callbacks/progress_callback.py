@@ -1,8 +1,9 @@
+import contextlib
 import json
+import os
 from collections import defaultdict
 from typing import Union, Dict, Sequence
 from abc import abstractmethod
-
 
 __all__ = [
     'choose_progress_callback',
@@ -16,50 +17,6 @@ __all__ = [
 from .has_monitor_callback import HasMonitorCallback
 from fastNLP.core.utils import f_rich_progress, f_tqdm_progress
 from fastNLP.core.log import logger
-
-
-class ProgressCallback(HasMonitorCallback):
-    def __init__(self, monitor, larger_better, must_have_monitor=False):
-        super(ProgressCallback, self).__init__(monitor=monitor, larger_better=larger_better,
-                                               must_have_monitor=must_have_monitor)
-        self.best_monitor_epoch = -1
-        self.best_monitor_step = -1
-        self.best_results = None
-
-    def record_better_monitor(self, trainer, results):
-        self.best_monitor_step = trainer.global_forward_batches
-        self.best_monitor_epoch = trainer.cur_epoch_idx
-        self.best_results = self.itemize_results(results)
-
-    def on_train_end(self, trainer):
-        if self.best_monitor_epoch != -1:
-            msg = f"The best performance for monitor {self._real_monitor}:{self.monitor_value} was achieved in" \
-                  f" Epoch:{self.best_monitor_epoch}, Global Batch:{self.best_monitor_step}."
-            if self.best_results is not None:
-                msg = msg + ' The evaluation result: \n' + str(self.best_results)
-            logger.info(msg)
-
-    @property
-    def name(self):  # progress bar的名称
-        return 'auto'
-
-
-def choose_progress_callback(progress_bar: Union[str, ProgressCallback]) -> ProgressCallback:
-    if progress_bar == 'auto':
-        if not f_rich_progress.dummy:
-            progress_bar = 'rich'
-        else:
-            progress_bar = 'raw'
-    if progress_bar == 'rich':
-        return RichCallback()
-    elif progress_bar == 'raw':
-        return RawTextCallback()
-    elif progress_bar == 'tqdm':
-        return TqdmCallback()
-    elif isinstance(progress_bar, ProgressCallback):
-        return progress_bar
-    else:
-        return None
 
 
 class ExtraInfoStatistics:
@@ -165,6 +122,51 @@ def _get_beautiful_extra_string(extra_info_collection: dict, progress_type: str)
         # TODO 使用 TQDM 进度条时，额外信息过长，控制台太小时会导致额外信息显示不全，且无法和 RICH 一样通过换行规避。
         pass
     return original
+
+
+class ProgressCallback(HasMonitorCallback):
+    def __init__(self, monitor, larger_better, must_have_monitor=False):
+        super(ProgressCallback, self).__init__(monitor=monitor, larger_better=larger_better,
+                                               must_have_monitor=must_have_monitor)
+        self.best_monitor_epoch = -1
+        self.best_monitor_step = -1
+        self.best_results = None
+
+    def record_better_monitor(self, trainer, results):
+        self.best_monitor_step = trainer.global_forward_batches
+        self.best_monitor_epoch = trainer.cur_epoch_idx
+        self.best_results = self.itemize_results(results)
+
+    def on_train_end(self, trainer):
+        if self.best_monitor_epoch != -1:
+            msg = f"The best performance for monitor {self._real_monitor}:{self.monitor_value} was achieved in" \
+                  f" Epoch:{self.best_monitor_epoch}, Global Batch:{self.best_monitor_step}."
+            if self.best_results is not None:
+                msg = msg + ' The evaluation result: \n' + str(self.best_results)
+            logger.info(msg)
+
+    @property
+    def name(self):  # progress bar的名称
+        return 'auto'
+
+
+def choose_progress_callback(progress_bar: Union[str, ProgressCallback],
+                             extra_show_keys: Union[str, Sequence[str], ExtraInfoStatistics, None]) -> ProgressCallback:
+    if progress_bar == 'auto':
+        if not f_rich_progress.dummy:
+            progress_bar = 'rich'
+        else:
+            progress_bar = 'raw'
+    if progress_bar == 'rich':
+        return RichCallback(extra_show_keys=extra_show_keys)
+    elif progress_bar == 'raw':
+        return RawTextCallback(extra_show_keys=extra_show_keys)
+    elif progress_bar == 'tqdm':
+        return TqdmCallback(extra_show_keys=extra_show_keys)
+    elif isinstance(progress_bar, ProgressCallback):
+        return progress_bar
+    else:
+        return None
 
 
 class RichCallback(ProgressCallback):
@@ -288,16 +290,19 @@ class RichCallback(ProgressCallback):
                     text_style = '[bold]'
                     characters = '+'
         self.progress_bar.print()
-        self.progress_bar.console.rule(text_style + f"Eval. results on Epoch:{trainer.cur_epoch_idx}, "
-                                                    f"Batch:{trainer.batch_idx_in_epoch}",
-                                       style=rule_style, characters=characters)
-        results = {key: trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
+        text = f"Eval. results on Epoch:{trainer.cur_epoch_idx}, Batch:{trainer.batch_idx_in_epoch}"
+        self.progress_bar.console.rule(text_style+text, style=rule_style, characters=characters)
+        with open(os.devnull, 'w') as f:  # 这样可以让logger打印到文件记录中，但是不要再次输出到terminal中
+            with contextlib.redirect_stdout(f):
+                logger.info(f'{characters}'*10+text+f'{characters}'*10)
+        results = {key:trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
                    not key.startswith('_')}
         if self.format_json:
-            results = json.dumps(results)
-            self.progress_bar.console.print_json(results)
-        else:
-            self.progress_bar.print(results)
+            results = json.dumps(results, indent=2)
+            # self.progress_bar.console.print_json(results)
+        # else:
+        #     self.progress_bar.print(results)
+        logger.info(results)
 
     def clear_tasks(self):
         for key, taskid in self.task2id.items():
@@ -410,7 +415,7 @@ class RawTextCallback(ProgressCallback):
         results = {key: trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
                    not key.startswith('_')}
         if self.format_json:
-            results = json.dumps(results)
+            results = json.dumps(results, indent=2)
         logger.info(results)
 
     @property
@@ -535,7 +540,7 @@ class TqdmCallback(ProgressCallback):
         results = {key: trainer.driver.tensor_to_numeric(value) for key, value in results.items() if
                    not key.startswith('_')}
         if self.format_json:
-            results = json.dumps(results)
+            results = json.dumps(results, indent=2)
         logger.info(results)
 
     def clear_tasks(self):

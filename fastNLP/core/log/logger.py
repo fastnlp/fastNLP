@@ -77,19 +77,21 @@ class FastNLPLogger(logging.Logger, metaclass=LoggerSingleton):
             level = parse_level()
         return _add_file_handler(self, path, level, remove_other_handlers, mode)
 
-    def set_stdout(self, stdout: str = 'raw', level: str = 'AUTO'):
+    def set_stdout(self, stdout: str = 'raw', level: str = 'AUTO', **kwargs):
         """
         设置 log 的 terminal 输出形式。
 
         :param stdout: 可选['rich', 'naive', 'raw', 'none']。
         :param level: 可选 ['INFO', 'WARNING', 'DEBUG', 'ERROR', 'AUTO'], 其中AUTO表示根据环境变量"FASTNLP_LOG_LEVEL'进行
             设置。
+        :param kwargs: 支持以下的参数
+            * *rich_show_path* bool类型 -- 当 stdout 为 rich 时，是否在打印信息的时候附上当前打印来自于代码哪个位置。
         :return:
         """
         r"""设置标准输出格式和输出级别"""
         if level == 'AUTO':
             level = parse_level()
-        return _set_stdout_handler(self, stdout, level)
+        return _set_stdout_handler(self, stdout, level, **kwargs)
 
     def debug(self, msg, *args, **kwargs):
         """
@@ -251,7 +253,8 @@ def _add_file_handler(_logger: logging.Logger, path: Optional[Union[str, Path]] 
         else:
             # 主进程会帮助我们创建文件夹，但是由于主从进程几乎是同步的，因此到这里时子进程也会尝试创建文件夹，即使主进程会做这件事情；
             dirname = os.path.dirname(path)
-            os.makedirs(dirname, exist_ok=True)
+            if dirname:
+                os.makedirs(dirname, exist_ok=True)
     if path.is_dir():
         if os.environ.get(FASTNLP_BACKEND_LAUNCH, '0')== '1':
             # 如果是通过 python -m xxx.launch 等启动的话，FASTNLP_LAUNCH_TIME这个名称可能是不一致的。
@@ -314,7 +317,7 @@ def _add_file_handler(_logger: logging.Logger, path: Optional[Union[str, Path]] 
     return file_handler
 
 
-def _set_stdout_handler(_logger, stdout='raw', level='INFO'):
+def _set_stdout_handler(_logger, stdout='raw', level='INFO', **kwargs):
     level = _get_level(level)
     supported_stdout = ['none', 'raw', 'tqdm', 'naive', 'rich']
     if stdout not in supported_stdout:
@@ -334,7 +337,7 @@ def _set_stdout_handler(_logger, stdout='raw', level='INFO'):
     if stdout == 'raw':
         stream_handler = StdoutStreamHandler()
     elif stdout == 'rich':
-        stream_handler = RichHandler(level=level, log_time_format="[%X]")
+        stream_handler = RichHandler(level=level, log_time_format="[%X]", show_path=kwargs.get('rich_show_path', True))
     elif stdout == 'naive':
         stream_handler = logging.StreamHandler(sys.stdout)
     elif stdout == 'tqdm':

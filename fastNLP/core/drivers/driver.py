@@ -331,7 +331,7 @@ class Driver(ABC):
         元素则返回 ``float`` 或 ``int``。
 
         :param tensor: 需要被转换的 ``tensor`` 对象
-        :param reduce: 可选 ``['sum', 'max', 'mea', 'min']``，如果不为 ``None`` 将使用该 ``reduce`` 方法来处理当前 ``tensor`` 再返回
+        :param reduce: 可选 ``['sum', 'max', 'mean', 'min']``，如果不为 ``None`` 将使用该 ``reduce`` 方法来处理当前 ``tensor`` 再返回
             :class:`float` 或 :class:`int` 对象
         :return: 转换后返回的结果
         """

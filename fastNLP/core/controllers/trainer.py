@@ -364,6 +364,9 @@ class Trainer(TrainerEventTrigger):
         * *evaluate_input_mapping* -- 与 input_mapping 一致，但是只用于 ``Evaluator`` 中。与 input_mapping 互斥。
         * *evaluate_output_mapping* -- 与 output_mapping 一致，但是只用于 ``Evaluator`` 中。与 output_mapping 互斥。
         * *check_dataloader_legality* -- 是否检查 ``DataLoader`` 是否合法，默认为 ``True`` 。
+        * *extra_show_keys* -- 目前支持 ``[str, List[str], :class:`~fastNLP.core.callbacks.ExtraInfoStatistics`]``
+          用于在进度条中显示除``loss``以外的信息，如果传入 ``str`` 类型的数据，应当是 ``train_fn`` 返回的字典中包含的关键字。仅当没有
+          手动传入 ``ProgressBarCallback`` 类型的 ``callback`` 时生效。
 
     .. note::
         ``Trainer`` 是通过在内部直接初始化一个 ``Evaluator`` 来进行验证；
@@ -495,7 +498,7 @@ class Trainer(TrainerEventTrigger):
 
         # 根据 progress_bar 参数选择 ProgressBarCallback
         self.progress_bar = kwargs.get('progress_bar', 'auto')
-        callbacks = prepare_callbacks(callbacks, self.progress_bar)
+        callbacks = prepare_callbacks(callbacks, self.progress_bar, extra_show_keys=kwargs.get('extra_show_keys', None))
         # 初始化 callback manager；
         self.callback_manager = CallbackManager(callbacks)
         # 添加所有的函数式 callbacks；

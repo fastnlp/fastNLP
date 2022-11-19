@@ -6,19 +6,23 @@ import pytest
 from dataclasses import dataclass
 from typing import Any
 
+import fastNLP
 from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.core.samplers import BucketedBatchSampler, RandomSampler
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchNormalDataset_Classification, TorchArgMaxDataset
 from tests.helpers.callbacks.helper_callbacks import RecordLossCallback, RecordMetricCallback
 from tests.helpers.utils import magic_argv_env_context
-from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _module_available
 
 if _NEED_IMPORT_TORCH:
     from torch.optim import SGD
     from torch.utils.data import DataLoader
     import torch.distributed as dist
-    from torchmetrics import Accuracy
+    if _module_available('torchmetrics'):
+        from torchmetrics import Accuracy
+    else:
+        from fastNLP import Accuracy
 
 
 @dataclass
@@ -472,3 +476,42 @@ def test_trainer_w_evaluator_w_samplers(
     if dist.is_initialized():
         dist.destroy_process_group()
 
+
+@pytest.mark.torch
+@pytest.mark.parametrize("driver,device", [("torch", 'cpu')])  # ("torch", [0, 1]),("torch", 1)
+@magic_argv_env_context
+def test_trainer_extra_info_keys(
+        model_and_optimizers: TrainerParameters,
+        driver,
+        device,
+        n_epochs=2,
+):
+    """
+    测试一些特殊的参数是否能够正确地传递；
+    """
+    trainer = Trainer(
+        model=model_and_optimizers.model,
+        driver=driver,
+        device=device,
+        optimizers=model_and_optimizers.optimizers,
+        train_dataloader=model_and_optimizers.train_dataloader,
+        evaluate_dataloaders={"dl": model_and_optimizers.evaluate_dataloaders},
+        input_mapping=model_and_optimizers.input_mapping,
+        output_mapping=lambda x: {'loss': x['loss'], 'loss1': x['loss']*10},
+        metrics=model_and_optimizers.metrics,
+        n_epochs=n_epochs,
+        output_from_new_proc="all",
+        evaluate_every=-1,
+        model_wo_auto_param_call=True,
+        torch_kwargs={
+            "non_blocking": False,
+            "set_grad_to_none": True
+        },
+        extra_show_keys='loss1'
+    )
+
+    assert trainer.driver.non_blocking is False
+    assert trainer.driver.wo_auto_param_call is True
+
+    if dist.is_available() and dist.is_initialized():
+        dist.destroy_process_group()
