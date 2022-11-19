@@ -5,7 +5,8 @@ import pytest
 
 from fastNLP import Metric, Accuracy
 from tests.helpers.utils import magic_argv_env_context
-from fastNLP import Trainer, Evaluator
+from fastNLP import Trainer, Evaluator, RichCallback, RawTextCallback, TqdmCallback
+from fastNLP.core.callbacks import ExtraInfoStatistics
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 if _NEED_IMPORT_TORCH:
     from torch.utils.data import DataLoader
@@ -118,6 +119,44 @@ def test_run( model_and_optimizers: TrainerParameters, device):
         dist.destroy_process_group()
 
 
+@pytest.mark.torch
+@pytest.mark.parametrize('device', ['cpu', [0, 1]])
+@magic_argv_env_context
+def test_show_extra_keys(model_and_optimizers: TrainerParameters, device):
+    if device != 'cpu' and not torch.cuda.is_available():
+        pytest.skip(f"No cuda for device:{device}")
+    n_epochs = 2
 
+    class MyExtraInfoStatistics(ExtraInfoStatistics):
+        def __init__(self):
+            super().__init__('loss')
 
+        def update(self, outputs) -> None:
+            pass
+
+        def get_stat(self) -> dict:
+            return dict(key1="value1", key2="value2")
+
+    for progress_callback_module in [RichCallback, RawTextCallback, TqdmCallback]:
+        progress_callback = progress_callback_module(extra_show_keys=MyExtraInfoStatistics())
+        trainer = Trainer(
+            model=model_and_optimizers.model,
+            driver='torch',
+            device=device,
+            optimizers=model_and_optimizers.optimizers,
+            train_dataloader=model_and_optimizers.train_dataloader,
+            evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+            input_mapping=model_and_optimizers.input_mapping,
+            output_mapping=model_and_optimizers.output_mapping,
+            metrics=model_and_optimizers.metrics,
+            n_epochs=n_epochs,
+            callbacks=[progress_callback],
+            output_from_new_proc="all",
+            evaluate_fn='train_step',
+            larger_better=False
+        )
+        trainer.run()
+
+    if dist.is_initialized():
+        dist.destroy_process_group()
 
