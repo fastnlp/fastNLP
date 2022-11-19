@@ -129,7 +129,7 @@ def test_show_extra_keys(model_and_optimizers: TrainerParameters, device):
 
     class MyExtraInfoStatistics(ExtraInfoStatistics):
         def __init__(self):
-            super().__init__('loss')
+            pass
 
         def update(self, outputs) -> None:
             pass
@@ -157,6 +157,26 @@ def test_show_extra_keys(model_and_optimizers: TrainerParameters, device):
         )
         trainer.run()
 
-    if dist.is_initialized():
+    for progress_callback_module in [RichCallback, RawTextCallback, TqdmCallback]:
+        progress_callback = progress_callback_module(extra_show_keys='loss2')
+        trainer = Trainer(
+            model=model_and_optimizers.model,
+            driver='torch',
+            device=device,
+            optimizers=model_and_optimizers.optimizers,
+            train_dataloader=model_and_optimizers.train_dataloader,
+            evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+            input_mapping=model_and_optimizers.input_mapping,
+            output_mapping=lambda x:{'loss': x['loss'], 'loss2': x['loss']},
+            metrics=model_and_optimizers.metrics,
+            n_epochs=n_epochs,
+            callbacks=[progress_callback],
+            output_from_new_proc="all",
+            evaluate_fn='train_step',
+            larger_better=False
+        )
+        trainer.run()
+
+    if dist.is_available() and dist.is_initialized():
         dist.destroy_process_group()
 
