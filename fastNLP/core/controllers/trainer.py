@@ -693,8 +693,6 @@ class Trainer(TrainerEventTrigger):
                 self.cur_epoch_idx += 1
                 self.on_train_epoch_end()
                 self.driver.barrier()
-                self.epoch_evaluate()
-                self.driver.barrier()
 
         except EarlyStopException as e:
             logger.info(f"Catch early stop exception: {e.msg}.")

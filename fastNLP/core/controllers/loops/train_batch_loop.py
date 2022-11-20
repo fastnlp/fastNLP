@@ -65,6 +65,9 @@ class TrainBatchLoop(Loop):
                     logger.error(f"Exception happens when training on samples: {indices}")
                 raise e
             trainer.step_evaluate()
+        trainer.driver.barrier()
+        trainer.epoch_evaluate()
+        trainer.driver.barrier()
         trainer.batch_idx_in_epoch = 0
 
     @staticmethod
