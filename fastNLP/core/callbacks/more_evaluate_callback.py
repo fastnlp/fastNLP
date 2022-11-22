@@ -151,11 +151,15 @@ class MoreEvaluateCallback(HasMonitorCallback):
         from fastNLP.core.controllers.evaluator import Evaluator
         self.evaluator = Evaluator(**kwargs)
         if self.num_eval_sanity_batch>0:
+            verbose_temp = kwargs["verbose"]
+            self.evaluator.verbose = 0
             results = self.evaluator.run(num_eval_batch_per_dl=self.num_eval_sanity_batch)
+            self.evaluator.verbose = verbose_temp
             self.topk_saver.get_monitor_value(results)
 
     def on_evaluate_end(self, trainer, results):
         if self.is_better_results(results, keep_if_better=True):
+            FRichProgress().console.rule("MoreEvaluateCallback", characters='-')
             results = self.evaluator.run()
             self.topk_saver.save_topk(trainer, results)
 
@@ -165,6 +169,7 @@ class MoreEvaluateCallback(HasMonitorCallback):
         if isinstance(self.evaluate_every, int) and self.evaluate_every < 0:
             evaluate_every = -self.evaluate_every
             if trainer.cur_epoch_idx % evaluate_every == 0:
+                FRichProgress().console.rule("MoreEvaluateCallback", characters='-')
                 results = self.evaluator.run()
                 self.topk_saver.save_topk(trainer, results)
 
@@ -173,9 +178,11 @@ class MoreEvaluateCallback(HasMonitorCallback):
             return
         if callable(self.evaluate_every):
             if self.evaluate_every(trainer):
+                FRichProgress().console.rule("MoreEvaluateCallback", characters='-')
                 results = self.evaluator.run()
                 self.topk_saver.save_topk(trainer, results)
         elif self.evaluate_every > 0 and trainer.global_forward_batches % self.evaluate_every == 0:
+            FRichProgress().console.rule("MoreEvaluateCallback", characters='-')
             results = self.evaluator.run()
             self.topk_saver.save_topk(trainer, results)
 
