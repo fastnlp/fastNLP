@@ -24,7 +24,7 @@ from .loops import Loop, EvaluateBatchLoop
 from fastNLP.core.utils import auto_param_call, dataclass_to_dict, \
     match_and_substitute_params, f_rich_progress, flat_nest_dict, f_tqdm_progress
 from fastNLP.core.metrics import Metric
-from fastNLP.core.metrics.utils import _is_torchmetrics_metric, _is_paddle_metric, _is_allennlp_metric
+from fastNLP.core.metrics.utils import _is_torchmetrics_metric, _is_paddle_metric, _is_allennlp_metric, _is_torcheval_metric
 from fastNLP.core.controllers.utils.utils import _TruncatedDataLoader
 from fastNLP.core.utils.utils import _check_valid_parameters_number
 from fastNLP.core.log import logger
@@ -453,6 +453,9 @@ class _MetricsWrapper:
                 if _is_torchmetrics_metric(metric) and isinstance(evaluator.driver, TorchDriver):
                     # torchmetrics 是默认自动开启了多卡的
                     evaluator.driver.move_model_to_device(metric, evaluator.driver.data_device)
+                if _is_torcheval_metric(metric):
+                    # torcheval也是默认开启多卡，需要在这一步将数据移动到对应的机器上；
+                    metric.to(evaluator.driver.data_device)
                 elif isinstance(metric, Metric):
                     # 如果数据是分布式的，但是不aggregate的话可能有问题
                     if evaluator._dist_sampler is not None and metric.aggregate_when_get_metric is False:
@@ -491,6 +494,8 @@ class _MetricsWrapper:
             elif _is_paddle_metric(metric):
                 res = auto_param_call(metric.compute, outputs, *args)
                 metric.update(res)
+            elif _is_torcheval_metric(metric):
+                auto_param_call(metric.update, outputs, *args)
 
     def reset(self):
         """
@@ -501,7 +506,7 @@ class _MetricsWrapper:
         for metric in self._metrics:
             if _is_allennlp_metric(metric):
                 metric.get_metric(reset=True)
-            elif _is_torchmetrics_metric(metric) or _is_paddle_metric(metric) or isinstance(metric, Metric):
+            elif _is_torchmetrics_metric(metric) or _is_paddle_metric(metric) or isinstance(metric, Metric) or _is_torcheval_metric(metric):
                 metric.reset()
 
     def get_metric(self) -> Dict:
@@ -521,6 +526,9 @@ class _MetricsWrapper:
                 _results = metric.compute()
             elif _is_paddle_metric(metric):
                 _results = metric.accumulate()
+            elif _is_torcheval_metric(metric):
+                from torcheval.metrics.toolkit import sync_and_compute
+                _results = sync_and_compute(metric, recipient_rank="all")
             else:
                 raise RuntimeError(f"Not support `{type(metric)}` for now.")
             if _results is not None:

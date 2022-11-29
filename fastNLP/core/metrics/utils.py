@@ -8,6 +8,7 @@ from fastNLP.envs.utils import _module_available
 
 _IS_TORCHMETRICS_AVAILABLE = _module_available('torchmetrics')
 _IS_ALLENNLP_AVAILABLE = _module_available('allennlp')
+_IS_TORCHEVAL_AVAILABLE = _module_available('torcheval')
 if _IS_ALLENNLP_AVAILABLE:
     from allennlp.training.metrics import Metric as allennlp_Metric
 
@@ -16,6 +17,9 @@ if _IS_TORCHMETRICS_AVAILABLE:
 
 if _NEED_IMPORT_PADDLE:
     from paddle.metric import Metric as paddle_Metric
+
+if _IS_TORCHEVAL_AVAILABLE:
+    from torcheval.metrics import Metric as torcheval_Metric
 
 
 def _is_torchmetrics_metric(metric: Any) -> bool:
@@ -53,6 +57,18 @@ def _is_paddle_metric(metric: Any) -> bool:
     """
     if _NEED_IMPORT_PADDLE:
         return isinstance(metric, paddle_Metric)
+    else:
+        return False
+
+
+def _is_torcheval_metric(metric: Any) ->bool:
+    """
+    检查输入的对象是否为torcheval对象
+    :param metric:
+    :return:
+    """
+    if _IS_TORCHEVAL_AVAILABLE:
+        return isinstance(metric, torcheval_Metric)
     else:
         return False
 
