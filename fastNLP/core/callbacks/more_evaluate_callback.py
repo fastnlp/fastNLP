@@ -158,7 +158,7 @@ class MoreEvaluateCallback(HasMonitorCallback):
 
     def on_evaluate_end(self, trainer, results):
         if self.is_better_results(results, keep_if_better=True):
-            self.results_print(trainer)
+            self.run_evaluation(trainer, self.evaluator, self.topk_saver)
 
     def on_train_epoch_end(self, trainer):
         if self.monitor is not None:
@@ -166,16 +166,16 @@ class MoreEvaluateCallback(HasMonitorCallback):
         if isinstance(self.evaluate_every, int) and self.evaluate_every < 0:
             evaluate_every = -self.evaluate_every
             if trainer.cur_epoch_idx % evaluate_every == 0:
-                self.results_print(trainer)
+                self.run_evaluation(trainer, self.evaluator, self.topk_saver)
 
     def on_train_batch_end(self, trainer):
         if self.monitor is not None:
             return
         if callable(self.evaluate_every):
             if self.evaluate_every(trainer):
-                self.results_print(trainer)
+                self.run_evaluation(trainer, self.evaluator, self.topk_saver)
         elif self.evaluate_every > 0 and trainer.global_forward_batches % self.evaluate_every == 0:
-            self.results_print(trainer)
+            self.run_evaluation(trainer, self.evaluator, self.topk_saver)
 
     def on_save_checkpoint(self, trainer) -> Dict:
         states = {'topk_saver': self.topk_saver.state_dict()}
@@ -196,8 +196,8 @@ class MoreEvaluateCallback(HasMonitorCallback):
         metric_names = '+'.join(sorted(self.metrics.keys()))
         return f'more_evaluate_callback#metric_name-{metric_names}#monitor-{self.monitor_name}#topk_saver:{self.topk_saver}'
 
-    def results_print(self, trainer):
-        results = self.evaluator.run()
+    def run_evaluation(self, trainer, evaluator, topk_saver):
+        results = evaluator.run()
         logger.info("以下属于MoreEvaluateCallback:")
         logger.info(results)
-        self.topk_saver.save_topk(trainer, results)
+        topk_saver.save_topk(trainer, results)
