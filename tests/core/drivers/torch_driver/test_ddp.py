@@ -1058,7 +1058,7 @@ def test_customized_sampler_dataloader(inherit):
 
 @pytest.mark.torch
 @magic_argv_env_context
-@pytest.mark.parametrize("device", ([[0, 1, 2]]))
+@pytest.mark.parametrize("device", (['cpu', 0, [0, 1]]))
 def test_sync_batchnorm(device):
     import numpy as np
     from fastNLP import Event, Trainer, DataSet, Instance
@@ -1078,6 +1078,9 @@ def test_sync_batchnorm(device):
 
     @Trainer.on(Event.on_train_batch_end())
     def check_sync(trainer):
+        if not isinstance(device, list) or len(device) is 0:
+            # 单卡或 CPU 的情况下不需要检查
+            return
         running_mean_list = fastnlp_torch_all_gather(trainer.model.norm.running_mean)
         running_var_list = fastnlp_torch_all_gather(trainer.model.norm.running_var)
         for running_mean in running_mean_list:

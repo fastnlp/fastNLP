@@ -244,7 +244,7 @@ class TorchDDPDriver(TorchDriver):
         * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.amp.cuda.GradScaler` 的参数
     :kwargs:
         * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的 ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
-        * *sync_bn* (``bool``) -- 是否要将模型中可能存在的 BatchNorm 层转换为可同步所有卡数据计算均值和方差的 SyncBatchNorm 层
+        * *sync_bn* (``bool``) -- 是否要将模型中可能存在的 BatchNorm 层转换为可同步所有卡数据计算均值和方差的 SyncBatchNorm 层，默认为 True
 
         .. note::
 
@@ -333,7 +333,7 @@ class TorchDDPDriver(TorchDriver):
         self._has_setup = False  # 设置这一参数是因为 evaluator 中也会进行 setup 操作，但是显然是不需要的也不应该的；
         self._has_ddpwrapped = False  # 判断传入的模型是否经过 _has_ddpwrapped 包裹；
         # sync_bn 表示是否要将模型中可能存在的 BatchNorm 层转换为可同步所有卡数据计算均值和方差的 SyncBatchNorm 层；
-        self.sync_bn = kwargs.get("sync_bn", False)
+        self.sync_bn = kwargs.get("sync_bn", True)
 
     def setup(self):
         r"""
