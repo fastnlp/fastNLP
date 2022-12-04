@@ -364,3 +364,27 @@ def all_gather_object(object_list, obj, group=None):
         tensor_size = object_size_list[i]
         object_list[i] = _tensor_to_object(tensor, tensor_size)
     return object_list
+
+
+def convert_sync_batchnorm(model, group=None):
+    """
+    将模型中所有继承 :class:`torch.nn.modules.batchnorm._BatchNorm` 的层转换为 :class:`torch.nn.SyncBatchNorm` 。
+
+    Example::
+        >>> import torch
+        >>> model = torch.nn.Sequential(
+        >>>     torch.nn.Linear(20, 100),
+        >>>     torch.nn.BatchNorm1d(100)
+        >>> ).cuda()
+        >>> process_group = torch.distributed.new_group(process_ids)
+        >>> model = convert_sync_batchnorm(model, process_group)
+        >>> # also works with nn.DataParallel
+        >>> model = torch.nn.parallel.DistributedDataParallel(model)
+        >>> model = convert_sync_batchnorm(model, process_group)
+
+    :param model: 要转换的模型
+    :param process_group: 同步的进程组，如果为None，则使用默认的进程组。
+    :return: 转换后的模型
+
+    """
+    return torch.nn.SyncBatchNorm.convert_sync_batchnorm(model, process_group=group)

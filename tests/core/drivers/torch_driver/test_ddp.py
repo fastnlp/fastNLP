@@ -1054,3 +1054,51 @@ def test_customized_sampler_dataloader(inherit):
         if dist.is_initialized():
             dist.barrier()
             dist.destroy_process_group()
+
+
+@pytest.mark.torch
+@magic_argv_env_context
+@pytest.mark.parametrize("device", ([[0, 1, 2]]))
+def test_sync_batchnorm(device):
+    import numpy as np
+    from fastNLP import Event, Trainer, DataSet, Instance
+    class Model(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.dense1 = torch.nn.Linear(in_features=1, out_features=10)
+            self.norm = torch.nn.BatchNorm1d(10, affine=False)
+            self.dense2 = torch.nn.Linear(in_features=10, out_features=1)
+
+        def forward(self, x, y):
+            x = self.dense1(x)
+            x = self.norm(x)
+            x = self.dense2(x)
+            loss = torch.nn.functional.mse_loss(x, y)
+            return dict(loss=loss)
+
+    @Trainer.on(Event.on_train_batch_end())
+    def check_sync(trainer):
+        running_mean_list = fastnlp_torch_all_gather(trainer.model.norm.running_mean)
+        running_var_list = fastnlp_torch_all_gather(trainer.model.norm.running_var)
+        for running_mean in running_mean_list:
+            # 检查每张卡上的均值是否相等
+            assert running_mean_list[0].equal(running_mean)
+        for running_var in running_var_list:
+            # 检查每张卡上的方差是否相等
+            assert running_var_list[0].equal(running_var)
+
+    model = Model()
+    dataset = DataSet()
+    for i in np.arange(30):
+        dataset.append(Instance(x=np.random.rand(10, 1), y=np.random.rand(10, 1)))
+    dl = prepare_torch_dataloader(dataset, batch_size=10)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    trainer = Trainer(
+        model,
+        train_dataloader=dl,
+        device=device,
+        optimizers=optimizer,
+        sync_bn=True,
+        n_epochs=1
+    )
+    trainer.run()
