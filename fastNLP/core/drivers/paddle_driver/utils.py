@@ -270,6 +270,8 @@ def _check_dataloader_args_for_distributed(args, controller='Trainer'):
     检查 dataloader 的 sampler 情况，如果用户替换了自己定制的 sampler ，为了防止
     在分布式训练中出现错误会报错。
     """
+    if isinstance(args.batch_sampler, ReproducibleBatchSampler):
+        return
     error_flag = (type(args.sampler) not in {RandomSampler, SequenceSampler})
     if controller == 'Trainer':
         mode = 'training'
