@@ -1,3 +1,5 @@
+from typing import List, Union
+
 from ..utils import AggregateMethodError
 
 __all__ = []
@@ -22,7 +24,7 @@ class Backend:
 
         return tensor
 
-    def create_tensor(self, value: float):
+    def create_tensor(self, value: Union[float,List]):
         """
         创建 tensor，并且填入 ``value`` 作为值。
 
@@ -30,7 +32,7 @@ class Backend:
         """
         return value
 
-    def fill_value(self, tensor, value: float):
+    def fill_value(self, tensor, value: Union[float,List]):
         """
         将 tensor 的值设置为 ``value``
 
@@ -46,6 +48,15 @@ class Backend:
         :param tensor: 传入的张量;
         :return:
         """
+        return tensor
+
+    def get_values(self, tensor) -> List:
+        """
+       ``tensor`` 的 value 值.
+
+       :param tensor: 传入的张量;
+       :return:
+       """
         return tensor
 
     def is_specified(self) -> bool:

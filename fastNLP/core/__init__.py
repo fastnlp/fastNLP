@@ -86,6 +86,7 @@ __all__ = [
     "TransformersAccuracy",
     'SpanFPreRecMetric',
     'ClassifyFPreRecMetric',
+    "Bleu",
 
     # samplers
     'ReproducibleSampler',

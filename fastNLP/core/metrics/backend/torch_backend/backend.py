@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 import numpy as np
 
@@ -54,23 +54,23 @@ class TorchBackend(Backend):
 
         return tensor
 
-    def create_tensor(self, value: float):
+    def create_tensor(self, value: Union[float,List]):
         """
         创建 tensor，并且填入 value 作为值
 
         :param value: 创建张量的初始值
         """
-        tensor = torch.ones(1).fill_(value)
+        tensor = torch.tensor(value)
         return tensor
 
-    def fill_value(self, tensor, value: float):
+    def fill_value(self, tensor, value: Union[float,List]):
         """
         将 tensor 的值设置为 value
 
         :param tensor: 传入的张量
         :param value: 需要 fill 的值。
         """
-        tensor.fill_(value)
+        tensor.copy_(torch.tensor(value))
         return tensor
 
     def get_scalar(self, tensor) -> float:
@@ -81,13 +81,21 @@ class TorchBackend(Backend):
         """
         return tensor.item()
 
+    def get_values(self, tensor) -> List:
+        """
+       ``tensor`` 的 value 值.
+
+       :param tensor: 传入的张量;
+       :return:
+       """
+        return tensor.tolist()
+
     def tensor2numpy(self, tensor) -> np.array:
         """
         将 tensor 转为 numpy 值， 主要是在 metric 计算中使用
 
         :param tensor: 传入的张量
         """
-
         if isinstance(tensor, torch.Tensor):
             return tensor.cpu().detach().numpy()
         elif isinstance(tensor, np.ndarray):
