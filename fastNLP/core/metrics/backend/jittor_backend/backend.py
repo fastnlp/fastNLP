@@ -1,3 +1,5 @@
+from typing import Union, List
+
 import numpy as np
 
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
@@ -20,29 +22,38 @@ class JittorBackend(Backend):
         """
         return tensor
 
-    def create_tensor(self, value: float):
+    def create_tensor(self, value: Union[float,List]):
         """
         创建 tensor，并且填入 value 作为值
         """
-        value = jittor.Var(value)
-        return value
+        tensor = jittor.array(value)
+        return tensor
 
-    def fill_value(self, tensor, value: float):
+    def fill_value(self, tensor, value: Union[float,List]):
         """
         将 tensor 的值设置为 value
 
         """
-        value = jittor.full_like(tensor, value)
-        return value
+        tensor = jittor.array(value).copy()
+        return tensor
 
     def get_scalar(self, tensor) -> float:
         """
-        tensor 的 saclar 值
+        tensor 的 scalar 值
 
         :param tensor:
         :return:
         """
         return tensor.item()
+
+    def get_values(self, tensor) -> List:
+        """
+       ``tensor`` 的 value 值.
+
+       :param tensor: 传入的张量;
+       :return:
+       """
+        return tensor.tolist()
 
     def is_specified(self) -> bool:
         """
