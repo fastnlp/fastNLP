@@ -279,7 +279,7 @@ class DataSet:
           Instance 详见 :class:`~fastNLP.core.dataset.Instance` 。
         * 当 data 为 ``Dict[str, List[Any]] 时， 则每个 key 的 value 应该为等长的 list， 否则不同 field 的长度不一致。
     """
-    def __init__(self, data: Union[List[Instance], Dict[str, List[Any]], None] = None):
+    def __init__(self, data: Union[List[Instance], Dict[str, List[Any]], List[Dict[str, Any]], None] = None):
         self.field_arrays = {}
         self._collator = Collator()
         if data is not None:
@@ -291,9 +291,7 @@ class DataSet:
                 for key, value in data.items():
                     self.add_field(field_name=key, fields=value)
             elif isinstance(data, List):
-                for ins in data:
-                    assert isinstance(ins, Instance), "Must be Instance type, not {}.".format(type(ins))
-                    self.append(ins)
+                self._from_list(data)
             else:
                 raise ValueError("data only be dict or list type.")
 
@@ -423,6 +421,26 @@ class DataSet:
 
     def __repr__(self):
         return str(pretty_table_printer(self))
+
+    def _from_list_of_dict(self, data):
+        for dict_data in data:
+            # TODO 报错信息需要修改
+            assert isinstance(dict_data, Dict), "Every item in your data list must be Dict type, not {}.".format(type(dict_data))
+            self.append(Instance(**dict_data))
+
+    def _from_list_of_instance(self, data):
+        for ins in data:
+            assert isinstance(ins, Instance), "Every item in your data list Must be Instance type, not {}.".format(type(ins))
+            self.append(ins)
+
+    def _from_list(self, data):
+        if len(data) == 0:
+            return
+        assert isinstance(data[0], (Dict, Instance))
+        if isinstance(data[0], Dict):
+            self._from_list_of_dict(data)
+        else:
+            self._from_list_of_instance(data)
 
     def append(self, instance: Instance) -> None:
         r"""
