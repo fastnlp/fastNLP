@@ -71,7 +71,7 @@ class PaddleBackend(Backend):
         :param tensor: 传入的张量
         :param value: 需要 fill 的值。
         """
-        tensor = paddle.assign(paddle.to_tensor(value))
+        paddle.assign(paddle.to_tensor(value),tensor)
         return tensor
 
     def get_scalar(self, tensor) -> float:
@@ -82,14 +82,17 @@ class PaddleBackend(Backend):
         """
         return tensor.item()
 
-    def get_values(self, tensor) -> List:
+    def to_list(self, tensor) -> Union[float, List]:
         """
        ``tensor`` 的 value 值.
 
        :param tensor: 传入的张量;
        :return:
        """
-        return tensor.tolist()
+        values = tensor.tolist()
+        if len(values) == 1:
+            values = tensor.item()
+        return values
 
 
     def tensor2numpy(self, tensor) -> np.array:
