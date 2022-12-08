@@ -25,8 +25,8 @@ class Accuracy(Metric):
     """
     def __init__(self, backend: Union[str, Backend, None] = 'auto', aggregate_when_get_metric: bool = None):
         super(Accuracy, self).__init__(backend=backend, aggregate_when_get_metric=aggregate_when_get_metric)
-        self.register_element(name='correct', value=[0], aggregate_method='sum', backend=backend)
-        self.register_element(name='total', value=[0], aggregate_method="sum", backend=backend)
+        self.register_element(name='correct', value=0, aggregate_method='sum', backend=backend)
+        self.register_element(name='total', value=0, aggregate_method="sum", backend=backend)
 
     def get_metric(self) -> dict:
         r"""

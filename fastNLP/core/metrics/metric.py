@@ -54,7 +54,7 @@ class Metric:
     def elements(self) -> dict:
         return self._elements
 
-    def register_element(self, name, value: List, aggregate_method=None, backend='auto') -> Element:
+    def register_element(self, name, value: Union[float,List], aggregate_method=None, backend='auto') -> Element:
         """
         注册一个 element 对象，注册之后便可以通过在 Metric 中直接通过 ``self.{name}`` 进行调用，可以认为该对象即为对应 backend 的
         tensor 直接进行加减乘除计算即可。
@@ -112,7 +112,9 @@ class Metric:
                 self._call_gather_object = False
                 results = get_metric(*args, **kwargs)
                 # 如果直接返回了Element，帮他转录一下，不然的话会在reset()之后就被重置为0了
-                results = apply_to_collection(results, dtype=Element, function=lambda x: x.get_scalar(),
+
+                results = apply_to_collection(results, dtype=Element,
+                                              function=lambda x: x.to_list(),
                                               include_none=False)
                 # elements 为空、没有 call 则准备报错
                 if len(self._elements) == 0 and not self._call_gather_object:
@@ -130,7 +132,7 @@ class Metric:
 
     def __setattr__(self, key, value):
         if getattr(self, '_cannot_change_element', False):
-            if key in self.elements and isinstance(value, (float, int, bool)):
+            if key in self.elements and isinstance(value, (float, int, bool,List)):
                 self.elements[key].fill_value(value)
                 return
             elif key in self.elements:
@@ -209,7 +211,7 @@ class Metric:
         if aggregate:
             for name, element in self.elements.items():
                 # 保存过去的值
-                keep_value[name] = element.get_values()
+                keep_value[name] = element.to_list()
                 # 聚合结果
                 element.aggregate()
 

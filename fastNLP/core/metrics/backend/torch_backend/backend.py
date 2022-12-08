@@ -81,7 +81,7 @@ class TorchBackend(Backend):
         """
         return tensor.item()
 
-    def get_values(self, tensor) -> List:
+    def to_list(self, tensor) -> List:
         """
        ``tensor`` 的 value 值.
 

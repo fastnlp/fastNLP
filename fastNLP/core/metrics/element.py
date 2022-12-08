@@ -116,13 +116,13 @@ class Element:
         self._check_value_initialized()
         return self.backend.get_scalar(self._value)
 
-    def get_values(self) -> List:
+    def to_list(self) -> List:
         """
         获取元素的 values 值
 
         """
         self._check_value_initialized()
-        return self.backend.get_values(self._value)
+        return self.backend.to_list(self._value)
 
     def tensor2numpy(self) -> np.array:
         """
