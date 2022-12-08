@@ -1,8 +1,6 @@
 from typing import Union, List
 
 import numpy as np
-from spyder_kernels.utils.lazymodules import numpy
-
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
 from fastNLP.core.metrics.backend import Backend
 
@@ -50,17 +48,14 @@ class JittorBackend(Backend):
         """
         return tensor.item()
 
-    def to_list(self, tensor) -> Union[float, List]:
+    def to_list(self, tensor) -> List:
         """
        ``tensor`` 的 value 值.
 
        :param tensor: 传入的张量;
        :return:
        """
-        values = tensor.tolist()
-        if len(values) == 1:
-            values = tensor.item()
-        return values
+        return tensor.tolist()
 
     def is_specified(self) -> bool:
         """

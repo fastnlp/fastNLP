@@ -82,17 +82,14 @@ class PaddleBackend(Backend):
         """
         return tensor.item()
 
-    def to_list(self, tensor) -> Union[float, List]:
+    def to_list(self, tensor) -> List:
         """
        ``tensor`` 的 value 值.
 
        :param tensor: 传入的张量;
        :return:
        """
-        values = tensor.tolist()
-        if len(values) == 1:
-            values = tensor.item()
-        return values
+        return tensor.tolist()
 
 
     def tensor2numpy(self, tensor) -> np.array:
