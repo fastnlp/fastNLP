@@ -112,7 +112,7 @@ class Metric:
                 self._call_gather_object = False
                 results = get_metric(*args, **kwargs)
                 # 如果直接返回了Element，帮他转录一下，不然的话会在reset()之后就被重置为0了
-                outputs = apply_to_collection(results, dtype=Element,
+                results = apply_to_collection(results, dtype=Element,
                                               function=lambda x: x.get_scalar() if x.value.ndim == 1 and x.value.shape[
                                                   0] == 1 else x.to_list(),
                                               include_none=False)
