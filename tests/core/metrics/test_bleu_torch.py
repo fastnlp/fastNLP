@@ -13,6 +13,7 @@ from fastNLP.core.dataset import DataSet
 from fastNLP.core.metrics.metric import Metric
 from .utils import find_free_network_port, setup_ddp, _assert_allclose
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+
 if _NEED_IMPORT_TORCH:
     import torch
     import torch.distributed
@@ -25,7 +26,6 @@ except:
     pass
 
 set_start_method("spawn", force=True)
-
 
 NUM_PROCESSES = 2
 pool = None
@@ -48,9 +48,8 @@ def _test(local_rank: int,
         predictions = dataset[i]["predictions"]
         references = dataset[i]["references"]
         metric.update([predictions], [references])
-
     my_result = metric.get_metric()
-    if local_rank==0:
+    if local_rank == 0:
         print(my_result)
 
 
@@ -65,27 +64,28 @@ def pre_process():
     pool.join()
 
 
-
 @pytest.mark.torch
 @pytest.mark.parametrize('dataset', [
     DataSet({
-        "predictions" : ['the cat is on the mat', 'There is a big tree near the park here', 'The sun rises from the northeast with sunshine','I was late for work today for the rainy'],
-        "references" : [['a cat is on the mat'], ['A big tree is growing near the park here'],
-              ["A fierce sun rises in the northeast with sunshine"], ['I went to work too late today for the rainy']]
+        "predictions": ['the cat is on the mat', 'There is a big tree near the park here',
+                        'The sun rises from the northeast with sunshine', 'I was late for work today for the rainy'],
+        "references": [['a cat is on the mat'], ['A big tree is growing near the park here'],
+                       ["A fierce sun rises in the northeast with sunshine"],
+                       ['I went to work too late today for the rainy']]
     })
     # DataSet({'predictions': ['the cat is on the mat'],
     #          'references': [['there is a cat on the mat', 'a cat is on the mat']]}),
 ])
-@pytest.mark.parametrize('is_ddp', [True, False])
+@pytest.mark.parametrize('is_ddp', [1,2,3])
 @pytest.mark.parametrize('metric_class', [Bleu])
 @pytest.mark.parametrize('metric_kwargs', [{'backend': 'torch'}])
 @pytest.mark.parametrize('smooth', [True, False])
 class TestBleu:
 
     def test_v1(self, is_ddp: bool, dataset: DataSet, metric_class: Type['Metric'],
-                metric_kwargs: Dict[str, Any],smooth: bool) -> None:
+                metric_kwargs: Dict[str, Any], smooth: bool) -> None:
         global pool
-        if is_ddp:
+        if is_ddp == 1:
 
             if sys.platform == "win32":
                 pytest.skip("DDP not supported on windows")
@@ -100,6 +100,21 @@ class TestBleu:
                     metric_kwargs=metric_kwargs,
                 ),
                 [(rank, processes, torch.device(f'cuda:{rank}')) for rank in range(processes)]
+            )
+        elif is_ddp ==2:
+            if sys.platform == "win32":
+                pytest.skip("DDP not supported on windows")
+            metric_kwargs['aggregate_when_get_metric'] = True
+            metric_kwargs["smooth"] = smooth
+            processes = NUM_PROCESSES
+            pool.starmap(
+                partial(
+                    _test,
+                    dataset=dataset,
+                    metric_class=metric_class,
+                    metric_kwargs=metric_kwargs,
+                ),
+                [(0, processes, torch.device(f'cuda:{0}')), (1, processes, torch.device("cpu"))]
             )
         else:
             device = torch.device(
