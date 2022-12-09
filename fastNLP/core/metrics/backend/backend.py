@@ -43,7 +43,7 @@ class Backend:
 
     def get_scalar(self, tensor) -> float:
         """
-        ``tensor`` 的 saclar 值.
+        ``tensor`` 的 scalar 值.
 
         :param tensor: 传入的张量;
         :return:
