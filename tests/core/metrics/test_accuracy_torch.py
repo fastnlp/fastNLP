@@ -92,6 +92,8 @@ class TestAccuracy:
                 metric_kwargs: Dict[str, Any]) -> None:
         global pool
         if is_ddp:
+            if not torch.cuda.is_available():
+                return
             if sys.platform == "win32":
                 pytest.skip("DDP not supported on windows")
             metric_kwargs['aggregate_when_get_metric'] = True

@@ -74,7 +74,7 @@ class JittorBackend(Backend):
         """
         if isinstance(tensor, jittor.Var):
             return tensor.detach().numpy()
-        elif isinstance(tensor, np.array):
+        elif isinstance(tensor, np.ndarray):
             return tensor
         else:
             raise ValueError(f"tensor: {tensor} can not convert to ndarray!")

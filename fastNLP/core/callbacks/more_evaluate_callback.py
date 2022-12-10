@@ -198,6 +198,6 @@ class MoreEvaluateCallback(HasMonitorCallback):
 
     def run_evaluation(self, trainer, evaluator, topk_saver):
         results = evaluator.run()
-        logger.info("MoreEvaluateCallback:")
+        logger.info("The following results are from MoreEvaluateCallback:")
         logger.info(results)
         topk_saver.save_topk(trainer, results)

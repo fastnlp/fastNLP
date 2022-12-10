@@ -294,6 +294,7 @@ class TestSpanFPreRecMetric:
         vocab = Vocabulary().add_word_lst(list('bmes'))
         metric = SpanFPreRecMetric(tag_vocab=vocab, encoding_type='bmeso')
 
+    @pytest.mark.skipif(not (torch.cuda.is_available() and torch.cuda.device_count()>1), reason='no cuda')
     def test_case5(self):
         # global pool
         pool = Pool(NUM_PROCESSES)

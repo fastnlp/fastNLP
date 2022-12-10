@@ -82,6 +82,7 @@ def pre_process():
 @pytest.mark.parametrize('smooth', [True, False])
 class TestBleu:
 
+    @pytest.mark.skipif(not (torch.cuda.is_available() and torch.cuda.device_count()>1), reason='no cuda')
     def test_v1(self, is_ddp: bool, dataset: DataSet, metric_class: Type['Metric'],
                 metric_kwargs: Dict[str, Any], smooth: bool) -> None:
         global pool

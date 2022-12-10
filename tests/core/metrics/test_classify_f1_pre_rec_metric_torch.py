@@ -134,6 +134,7 @@ class TestClassfiyFPreRecMetric:
     @pytest.mark.parametrize("f_type, f1_score,recall,pre",
                              [('macro', 0.1882051282051282, 0.1619047619047619, 0.23928571428571427),
                               ('micro', 0.21875, 0.21875, 0.21875)])
+    @pytest.mark.skipif(not (torch.cuda.is_available() and torch.cuda.device_count()>1), reason='no cuda')
     def test_case_2(self, f_type, f1_score, recall, pre):
         dataset = DataSet({
             'pred': [torch.tensor([[-0.4375, -0.1779, -1.0985, -1.1592, 0.4910],

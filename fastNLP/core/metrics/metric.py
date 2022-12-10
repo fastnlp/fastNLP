@@ -8,6 +8,7 @@ from typing import Union, List
 import functools
 from contextlib import contextmanager
 import numpy as np
+from numbers import Number
 
 from fastNLP.core.metrics.backend import Backend, AutoBackend
 from fastNLP.core.metrics.element import Element
@@ -113,8 +114,8 @@ class Metric:
                 results = get_metric(*args, **kwargs)
                 # 如果直接返回了Element，帮他转录一下，不然的话会在reset()之后就被重置为0了
                 results = apply_to_collection(results, dtype=Element,
-                                              function=lambda x: x.get_scalar() if x.value.ndim == 1 and x.value.shape[
-                                                  0] == 1 else x.to_list(),
+                                              function=lambda x: x.get_scalar() if isinstance(x.init_value, Number)
+                                                    else x.to_list(),
                                               include_none=False)
                 # elements 为空、没有 call 则准备报错
                 if len(self._elements) == 0 and not self._call_gather_object:
