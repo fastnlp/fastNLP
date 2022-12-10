@@ -61,11 +61,12 @@ def test_jittor_return_element():
 def test_apply_to_collection():
     # 测试apply_to_collection这个函数是否运行正常
     backend = AutoBackend("paddle")
-    element_float = Element(name="element1", value=3, aggregate_method="sum",backend=backend)
+    element_float = Element(name="element1", value=3.3, aggregate_method="sum",backend=backend)
     element_Element = Element(name="element2", value=[0,1,2,3],aggregate_method="sum",backend=backend)
     results = {"element1":element_float, "element2":element_Element}
     outputs = apply_to_collection(results, dtype=Element,
                                   function=lambda x:x.get_scalar() if x.value.ndim==1 and x.value.shape[0]==1 else x.to_list(),
                                   include_none=False)
-    print(results)
-    print(outputs)
+
+    assert type(outputs["element1"]) == float
+    assert type(outputs["element2"]) == list
