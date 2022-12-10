@@ -62,8 +62,8 @@ class Bleu(Metric):
             raise ValueError(f"List of weights has different weights than `n_gram`: {len(ngram_weights)} != {n_gram}")
         self.ngram_weights = ngram_weights if ngram_weights is not None else [1.0 / n_gram] * n_gram
 
-        self.register_element(name="pred_len", value=[0], aggregate_method='sum', backend=backend)
-        self.register_element(name="references_len", value=[0], aggregate_method='sum', backend=backend)
+        self.register_element(name="pred_len", value=0, aggregate_method='sum', backend=backend)
+        self.register_element(name="references_len", value=0, aggregate_method='sum', backend=backend)
         self.register_element(name="precision_matches", value=[0 for _ in range(self.n_gram)], aggregate_method='sum',
                               backend=backend)
         self.register_element(name="precision_total", value=[0 for _ in range(self.n_gram)], aggregate_method='sum',

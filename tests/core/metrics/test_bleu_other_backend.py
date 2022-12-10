@@ -3,7 +3,8 @@ import os
 import pytest
 
 from fastNLP import DataSet, Bleu
-from fastNLP.envs.imports import _NEED_IMPORT_PADDLE,_NEED_IMPORT_ONEFLOW,_NEED_IMPORT_JITTOR
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE, _NEED_IMPORT_ONEFLOW, _NEED_IMPORT_JITTOR
+
 if _NEED_IMPORT_PADDLE:
     import paddle
 
@@ -24,19 +25,23 @@ def test_bleu_paddle():
                        ['I went to work too late today for the rainy']]
     })
     metric = Bleu(backend="paddle")
-    for i in range(len(dataset)):
-        predictions = dataset[i]["predictions"]
-        references = dataset[i]["references"]
-        metric.update([predictions], [references])
+    for i in range(0, len(dataset), 2):
+        prediction1 = dataset[i]["predictions"]
+        prediction2 = dataset[i + 1]["predictions"]
+        references1 = dataset[i]["references"]
+        references2 = dataset[i + 1]["references"]
+        metric.update([prediction1, prediction2], [references1, references2])
     my_result = metric.get_metric()
     result = my_result["bleu"]
     assert result == 0.4181
 
-    metric = Bleu(backend="paddle",smooth = True)
-    for i in range(len(dataset)):
-        predictions = dataset[i]["predictions"]
-        references = dataset[i]["references"]
-        metric.update([predictions], [references])
+    metric = Bleu(backend="paddle", smooth=True)
+    for i in range(0, len(dataset), 2):
+        prediction1 = dataset[i]["predictions"]
+        prediction2 = dataset[i + 1]["predictions"]
+        references1 = dataset[i]["references"]
+        references2 = dataset[i + 1]["references"]
+        metric.update([prediction1, prediction2], [references1, references2])
     my_result = metric.get_metric()
     result = my_result["bleu"]
     assert result == 0.442571
@@ -60,7 +65,7 @@ def test_bleu_oneflow():
     result = my_result["bleu"]
     assert result == 0.4181
 
-    metric = Bleu(backend="oneflow",smooth = True)
+    metric = Bleu(backend="oneflow", smooth=True)
     for i in range(len(dataset)):
         predictions = dataset[i]["predictions"]
         references = dataset[i]["references"]
@@ -80,6 +85,7 @@ def test_bleu_jittor():
                        ['I went to work too late today for the rainy']]
     })
     metric = Bleu(backend="jittor")
+
     for i in range(len(dataset)):
         predictions = dataset[i]["predictions"]
         references = dataset[i]["references"]
@@ -88,7 +94,7 @@ def test_bleu_jittor():
     result = my_result["bleu"]
     assert result == 0.4181
 
-    metric = Bleu(backend="jittor",smooth = True)
+    metric = Bleu(backend="jittor", smooth=True)
     for i in range(len(dataset)):
         predictions = dataset[i]["predictions"]
         references = dataset[i]["references"]
@@ -96,6 +102,3 @@ def test_bleu_jittor():
     my_result = metric.get_metric()
     result = my_result["bleu"]
     assert result == 0.442571
-
-
-
