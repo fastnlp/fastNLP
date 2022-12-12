@@ -50,6 +50,7 @@ else:
             ("roberta", ("RobertaTokenizer", None)),
             ("bert", ("BertTokenizer", None)),
             ("gpt2", ("GPT2Tokenizer", None)),
+            ("elasticbert", ("BertTokenizer", None)),
         ]
     )
 
