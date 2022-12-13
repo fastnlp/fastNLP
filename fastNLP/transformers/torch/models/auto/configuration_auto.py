@@ -31,6 +31,7 @@ CONFIG_MAPPING_NAMES = OrderedDict(
         ("bert", "BertConfig"),
         ("gpt2", "GPT2Config"),
         ("cpt", "CPTConfig"),
+        ("elasticbert", "ElasticBertConfig"),
     ]
 )
 
@@ -42,6 +43,7 @@ CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
         ("gpt2", "GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("roberta", "ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP"),
         ("cpt", "BART_PRETRAINED_CONFIG_ARCHIVE_MAP"),
+        ("elasticbert", "ELASTICBERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
     ]
 )
 
@@ -52,7 +54,8 @@ MODEL_NAMES_MAPPING = OrderedDict(
         ("roberta", "RoBERTa"),
         ("bert", "BERT"),
         ("gpt2", "OpenAI GPT-2"),
-        ("cpt", "CPT")
+        ("cpt", "CPT"),
+        ("elasticbert", "ElasticBERT")
     ]
 )
 

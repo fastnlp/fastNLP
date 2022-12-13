@@ -28,6 +28,7 @@ MODEL_MAPPING_NAMES = OrderedDict(
         ("bert", "BertModel"),
         ("gpt2", "GPT2Model"),
         ("cpt", "CPTModel"),
+        ("elasticbert", "ElasticBertModel"),
     ]
 )
 
@@ -38,6 +39,7 @@ MODEL_FOR_PRETRAINING_MAPPING_NAMES = OrderedDict(
         ("bert", "BertForPreTraining"),
         ("gpt2", "GPT2LMHeadModel"),
         ("cpt", "CPTForConditionalGeneration"),
+        ("elasticbert", "ElasticBertForPreTraining"),
     ]
 )
 
@@ -49,6 +51,7 @@ MODEL_WITH_LM_HEAD_MAPPING_NAMES = OrderedDict(
         ("bert", "BertForMaskedLM"),
         ("gpt2", "GPT2LMHeadModel"),
         ("cpt", "CPTForConditionalGeneration"),
+        ("elasticbert", "ElasticBertForMaskedLM"),
     ]
 )
 
@@ -59,6 +62,7 @@ MODEL_FOR_CAUSAL_LM_MAPPING_NAMES = OrderedDict(
         ("bert", "BertLMHeadModel"),
         ("gpt2", "GPT2LMHeadModel"),
         ("bart", "BartForCausalLM"),
+        ("elasticbert", "ElasticBertLMHeadModel"),
     ]
 )
 
@@ -71,6 +75,7 @@ MODEL_FOR_MASKED_LM_MAPPING_NAMES = OrderedDict(
         ("roberta", "RobertaForMaskedLM"),
         ("bert", "BertForMaskedLM"),
         ("cpt", "CPTForConditionalGeneration"),
+        ("elasticbert", "ElasticBertForMaskedLM"),
     ]
 )
 
@@ -94,6 +99,7 @@ MODEL_FOR_SEQUENCE_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("bert", "BertForSequenceClassification"),
         ("gpt2", "GPT2ForSequenceClassification"),
         ("cpt", "CPTForSequenceClassification"),
+        ("elasticbert", "ElasticBertForSequenceClassification"),
     ]
 )
 
@@ -104,6 +110,7 @@ MODEL_FOR_QUESTION_ANSWERING_MAPPING_NAMES = OrderedDict(
         ("roberta", "RobertaForQuestionAnswering"),
         ("bert", "BertForQuestionAnswering"),
         ("cpt", "CPTForQuestionAnswering"),
+        ("elasticbert", "ElasticBertForQuestionAnswering"),
     ]
 )
 
@@ -115,6 +122,7 @@ MODEL_FOR_TOKEN_CLASSIFICATION_MAPPING_NAMES = OrderedDict(
         ("roberta", "RobertaForTokenClassification"),
         ("bert", "BertForTokenClassification"),
         ("gpt2", "GPT2ForTokenClassification"),
+        ("elasticbert", "ElasticBertForTokenClassification"),
     ]
 )
 
@@ -123,6 +131,7 @@ MODEL_FOR_MULTIPLE_CHOICE_MAPPING_NAMES = OrderedDict(
         # Model for Multiple Choice mapping
         ("roberta", "RobertaForMultipleChoice"),
         ("bert", "BertForMultipleChoice"),
+        ("elasticbert", "ElasticBertForMultipleChoice"),
     ]
 )
 
