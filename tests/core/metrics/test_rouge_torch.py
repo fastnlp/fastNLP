@@ -8,7 +8,7 @@ import socket
 import pytest
 import numpy as np
 
-from fastNLP import BLEU
+from fastNLP import ROUGE
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.metrics.metric import Metric
 from .utils import find_free_network_port, setup_ddp, _assert_allclose
@@ -48,9 +48,16 @@ def _test(local_rank: int,
         predictions = dataset[i]["predictions"]
         references = dataset[i]["references"]
         metric.update([predictions], [references])
-    my_result = metric.get_metric()
+    results = metric.get_metric()
     if local_rank == 0:
-        np.testing.assert_almost_equal(my_result["bleu"], 0.4181)
+        if metric_kwargs["use_stemmer"]:
+            np.testing.assert_almost_equal(results['rouge1_fmeasure'], 0.7495700120925903)
+            np.testing.assert_almost_equal(results['rouge2_fmeasure'], 0.5278186202049255)
+            np.testing.assert_almost_equal(results['rougeL_fmeasure'], 0.6954764127731323)
+        else:
+            np.testing.assert_almost_equal(results['rouge1_fmeasure'], 0.6382868885993958)
+            np.testing.assert_almost_equal(results['rouge2_fmeasure'], 0.4007352888584137)
+            np.testing.assert_almost_equal(results['rougeL_fmeasure'], 0.6105090975761414)
 
 
 @pytest.fixture(scope='class', autouse=True)
@@ -67,31 +74,28 @@ def pre_process():
 @pytest.mark.torch
 @pytest.mark.parametrize('dataset', [
     DataSet({
-        "predictions": ['the cat is on the mat', 'There is a big tree near the park here',
-                        'The sun rises from the northeast with sunshine', 'I was late for work today for the rainy'],
-        "references": [['a cat is on the mat'], ['A big tree is growing near the park here'],
-                       ["A fierce sun rises in the northeast with sunshine"],
-                       ['I went to work too late today for the rainy']]
+        "predictions": ['the cat is on the mats', 'There is a big trees near the park here',
+                        'The sun rises from the northeast with sunshine', 'I was later for work today for the rainy'],
+        "references": [['a cat is on the mating'], ['A big tree is growing near the parks here'],
+                       ["A fierce sunning rises in the northeast with sunshine"],
+                       ['I go to working too later today for the rainy']]
     })
     # DataSet({'predictions': ['the cat is on the mat'],
     #          'references': [['there is a cat on the mat', 'a cat is on the mat']]}),
 ])
-@pytest.mark.parametrize('is_ddp', [1,2,3])
-@pytest.mark.parametrize('metric_class', [BLEU])
+@pytest.mark.parametrize('is_ddp', [True, False])
+@pytest.mark.parametrize('metric_class', [ROUGE])
 @pytest.mark.parametrize('metric_kwargs', [{'backend': 'torch'}])
-@pytest.mark.parametrize('smooth', [False])
-class TestBLEU:
-
-    @pytest.mark.skipif(not (torch.cuda.is_available() and torch.cuda.device_count()>1), reason='no cuda')
+@pytest.mark.parametrize('use_stemmer', [True, False])
+class TestROUGE:
     def test_v1(self, is_ddp: bool, dataset: DataSet, metric_class: Type['Metric'],
-                metric_kwargs: Dict[str, Any], smooth: bool) -> None:
+                metric_kwargs: Dict[str, Any], use_stemmer: bool) -> None:
         global pool
-        if is_ddp == 1:
-
+        if is_ddp:
             if sys.platform == "win32":
                 pytest.skip("DDP not supported on windows")
             metric_kwargs['aggregate_when_get_metric'] = True
-            metric_kwargs["smooth"] = smooth
+            metric_kwargs["use_stemmer"] = use_stemmer
             processes = NUM_PROCESSES
             pool.starmap(
                 partial(
@@ -102,26 +106,12 @@ class TestBLEU:
                 ),
                 [(rank, processes, torch.device(f'cuda:{rank}')) for rank in range(processes)]
             )
-        elif is_ddp ==2:
-            if sys.platform == "win32":
-                pytest.skip("DDP not supported on windows")
-            metric_kwargs['aggregate_when_get_metric'] = True
-            metric_kwargs["smooth"] = smooth
-            processes = NUM_PROCESSES
-            pool.starmap(
-                partial(
-                    _test,
-                    dataset=dataset,
-                    metric_class=metric_class,
-                    metric_kwargs=metric_kwargs,
-                ),
-                [(0, processes, torch.device(f'cuda:{0}')), (1, processes, torch.device("cpu"))]
-            )
+
         else:
             device = torch.device(
                 "cuda" if (torch.cuda.is_available() and torch.cuda.device_count() > 0) else "cpu")
             metric_kwargs['aggregate_when_get_metric'] = False
-            metric_kwargs["smooth"] = smooth
+            metric_kwargs["use_stemmer"] = use_stemmer
             _test(
                 local_rank=0,
                 world_size=1,

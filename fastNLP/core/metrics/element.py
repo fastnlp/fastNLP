@@ -4,6 +4,7 @@ __all__ = [
 
 import os
 import functools
+from numbers import Number
 from typing import Union, List
 
 import numpy as np
@@ -19,7 +20,10 @@ def _wrap_cal_value(func):
     def _wrap_cal(*args, **kwargs):
         self = args[0]
         value = func(*args, **kwargs)
-        value = self.backend.get_scalar(value)
+        if isinstance(self.init_value, Number):
+            value = self.backend.get_scalar(value)
+        else:
+            value = self.backend.to_list(value)
         return value
 
     return _wrap_cal
@@ -310,6 +314,18 @@ class Element:
         if isinstance(other, Element):
             other = other.value
         return self.value > other
+
+    def __getitem__(self, item):
+        assert isinstance(item, int)
+        if isinstance(self.init_value, Number):
+            raise ValueError(f"{type(self.init_value)} object does not support item assignment")
+        else:
+            return self.to_list()[item]
+
+    def __setitem__(self, key, value):
+        if isinstance(self.init_value, Number):
+            raise ValueError(f"{type(self.init_value)} object does not support item assignment")
+        self.value[key] = value
 
     def __str__(self):
         return str(self.value)

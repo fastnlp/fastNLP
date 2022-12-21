@@ -1,8 +1,9 @@
 import os
 
+import numpy as np
 import pytest
 
-from fastNLP import DataSet, Bleu
+from fastNLP import DataSet, BLEU
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE, _NEED_IMPORT_ONEFLOW, _NEED_IMPORT_JITTOR
 
 if _NEED_IMPORT_PADDLE:
@@ -24,7 +25,7 @@ def test_bleu_paddle():
                        ["A fierce sun rises in the northeast with sunshine"],
                        ['I went to work too late today for the rainy']]
     })
-    metric = Bleu(backend="paddle")
+    metric = BLEU(backend="paddle")
     for i in range(0, len(dataset), 2):
         prediction1 = dataset[i]["predictions"]
         prediction2 = dataset[i + 1]["predictions"]
@@ -33,9 +34,9 @@ def test_bleu_paddle():
         metric.update([prediction1, prediction2], [references1, references2])
     my_result = metric.get_metric()
     result = my_result["bleu"]
-    assert result == 0.4181
+    np.testing.assert_almost_equal(my_result["bleu"], 0.4181)
 
-    metric = Bleu(backend="paddle", smooth=True)
+    metric = BLEU(backend="paddle", smooth=True)
     for i in range(0, len(dataset), 2):
         prediction1 = dataset[i]["predictions"]
         prediction2 = dataset[i + 1]["predictions"]
@@ -44,7 +45,7 @@ def test_bleu_paddle():
         metric.update([prediction1, prediction2], [references1, references2])
     my_result = metric.get_metric()
     result = my_result["bleu"]
-    assert result == 0.442571
+    np.testing.assert_almost_equal(my_result["bleu"], 0.442571)
 
 
 @pytest.mark.oneflow
@@ -56,26 +57,26 @@ def test_bleu_oneflow():
                        ["A fierce sun rises in the northeast with sunshine"],
                        ['I went to work too late today for the rainy']]
     })
-    metric = Bleu(backend="oneflow")
+    metric = BLEU(backend="oneflow")
     for i in range(len(dataset)):
         predictions = dataset[i]["predictions"]
         references = dataset[i]["references"]
         metric.update([predictions], [references])
     my_result = metric.get_metric()
     result = my_result["bleu"]
-    assert result == 0.4181
+    np.testing.assert_almost_equal(my_result["bleu"], 0.4181)
 
-    metric = Bleu(backend="oneflow", smooth=True)
+    metric = BLEU(backend="oneflow", smooth=True)
     for i in range(len(dataset)):
         predictions = dataset[i]["predictions"]
         references = dataset[i]["references"]
         metric.update([predictions], [references])
     my_result = metric.get_metric()
     result = my_result["bleu"]
-    assert result == 0.442571
+    np.testing.assert_almost_equal(my_result["bleu"], 0.442571)
 
 
-@pytest.mark.oneflow
+@pytest.mark.jittor
 def test_bleu_jittor():
     dataset = DataSet({
         "predictions": ['the cat is on the mat', 'There is a big tree near the park here',
@@ -84,7 +85,7 @@ def test_bleu_jittor():
                        ["A fierce sun rises in the northeast with sunshine"],
                        ['I went to work too late today for the rainy']]
     })
-    metric = Bleu(backend="jittor")
+    metric = BLEU(backend="jittor")
 
     for i in range(len(dataset)):
         predictions = dataset[i]["predictions"]
@@ -92,13 +93,13 @@ def test_bleu_jittor():
         metric.update([predictions], [references])
     my_result = metric.get_metric()
     result = my_result["bleu"]
-    assert result == 0.4181
+    np.testing.assert_almost_equal(my_result["bleu"], 0.4181)
 
-    metric = Bleu(backend="jittor", smooth=True)
+    metric = BLEU(backend="jittor", smooth=True)
     for i in range(len(dataset)):
         predictions = dataset[i]["predictions"]
         references = dataset[i]["references"]
         metric.update([predictions], [references])
     my_result = metric.get_metric()
     result = my_result["bleu"]
-    assert result == 0.442571
+    np.testing.assert_almost_equal(my_result["bleu"], 0.442571)
