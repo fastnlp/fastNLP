@@ -1,24 +1,22 @@
-__all__ = [
-    'ROUGE'
-]
+__all__ = ['ROUGE']
 
 import re
 from collections import Counter
-from typing import Union, Any, Optional, Callable, Sequence, Dict, Tuple, List, Literal, TypedDict
+from typing import (Any, Callable, Dict, List, Literal, Optional, Sequence,
+                    Tuple, Union)
 
 import numpy as np
 
-from fastNLP.core.metrics.metric import Metric
 from fastNLP.core.metrics.backend import Backend
-
+from fastNLP.core.metrics.metric import Metric
 from fastNLP.envs.utils import _module_available
 
 
 def _normalize_and_tokenize(
-        text: str,
-        stemmer: Optional[Any] = None,
-        normalizer: Callable[[str], str] = None,
-        tokenizer: Callable[[str], Sequence[str]] = None,
+    text: str,
+    stemmer: Optional[Any] = None,
+    normalizer: Callable[[str], str] = None,
+    tokenizer: Callable[[str], Sequence[str]] = None,
 ) -> Sequence[str]:
     """对``sentence``使用Porter stemmer用于去除单词后缀以改进匹配。并规范化句子以及进行分词。
 
@@ -31,15 +29,17 @@ def _normalize_and_tokenize(
         如果这是``None``，则默认按空格分隔。
         这个函数必须输入一个 `str` 并且返回 ``Sequence[str]``。
     """
-    text = normalizer(text) if callable(normalizer) else re.sub(r"[^a-z0-9]+", " ", text.lower())
-    tokens = tokenizer(text) if callable(tokenizer) else re.split(r"\s+", text)
+    text = normalizer(text) if callable(normalizer) else re.sub(
+        r'[^a-z0-9]+', ' ', text.lower())
+    tokens = tokenizer(text) if callable(tokenizer) else re.split(r'\s+', text)
     if stemmer:
         tokens = [stemmer.stem(x) if len(x) > 3 else x for x in tokens]
     tokens = [x for x in tokens if (isinstance(x, str) and len(x) > 0)]
     return tokens
 
 
-def _compute_metrics(matches: int, pred_len: int, reference_len: int) -> Dict[str, np.ndarray]:
+def _compute_metrics(matches: int, pred_len: int,
+                     reference_len: int) -> Dict[str, np.ndarray]:
     """这个函数将根据命中数或者LCS和列表的长度去计算预测句子和标准译文句子的精度、召回率和F1得分值。
 
     :param matches: 匹配数或最长公共子序列的长度。
@@ -49,13 +49,18 @@ def _compute_metrics(matches: int, pred_len: int, reference_len: int) -> Dict[st
     precision = matches / pred_len
     recall = matches / reference_len
     if precision == recall == 0.0:
-        return dict(precision=np.array(0.0), recall=np.array(0.0), fmeasure=np.array(0.0))
+        return dict(precision=np.array(0.0),
+                    recall=np.array(0.0),
+                    fmeasure=np.array(0.0))
 
     fmeasure = 2 * precision * recall / (precision + recall)
-    return dict(precision=np.array(precision), recall=np.array(recall), fmeasure=np.array(fmeasure))
+    return dict(precision=np.array(precision),
+                recall=np.array(recall),
+                fmeasure=np.array(fmeasure))
 
 
-def _rougeL_score(pred: Sequence[str], reference: Sequence[str]) -> Dict[str, np.ndarray]:
+def _rougeL_score(pred: Sequence[str],
+                  reference: Sequence[str]) -> Dict[str, np.ndarray]:
     """计算Rouge-L metric的精度、召回率和F1得分值。
 
     :param pred: 一个预测句子的序列.
@@ -63,7 +68,9 @@ def _rougeL_score(pred: Sequence[str], reference: Sequence[str]) -> Dict[str, np
     """
     pred_len, reference_len = len(pred), len(reference)
     if 0 in (pred_len, reference_len):
-        return dict(precision=np.array(0.0), recall=np.array(0.0), fmeasure=np.array(0.0))
+        return dict(precision=np.array(0.0),
+                    recall=np.array(0.0),
+                    fmeasure=np.array(0.0))
     lcs = [[0] * (len(pred) + 1) for _ in range(len(reference) + 1)]
     for i in range(1, len(reference) + 1):
         for j in range(1, len(pred) + 1):
@@ -74,16 +81,19 @@ def _rougeL_score(pred: Sequence[str], reference: Sequence[str]) -> Dict[str, np
     return _compute_metrics(lcs[-1][-1], pred_len, reference_len)
 
 
-def _rougeN_score(pred: Sequence[str], reference: Sequence[str], n_gram: int) -> Dict[str, np.ndarray]:
+def _rougeN_score(pred: Sequence[str], reference: Sequence[str],
+                  n_gram: int) -> Dict[str, np.ndarray]:
     """计算Rouge-N metric的精度、召回率和F1得分值。
 
     :param pred: 一个预测句子的序列.
     :param reference: 一个标准译文句子的序列.
     :param n_gram: ``N-gram``值.
     """
+
     def get_n_gram(tokens: Sequence[str], n: int) -> Counter:
         ngrams: Counter = Counter()
-        for ngram in (tuple(tokens[i: i + n]) for i in range(len(tokens) - n + 1)):
+        for ngram in (tuple(tokens[i:i + n])
+                      for i in range(len(tokens) - n + 1)):
             ngrams[ngram] += 1
         return ngrams
 
@@ -92,9 +102,12 @@ def _rougeN_score(pred: Sequence[str], reference: Sequence[str], n_gram: int) ->
     pred_len = sum(pred_ngarms.values())
     reference_len = sum(reference_ngarms.values())
     if 0 in (pred_len, reference_len):
-        return dict(precision=np.array(0.0), recall=np.array(0.0), fmeasure=np.array(0.0))
+        return dict(precision=np.array(0.0),
+                    recall=np.array(0.0),
+                    fmeasure=np.array(0.0))
 
-    hits = sum(min(pred_ngarms[w], reference_ngarms[w]) for w in set(pred_ngarms))
+    hits = sum(
+        min(pred_ngarms[w], reference_ngarms[w]) for w in set(pred_ngarms))
     return _compute_metrics(hits, pred_len, reference_len)
 
 
@@ -116,52 +129,69 @@ class ROUGE(Metric):
         - ``best`` 采用预测和多个对应参考之间获得的最佳fmmeasure得分。
 
     Examples:
-        >>> predictions = ['the cat is on the mat', 'There is a big tree near the park here']
-        >>> references = [['a cat is on the mat'], ['A big tree is growing near the park here']]
+        >>> predictions = ['the cat is on the mat', 'There is a big tree near the park here'] # noqa: E501
+        >>> references = [['a cat is on the mat'], ['A big tree is growing near the park here']] # noqa: E501
         >>> metric = ROUGE()
         >>> metric.update(predictions, references)
         >>> results = metric.get_metric()
     """
-    def __init__(self,
-                 rouge_keys: Union[List, Tuple,int,str] = (1,2,'L'),
-                 use_stemmer: bool = False,
-                 normalizer: Callable[[str], str] = None,
-                 tokenizer: Callable[[str], Sequence[str]] = None,
-                 backend: Union[str, Backend, None] = 'auto',
-                 aggregate_when_get_metric: bool = None,
-                 accumulate: Literal["avg", "best"] = "best",
-                 **kwargs: Any,
-                 ):
-        super(ROUGE, self).__init__(backend=backend, aggregate_when_get_metric=aggregate_when_get_metric)
-        if isinstance(rouge_keys,int) or isinstance(rouge_keys,str):
+
+    def __init__(
+        self,
+        rouge_keys: Union[List, Tuple, int, str] = (1, 2, 'L'),
+        use_stemmer: bool = False,
+        normalizer: Callable[[str], str] = None,
+        tokenizer: Callable[[str], Sequence[str]] = None,
+        backend: Union[str, Backend, None] = 'auto',
+        aggregate_when_get_metric: bool = None,
+        accumulate: Literal['avg', 'best'] = 'best',
+        **kwargs: Any,
+    ):
+        super().__init__(backend=backend,
+                         aggregate_when_get_metric=aggregate_when_get_metric)
+        if isinstance(rouge_keys, int) or isinstance(rouge_keys, str):
             rouge_keys = [rouge_keys]
         for rouge_key in rouge_keys:
             if isinstance(rouge_key, int):
                 if rouge_key < 1 or rouge_key > 9:
-                    raise ValueError(f"Got unknown rouge key {rouge_key}. Expected to be one of {1 - 9} or L")
-            elif rouge_key != "L":
-                raise ValueError(f"Got unknown rouge key {rouge_key}. Expected to be one of {1 - 9} or L")
+                    raise ValueError(
+                        f'Got unknown rouge key {rouge_key}. Expected to be one of {1 - 9} or L'  # noqa: E501
+                    )
+            elif rouge_key != 'L':
+                raise ValueError(
+                    f'Got unknown rouge key {rouge_key}. Expected to be one of {1 - 9} or L'  # noqa: E501
+                )
         self.rouge_keys = rouge_keys
         if use_stemmer:
-            if _module_available("nltk"):
+            if _module_available('nltk'):
                 import nltk
                 self.stemmer = nltk.stem.porter.PorterStemmer()
             else:
-                raise ValueError("You need to download the nltk package")
+                raise ValueError('You need to download the nltk package')
         else:
             self.stemmer = None
         self.normalizer = normalizer
         self.tokenizer = tokenizer
         self.accumulate = accumulate
-        self.register_element(name="total_samples", value=0, aggregate_method='sum', backend=backend)
-        self.register_element(name="fmeasure", value=[0. for _ in range(len(rouge_keys))], aggregate_method='sum',
+        self.register_element(name='total_samples',
+                              value=0,
+                              aggregate_method='sum',
                               backend=backend)
-        self.register_element(name="precision", value=[0. for _ in range(len(rouge_keys))], aggregate_method='sum',
+        self.register_element(name='fmeasure',
+                              value=[0. for _ in range(len(rouge_keys))],
+                              aggregate_method='sum',
                               backend=backend)
-        self.register_element(name="recall", value=[0. for _ in range(len(rouge_keys))], aggregate_method='sum',
+        self.register_element(name='precision',
+                              value=[0. for _ in range(len(rouge_keys))],
+                              aggregate_method='sum',
+                              backend=backend)
+        self.register_element(name='recall',
+                              value=[0. for _ in range(len(rouge_keys))],
+                              aggregate_method='sum',
                               backend=backend)
 
-    def update(self, predictions: Sequence[str], references: Sequence[Sequence[str]]) -> None:
+    def update(self, predictions: Sequence[str],
+               references: Sequence[Sequence[str]]) -> None:
         r"""
        :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
        :param predictions: 预测的 ``sentence``, type为``Sequence``，长度可变，假设为 ``L``
@@ -171,11 +201,15 @@ class ROUGE(Metric):
 
         for prediction, _references in zip(predictions, references):
             self.total_samples += 1
-            pred_token = _normalize_and_tokenize(prediction, self.stemmer, self.normalizer, self.tokenizer)
+            pred_token = _normalize_and_tokenize(prediction, self.stemmer,
+                                                 self.normalizer,
+                                                 self.tokenizer)
             reference_len = len(_references)
             ref_tokens = []
             for reference in _references:
-                ref_token = _normalize_and_tokenize(reference, self.stemmer, self.normalizer, self.tokenizer)
+                ref_token = _normalize_and_tokenize(reference, self.stemmer,
+                                                    self.normalizer,
+                                                    self.tokenizer)
                 ref_tokens.append(ref_token)
             for i, rouge_key in enumerate(self.rouge_keys):
                 fmeasure = precision = recall = 0
@@ -186,17 +220,18 @@ class ROUGE(Metric):
                     else:
                         score = _rougeL_score(pred_token, ref_token)
                     if self.accumulate == 'best':
-                        if fmeasure < score["fmeasure"]:
-                            fmeasure = score["fmeasure"]
-                            precision = score["precision"]
-                            recall = score["recall"]
+                        if fmeasure < score['fmeasure']:
+                            fmeasure = score['fmeasure']
+                            precision = score['precision']
+                            recall = score['recall']
                     else:
-                        fmeasure += score["fmeasure"]
-                        precision += score["precision"]
-                        recall += score["recall"]
+                        fmeasure += score['fmeasure']
+                        precision += score['precision']
+                        recall += score['recall']
                 if self.accumulate == 'avg':
-                    fmeasure, precision, recall = fmeasure / reference_len, \
-                                                  precision / reference_len, recall / reference_len
+                    fmeasure, precision, recall = \
+                        fmeasure / reference_len, \
+                        precision / reference_len, recall / reference_len
 
                 self.fmeasure[i] += fmeasure
                 self.precision[i] += precision
@@ -208,13 +243,14 @@ class ROUGE(Metric):
 
         :return: 包含以下内容的字典：``{ `rouge1_fmeasure` : float}``；
         """
-        fmeasure, precision, recall = self.fmeasure.to_list(), \
-                                      self.precision.to_list(), self.recall.to_list()
+        fmeasure, precision, recall = \
+            self.fmeasure.to_list(), \
+            self.precision.to_list(), self.recall.to_list()
         total_samples = self.total_samples.get_scalar()
         results = {}
         for i, rouge_key in enumerate(self.rouge_keys):
-            results[f"rouge{rouge_key}_fmeasure"] = fmeasure[i] / total_samples
-            results[f"rouge{rouge_key}_precision"] = precision[i] / total_samples
-            results[f"rouge{rouge_key}_recall"] = recall[i] / total_samples
+            results[f'rouge{rouge_key}_fmeasure'] = fmeasure[i] / total_samples
+            results[
+                f'rouge{rouge_key}_precision'] = precision[i] / total_samples
+            results[f'rouge{rouge_key}_recall'] = recall[i] / total_samples
         return results
-

@@ -1,10 +1,8 @@
-import os
 import sys
 from typing import Dict, List, Any, Callable, Type, Union
 from functools import partial
 import copy
 
-import socket
 import pytest
 import numpy as np
 
