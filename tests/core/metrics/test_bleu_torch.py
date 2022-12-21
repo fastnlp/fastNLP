@@ -8,7 +8,7 @@ import socket
 import pytest
 import numpy as np
 
-from fastNLP import Bleu
+from fastNLP import BLEU
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.metrics.metric import Metric
 from .utils import find_free_network_port, setup_ddp, _assert_allclose
@@ -50,7 +50,7 @@ def _test(local_rank: int,
         metric.update([predictions], [references])
     my_result = metric.get_metric()
     if local_rank == 0:
-        print(my_result)
+        np.testing.assert_almost_equal(my_result["bleu"], 0.4181)
 
 
 @pytest.fixture(scope='class', autouse=True)
@@ -77,10 +77,10 @@ def pre_process():
     #          'references': [['there is a cat on the mat', 'a cat is on the mat']]}),
 ])
 @pytest.mark.parametrize('is_ddp', [1,2,3])
-@pytest.mark.parametrize('metric_class', [Bleu])
+@pytest.mark.parametrize('metric_class', [BLEU])
 @pytest.mark.parametrize('metric_kwargs', [{'backend': 'torch'}])
-@pytest.mark.parametrize('smooth', [True, False])
-class TestBleu:
+@pytest.mark.parametrize('smooth', [False])
+class TestBLEU:
 
     @pytest.mark.skipif(not (torch.cuda.is_available() and torch.cuda.device_count()>1), reason='no cuda')
     def test_v1(self, is_ddp: bool, dataset: DataSet, metric_class: Type['Metric'],

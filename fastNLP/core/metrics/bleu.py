@@ -1,5 +1,5 @@
 __all__ = [
-    'Bleu'
+    'BLEU'
 ]
 
 from collections import Counter
@@ -33,7 +33,7 @@ def _get_brevity_penalty(pred_len: np.array, references_len: np.array) -> np.arr
     return np.array(np.exp(1 - references_len / pred_len))
 
 
-class Bleu(Metric):
+class BLEU(Metric):
     """
       计算 bleu 的 metric 。
       :param n_gram: Gram的范围是[1,4]
@@ -55,7 +55,7 @@ class Bleu(Metric):
             aggregate_when_get_metric: bool = None,
             **kwargs: Any,
     ):
-        super(Bleu, self).__init__(backend=backend, aggregate_when_get_metric=aggregate_when_get_metric)
+        super(BLEU, self).__init__(backend=backend, aggregate_when_get_metric=aggregate_when_get_metric)
         self.n_gram = n_gram
         self.smooth = smooth
         if ngram_weights is not None and len(ngram_weights) != n_gram:
@@ -82,11 +82,7 @@ class Bleu(Metric):
 
         for prediction, references in zip(predictions_token, references_token):
             self.pred_len += len(prediction)
-            references_len_list = [len(reference) for reference in references]
-            references_len_diff = [abs(len(prediction) - length) for length in references_len_list]
-            min_index = references_len_diff.index(min(references_len_diff))
-            self.references_len += references_len_list[min_index]
-
+            self.references_len += len(min(references, key=lambda x: abs(len(x) - self.pred_len)))
             pred_counter: Counter = get_n_gram(prediction, self.n_gram)
             reference_counter: Counter = Counter()
             for reference in references:
@@ -95,14 +91,9 @@ class Bleu(Metric):
             counter_clip = pred_counter & reference_counter
 
             for counter in counter_clip:
-                values = self.precision_matches.tensor2numpy()
-                values[len(counter) - 1] += counter_clip[counter]
-                self.precision_matches.fill_value(values)
+                self.precision_matches[len(counter) - 1] += counter_clip[counter]
             for counter in pred_counter:
-                values = self.precision_total.tensor2numpy()
-
-                values[len(counter) - 1] += pred_counter[counter]
-                self.precision_total.fill_value(values)
+                self.precision_total[len(counter) - 1] += pred_counter[counter]
 
     def get_metric(self) -> dict:
         r"""
