@@ -318,13 +318,13 @@ class Element:
     def __getitem__(self, item):
         assert isinstance(item, int)
         if isinstance(self.init_value, Number):
-            raise ValueError(f"{type(self.init_value)} object does not support item assignment")
+            raise TypeError(f"{type(self.init_value)} object is not subscriptable")
         else:
             return self.to_list()[item]
 
     def __setitem__(self, key, value):
         if isinstance(self.init_value, Number):
-            raise ValueError(f"{type(self.init_value)} object does not support item assignment")
+            raise TypeError(f"{type(self.init_value)} object is not subscriptable")
         self.value[key] = value
 
     def __str__(self):

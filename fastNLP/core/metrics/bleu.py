@@ -92,7 +92,6 @@ class BLEU(Metric):
        :param references: 答案译文，type为``Sequence``，长度必须也为``L``，
            保持和``predictions``一致，每一个元素也是一个``Sequence``。
        """
-        # 为了兼容不同框架，我们将输入变量全部转为numpy类型来进行计算。
         references_token: Sequence[Sequence[Sequence[str]]] = [[
             tokenizer_fn(line) if line is not None else [] for line in r
         ] for r in references]
@@ -103,7 +102,7 @@ class BLEU(Metric):
         for prediction, references in zip(predictions_token, references_token):
             self.pred_len += len(prediction)
             self.references_len += len(
-                min(references, key=lambda x: abs(len(x) - self.pred_len)))
+                min(references, key=lambda x: abs(len(x) - len(prediction))))
             pred_counter: Counter = get_n_gram(prediction, self.n_gram)
             reference_counter: Counter = Counter()
             for reference in references:
@@ -111,11 +110,11 @@ class BLEU(Metric):
 
             counter_clip = pred_counter & reference_counter
 
-            for counter in counter_clip:
-                self.precision_matches[len(counter) -
-                                       1] += counter_clip[counter]
-            for counter in pred_counter:
-                self.precision_total[len(counter) - 1] += pred_counter[counter]
+            for ngram in counter_clip:
+                self.precision_matches[len(ngram) -
+                                       1] += counter_clip[ngram]
+            for ngram in pred_counter:
+                self.precision_total[len(ngram) - 1] += pred_counter[ngram]
 
     def get_metric(self) -> dict:
         r"""
@@ -130,8 +129,7 @@ class BLEU(Metric):
         if min(precision_matches) == 0.0:
             return {'bleu': np.array(0.0)}
         if self.smooth:
-            precision_score = np.add(precision_matches, np.ones(
-                self.n_gram)) / np.add(precision_total, np.ones(self.n_gram))
+            precision_score = (precision_matches+1)/(precision_total+1)
             precision_score[0] = precision_matches[0] / precision_total[0]
         else:
             precision_score = precision_matches / precision_total
@@ -139,7 +137,7 @@ class BLEU(Metric):
         precision_score = np.array(
             self.ngram_weights) * np.log(precision_score)
         brevity_penalty = _get_brevity_penalty(
-            self.pred_len.tensor2numpy(), self.references_len.tensor2numpy())
+            self.pred_len.get_scalar(), self.references_len.get_scalar())
         bleu = brevity_penalty * np.exp(np.sum(precision_score))
         result = {'bleu': round(float(bleu), 6)}
         return result
