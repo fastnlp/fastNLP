@@ -42,7 +42,6 @@ def _test(local_rank: int,
     metric = metric_class(**metric_kwargs)
     # dataset 也类似（每个进程有自己的一个）
     dataset = copy.deepcopy(dataset)
-    print(device)
     metric.to(device)
     # 把数据拆到每个 GPU 上，有点模仿 DistributedSampler 的感觉，但这里数据单位是一个 batch（即每个 i 取了一个 batch 到自己的 GPU 上）
     for i in range(local_rank, len(dataset), world_size):

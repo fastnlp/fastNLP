@@ -47,8 +47,6 @@ class MyMetric2(Metric):
             self.b[i] += i
 
     def get_metric(self) -> dict:
-
-        self.d[1]=1
         return {"a": self.a.to_list(), "b": self.b.to_list(), "c": self.c.to_list()}
 
 
