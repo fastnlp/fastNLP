@@ -47,7 +47,27 @@ class MyMetric2(Metric):
             self.b[i] += i
 
     def get_metric(self) -> dict:
-        return {"a": self.a.to_list(), "b": self.b.to_list(), "c": self.c.to_list()}
+        return {"a": self.a.to_list(), "b": self.b.to_list(), "c": self.c}
+
+
+class MyMetric3(Metric):
+    def __init__(self):
+        super(MyMetric3, self).__init__()
+        self.register_element(name="a", value=[[0, 0, 0, 0], [0, 0, 0, 0]])
+        self.register_element(name="b", value=[[0, 0, 0, 0], [0, 0, 0, 0]])
+        self.register_element(name="c", value=[[0, 0, 0, 0], [0, 0, 0, 0]])
+
+    def update(self, pred):
+        self.a += pred
+        self.b += pred
+        self.c += pred
+        self.a /= 2
+        self.b -= self.c
+        self.c *= 2
+        self.b += 2
+
+    def get_metric(self) -> dict:
+        return {"a": self.a.to_list(), "b": self.b.to_list(), "c": self.c}
 
 
 class TestElemnt:
@@ -69,3 +89,13 @@ class TestElemnt:
         np.testing.assert_almost_equal(res["a"], [8, 4, 2, 1])
         np.testing.assert_almost_equal(res["b"], [2, 3, 4, 5])
         np.testing.assert_almost_equal(res["c"], [32, 16, 8, 4])
+
+    @pytest.mark.torch
+    def test_case_v3(self):
+        pred = torch.tensor([[16, 8, 4, 2], [27, 9, 3, 1]])
+        metric = MyMetric3()
+        metric.update(pred)
+        res = metric.get_metric()
+        np.testing.assert_almost_equal(res["a"], [[8, 4, 2, 1], [13, 4, 1, 0]])
+        np.testing.assert_almost_equal(res["b"], [[2, 2, 2, 2], [2, 2, 2, 2]])
+        np.testing.assert_almost_equal(res["c"], [[32, 16, 8, 4], [54, 18, 6, 2]])

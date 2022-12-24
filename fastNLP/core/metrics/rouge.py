@@ -2,6 +2,7 @@ __all__ = ['ROUGE']
 
 import re
 from collections import Counter
+from difflib import SequenceMatcher
 from typing import (Any, Callable, Dict, List, Literal, Optional, Sequence,
                     Tuple, Union)
 
@@ -22,10 +23,10 @@ def get_tokenizer(lang):
 
 
 def _normalize_and_tokenize(
-    text: str,
-    stemmer: Optional[Any] = None,
-    normalizer: Callable[[str], str] = None,
-    tokenizer: Callable[[str], Sequence[str]] = None,
+        text: str,
+        stemmer: Optional[Any] = None,
+        normalizer: Callable[[str], str] = None,
+        tokenizer: Callable[[str], Sequence[str]] = None,
 ) -> Sequence[str]:
     """对``sentence``使用Porter stemmer用于去除单词后缀以改进匹配。并规范化句子以及进行分词。
 
@@ -47,7 +48,7 @@ def _normalize_and_tokenize(
 
 
 def _compute_metrics(matches: int, pred_len: int,
-                     reference_len: int) -> Dict[str, np.ndarray]:
+                     reference_len: int) -> Dict[str, float]:
     """这个函数将根据命中数或者LCS和列表的长度去计算预测句子和标准译文句子的精度、召回率和F1得分值。
 
     :param matches: 匹配数或最长公共子序列的长度。
@@ -57,18 +58,18 @@ def _compute_metrics(matches: int, pred_len: int,
     precision = matches / pred_len
     recall = matches / reference_len
     if precision == recall == 0.0:
-        return dict(precision=np.array(0.0),
-                    recall=np.array(0.0),
-                    fmeasure=np.array(0.0))
+        return dict(precision=float(0.0),
+                    recall=float(0.0),
+                    fmeasure=float(0.0))
 
     fmeasure = 2 * precision * recall / (precision + recall)
-    return dict(precision=np.array(precision),
-                recall=np.array(recall),
-                fmeasure=np.array(fmeasure))
+    return dict(precision=float(precision),
+                recall=float(recall),
+                fmeasure=float(fmeasure))
 
 
 def _rougeL_score(pred: Sequence[str],
-                  reference: Sequence[str]) -> Dict[str, np.ndarray]:
+                  reference: Sequence[str]) -> Dict[str, float]:
     """计算Rouge-L metric的精度、召回率和F1得分值。
 
     :param pred: 一个预测句子的序列.
@@ -76,21 +77,18 @@ def _rougeL_score(pred: Sequence[str],
     """
     pred_len, reference_len = len(pred), len(reference)
     if 0 in (pred_len, reference_len):
-        return dict(precision=np.array(0.0),
-                    recall=np.array(0.0),
-                    fmeasure=np.array(0.0))
-    lcs = [[0] * (len(pred) + 1) for _ in range(len(reference) + 1)]
-    for i in range(1, len(reference) + 1):
-        for j in range(1, len(pred) + 1):
-            if reference[i - 1] == pred[j - 1]:
-                lcs[i][j] = lcs[i - 1][j - 1] + 1
-            else:
-                lcs[i][j] = max(lcs[i - 1][j], lcs[i][j - 1])
-    return _compute_metrics(lcs[-1][-1], pred_len, reference_len)
+        return dict(precision=float(0.0),
+                    recall=float(0.0),
+                    fmeasure=float(0.0))
+    lcs = 0
+    matches = SequenceMatcher(None, pred, reference).get_matching_blocks()
+    for match in matches:
+        lcs += match.size
+    return _compute_metrics(lcs, pred_len, reference_len)
 
 
 def _rougeN_score(pred: Sequence[str], reference: Sequence[str],
-                  n_gram: int) -> Dict[str, np.ndarray]:
+                  n_gram: int) -> Dict[str, float]:
     """计算Rouge-N metric的精度、召回率和F1得分值。
 
     :param pred: 一个预测句子的序列.
@@ -110,9 +108,9 @@ def _rougeN_score(pred: Sequence[str], reference: Sequence[str],
     pred_len = sum(pred_ngarms.values())
     reference_len = sum(reference_ngarms.values())
     if 0 in (pred_len, reference_len):
-        return dict(precision=np.array(0.0),
-                    recall=np.array(0.0),
-                    fmeasure=np.array(0.0))
+        return dict(precision=float(0.0),
+                    recall=float(0.0),
+                    fmeasure=float(0.0))
 
     hits = sum(
         min(pred_ngarms[w], reference_ngarms[w]) for w in set(pred_ngarms))
@@ -145,15 +143,15 @@ class ROUGE(Metric):
     """
 
     def __init__(
-        self,
-        rouge_keys: Union[List, Tuple, int, str] = (1, 2, 'L'),
-        use_stemmer: bool = False,
-        normalizer: Callable[[str], str] = None,
-        tokenizer: Union[Callable, str] = None,
-        backend: Union[str, Backend, None] = 'auto',
-        aggregate_when_get_metric: bool = None,
-        accumulate: Literal['avg', 'best'] = 'best',
-        **kwargs: Any,
+            self,
+            rouge_keys: Union[List, Tuple, int, str] = (1, 2, 'L'),
+            use_stemmer: bool = False,
+            normalizer: Callable[[str], str] = None,
+            tokenizer: Union[Callable, str] = None,
+            backend: Union[str, Backend, None] = 'auto',
+            aggregate_when_get_metric: bool = None,
+            accumulate: Literal['avg', 'best'] = 'best',
+            **kwargs: Any,
     ):
         super().__init__(backend=backend,
                          aggregate_when_get_metric=aggregate_when_get_metric)
@@ -175,7 +173,7 @@ class ROUGE(Metric):
                 import nltk
                 self.stemmer = nltk.stem.porter.PorterStemmer()
             else:
-                raise ValueError('You need to download the nltk package')
+                raise ValueError('the nltk package is needed to use stemmer, check https://www.nltk.org/install.html for installation.')
         else:
             self.stemmer = None
         self.normalizer = normalizer
@@ -212,9 +210,9 @@ class ROUGE(Metric):
                               backend=backend)
 
     def update(
-        self, predictions: Union[str, Sequence[str]],
-        references: Union[str, Sequence[str],
-                          Sequence[Sequence[str]]]) -> None:
+            self, predictions: Union[str, Sequence[str]],
+            references: Union[str, Sequence[str],
+                              Sequence[Sequence[str]]]) -> None:
         r"""
        :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
        :param predictions: 预测的 ``sentence``, type为``Sequence``，长度可变，假设为 ``L``
@@ -265,8 +263,7 @@ class ROUGE(Metric):
                 ref_tokens.append(ref_token)
             for i, rouge_key in enumerate(self.rouge_keys):
                 fmeasure = precision = recall = 0
-                for j, reference in enumerate(_references):
-                    ref_token = ref_tokens[j]
+                for j, ref_token in enumerate(ref_tokens):
                     if isinstance(rouge_key, int):
                         score = _rougeN_score(pred_token, ref_token, rouge_key)
                     else:
@@ -293,7 +290,8 @@ class ROUGE(Metric):
         r"""
         :meth:`get_metric` 函数将根据 :meth:`update` 函数累计的评价指标统计量来计算最终的评价结果。
 
-        :return: 包含以下内容的字典：``{ `rouge1_fmeasure` : float}``；
+        :return: 包含以下内容的字典：``{ 'rouge{x}_fmeasure': float, 'rouge{x}_precision': float,
+            'rouge{x}_recall': float}``,其中{x}的值取决于在初始化时传入的rouge_keys。
         """
         fmeasure, precision, recall = \
             self.fmeasure.to_list(), \

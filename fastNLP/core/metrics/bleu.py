@@ -27,13 +27,13 @@ def get_tokenizer(lang):
         return None
 
 
-def _get_brevity_penalty(pred_len: np.array,
-                         references_len: np.array) -> np.array:
+def _get_brevity_penalty(pred_len: float,
+                         references_len: float) -> float | np.float:
     if pred_len >= references_len:
-        return np.array(1.)
-    elif pred_len == np.array(0.) or references_len == np.array(0.):
-        return np.array(0.)
-    return np.array(np.exp(1 - references_len / pred_len))
+        return float(1.)
+    elif pred_len == 0 or references_len == 0:
+        return float(0.)
+    return np.exp(1 - references_len / pred_len)
 
 
 class BLEU(Metric):
@@ -179,7 +179,7 @@ class BLEU(Metric):
         precision_matches = self.precision_matches.tensor2numpy()
         precision_total = self.precision_total.tensor2numpy()
         if min(precision_matches) == 0.0:
-            return {'bleu': np.array(0.0)}
+            return {'bleu': float(0.0)}
         if self.smooth:
             precision_score = (precision_matches + 1) / (precision_total + 1)
             precision_score[0] = precision_matches[0] / precision_total[0]

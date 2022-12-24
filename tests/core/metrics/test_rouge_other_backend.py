@@ -55,7 +55,7 @@ def test_input3(dataset):
    result = metric.get_metric()
    print(result)
 
-@pytest.mark.parametrize('use_stemmer', [True, False])
+@pytest.mark.parametrize('use_stemmer', [True,False])
 @pytest.mark.parametrize('accumulate', ['best','avg'])
 @pytest.mark.paddle
 def test_rouge_paddle(use_stemmer,accumulate):
