@@ -42,6 +42,7 @@ def _test(local_rank: int,
     metric = metric_class(**metric_kwargs)
     # dataset 也类似（每个进程有自己的一个）
     dataset = copy.deepcopy(dataset)
+    print(device)
     metric.to(device)
     # 把数据拆到每个 GPU 上，有点模仿 DistributedSampler 的感觉，但这里数据单位是一个 batch（即每个 i 取了一个 batch 到自己的 GPU 上）
     for i in range(local_rank, len(dataset), world_size):
@@ -83,7 +84,7 @@ def pre_process():
     # DataSet({'predictions': ['the cat is on the mat'],
     #          'references': [['there is a cat on the mat', 'a cat is on the mat']]}),
 ])
-@pytest.mark.parametrize('is_ddp', [True, False])
+@pytest.mark.parametrize('is_ddp', [True,False])
 @pytest.mark.parametrize('metric_class', [ROUGE])
 @pytest.mark.parametrize('metric_kwargs', [{'backend': 'torch'}])
 @pytest.mark.parametrize('use_stemmer', [True, False])

@@ -33,6 +33,7 @@ class MyMetric2(Metric):
         self.register_element(name="a", value=[0, 0, 0, 0])
         self.register_element(name="b", value=[0, 0, 0, 0])
         self.register_element(name="c", value=[0, 0, 0, 0])
+        self.register_element(name="d", value=0)
 
     def update(self, pred):
         self.a += pred
@@ -46,6 +47,8 @@ class MyMetric2(Metric):
             self.b[i] += i
 
     def get_metric(self) -> dict:
+
+        self.d[1]=1
         return {"a": self.a.to_list(), "b": self.b.to_list(), "c": self.c.to_list()}
 
 

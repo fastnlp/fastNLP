@@ -67,11 +67,14 @@ def pre_process():
 @pytest.mark.torch
 @pytest.mark.parametrize('dataset', [
     DataSet({
-        "predictions": ['the cat is on the mat', 'There is a big tree near the park here',
-                        'The sun rises from the northeast with sunshine', 'I was late for work today for the rainy'],
-        "references": [['a cat is on the mat'], ['A big tree is growing near the park here'],
+        "predictions": ['There is a big tree near the park here',
+                        'The sun rises from the northeast with sunshine',
+                        'I was late for work today for the rainy',
+                        'the cat is on the mat', ],
+        "references": [['A big tree is growing near the park here'],
                        ["A fierce sun rises in the northeast with sunshine"],
-                       ['I went to work too late today for the rainy']]
+                       ['I went to work too late today for the rainy'],
+                       ['a cat is on the mat', 'one cat is in the mat', 'cat is in mat', 'a cat is on a blue mat'], ]
     })
     # DataSet({'predictions': ['the cat is on the mat'],
     #          'references': [['there is a cat on the mat', 'a cat is on the mat']]}),

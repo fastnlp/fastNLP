@@ -1,12 +1,12 @@
 __all__ = ['BLEU']
 
 from collections import Counter
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Callable, Optional, Sequence, Union
 
 import numpy as np
-
 from fastNLP.core.metrics.backend import Backend
 from fastNLP.core.metrics.metric import Metric
+from fastNLP.core.utils.utils import _check_valid_parameters_number
 
 
 def get_n_gram(token: Sequence[str], n_gram: int) -> Counter:
@@ -18,8 +18,13 @@ def get_n_gram(token: Sequence[str], n_gram: int) -> Counter:
     return counter
 
 
-def tokenizer_fn(sentence: str) -> Sequence[str]:
-    return sentence.split()
+def get_tokenizer(lang):
+    if lang == 'en':
+        return str.split
+    elif lang in ('cn', 'zh'):
+        return list
+    else:
+        return None
 
 
 def _get_brevity_penalty(pred_len: np.array,
@@ -44,6 +49,9 @@ class BLEU(Metric):
         聚合后再得到 metric，当 ``backend`` 不支持分布式时，该参数无意义。
         如果为 ``None`` ，将在 :class:`~fastNLP.core.controllers.Evaluator`
         中根据 ``sampler`` 是否使用分布式进行自动设置。
+    :param tokenizer: 用户可以传入Callable函数进行分词
+        如果是``str``，则按照传入的语言进行分词，默认选项有['en','cn','zh'],``en``代表英语，其他代表中文
+        如果是None，则会再第一次update时选择第一个sample的语言进行选择
     """
 
     def __init__(
@@ -53,6 +61,7 @@ class BLEU(Metric):
         ngram_weights: Optional[Sequence[float]] = None,
         backend: Union[str, Backend, None] = 'auto',
         aggregate_when_get_metric: bool = None,
+        tokenizer_fn: Union[Callable, str] = None,
         **kwargs: Any,
     ):
         super().__init__(backend=backend,
@@ -83,22 +92,67 @@ class BLEU(Metric):
                               value=[0 for _ in range(self.n_gram)],
                               aggregate_method='sum',
                               backend=backend)
+        if callable(tokenizer_fn):
+            _check_valid_parameters_number(tokenizer_fn,
+                                           ['text'])  # 检查是否一定是吃进去一个参数
+            self.tokenizer_fn = tokenizer_fn
+        elif isinstance(tokenizer_fn, str):
+            self.tokenizer_fn = get_tokenizer(tokenizer_fn)
+            if self.tokenizer_fn is None:
+                raise ValueError(
+                    "Right now, `tokenizer_fn` only supports pre-defined 'en' or 'cn'."
+                )
+        else:
+            assert tokenizer_fn is None, f'`tokenizer_fn` supports Callable, str or None, but not `{type(tokenizer_fn)}`'
+            self.tokenizer_fn = tokenizer_fn
 
-    def update(self, predictions: Sequence[str],
-               references: Sequence[Sequence[str]]) -> None:
+    def update(
+        self, predictions: Union[str, Sequence[str]],
+        references: Union[str, Sequence[str],
+                          Sequence[Sequence[str]]]) -> None:
         r"""
        :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
        :param predictions: 预测的 ``sentence``, type为``Sequence``，长度可变，假设为 ``L``
+           * predictions可以为str类型，也可以为list类型。
        :param references: 答案译文，type为``Sequence``，长度必须也为``L``，
            保持和``predictions``一致，每一个元素也是一个``Sequence``。
+           * references可以为str类型，但是该情况下predictions也必须为str类型。
+           * references可以为list[str]类型，如果predictions只有一条数据，references数量不受限制，
+                如果predictions数量超过一条，references的长度必须匹配predictions的数量。
        """
-        references_token: Sequence[Sequence[Sequence[str]]] = [[
-            tokenizer_fn(line) if line is not None else [] for line in r
-        ] for r in references]
-        predictions_token: Sequence[Sequence[str]] = [
-            tokenizer_fn(line) if line else [] for line in predictions
-        ]
 
+        if isinstance(references, list) and all(
+                isinstance(reference, str) for reference in references):
+            if isinstance(predictions, str):
+                references = [references]
+            else:
+                if len(predictions) == 1:
+                    references = [references]
+                else:
+                    references = [[reference] for reference in references]
+
+        if isinstance(predictions, str):
+            predictions = [predictions]
+
+        if isinstance(references, str):
+            references = [[references]]
+        assert len(predictions) == len(
+            references
+        ), 'The number of predictions and references must be equal'
+
+        if self.tokenizer_fn is None:
+            lang = 'en'
+            for _char in predictions[0]:
+                if '\u4e00' <= _char <= '\u9fa5':
+                    lang = 'cn'
+                    break
+            self.tokenizer_fn = get_tokenizer(lang)
+        references_token: Sequence[Sequence[Sequence[str]]] = [
+            [self.tokenizer_fn(line) for line in r] for r in references
+        ]
+        predictions_token: Sequence[Sequence[str]] = [
+            self.tokenizer_fn(line) for line in predictions
+        ]
         for prediction, references in zip(predictions_token, references_token):
             self.pred_len += len(prediction)
             self.references_len += len(
@@ -111,8 +165,7 @@ class BLEU(Metric):
             counter_clip = pred_counter & reference_counter
 
             for ngram in counter_clip:
-                self.precision_matches[len(ngram) -
-                                       1] += counter_clip[ngram]
+                self.precision_matches[len(ngram) - 1] += counter_clip[ngram]
             for ngram in pred_counter:
                 self.precision_total[len(ngram) - 1] += pred_counter[ngram]
 
@@ -125,11 +178,10 @@ class BLEU(Metric):
 
         precision_matches = self.precision_matches.tensor2numpy()
         precision_total = self.precision_total.tensor2numpy()
-
         if min(precision_matches) == 0.0:
             return {'bleu': np.array(0.0)}
         if self.smooth:
-            precision_score = (precision_matches+1)/(precision_total+1)
+            precision_score = (precision_matches + 1) / (precision_total + 1)
             precision_score[0] = precision_matches[0] / precision_total[0]
         else:
             precision_score = precision_matches / precision_total

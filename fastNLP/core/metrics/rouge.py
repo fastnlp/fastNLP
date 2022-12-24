@@ -6,10 +6,19 @@ from typing import (Any, Callable, Dict, List, Literal, Optional, Sequence,
                     Tuple, Union)
 
 import numpy as np
-
 from fastNLP.core.metrics.backend import Backend
 from fastNLP.core.metrics.metric import Metric
+from fastNLP.core.utils.utils import _check_valid_parameters_number
 from fastNLP.envs.utils import _module_available
+
+
+def get_tokenizer(lang):
+    if lang == 'en':
+        return str.split
+    elif lang in ('cn', 'zh'):
+        return list
+    else:
+        return None
 
 
 def _normalize_and_tokenize(
@@ -25,13 +34,12 @@ def _normalize_and_tokenize(
     :param normalizer: 用户自己的规范化函数。
         如果这值是``None``，则默认使用空格替换任何非字母数字字符。
         这个函数必须输入一个 ``str`` 并且返回 ``str``。
-    :param tokenizer: 用户自己的分词函数
-        如果这是``None``，则默认按空格分隔。
-        这个函数必须输入一个 `str` 并且返回 ``Sequence[str]``。
+    :param tokenizer: 分词函数，用户传入的函数，或者是类中包含的中英文分词函数。
     """
-    text = normalizer(text) if callable(normalizer) else re.sub(
-        r'[^a-z0-9]+', ' ', text.lower())
-    tokens = tokenizer(text) if callable(tokenizer) else re.split(r'\s+', text)
+    if tokenizer == str.split:
+        text = normalizer(text) if callable(normalizer) else re.sub(
+            r'[^a-z0-9]+', ' ', text.lower())
+    tokens = tokenizer(text)
     if stemmer:
         tokens = [stemmer.stem(x) if len(x) > 3 else x for x in tokens]
     tokens = [x for x in tokens if (isinstance(x, str) and len(x) > 0)]
@@ -120,9 +128,9 @@ class ROUGE(Metric):
     :param normalizer: 用户自己的规范化函数。
         如果这值是``None``，则默认使用空格替换任何非字母数字字符。
         这个函数必须输入一个 ``str`` 并且返回 ``str``.
-    :param tokenizer: 用户自己的分词函数
-        如果这是``None``，则默认按空格分隔。
-        这个函数必须输入一个 `str` 并且返回 ``Sequence[str]``
+    :param tokenizer: 用户可以传入Callable函数进行分词
+        如果是``str``，则按照传入的语言进行分词，默认选项有['en','cn','zh'],``en``代表英语，其他代表中文
+        如果是None，则会再第一次update时选择第一个sample的语言进行选择
     :param accumulate:
         该参数在多references场景下使用。
         - ``avg`` 获取与预测相关的所有引用的平均值。
@@ -141,7 +149,7 @@ class ROUGE(Metric):
         rouge_keys: Union[List, Tuple, int, str] = (1, 2, 'L'),
         use_stemmer: bool = False,
         normalizer: Callable[[str], str] = None,
-        tokenizer: Callable[[str], Sequence[str]] = None,
+        tokenizer: Union[Callable, str] = None,
         backend: Union[str, Backend, None] = 'auto',
         aggregate_when_get_metric: bool = None,
         accumulate: Literal['avg', 'best'] = 'best',
@@ -171,7 +179,20 @@ class ROUGE(Metric):
         else:
             self.stemmer = None
         self.normalizer = normalizer
-        self.tokenizer = tokenizer
+
+        if callable(tokenizer):
+            _check_valid_parameters_number(tokenizer,
+                                           ['text'])  # 检查是否一定是吃进去一个参数
+            self.tokenizer = tokenizer
+        elif isinstance(tokenizer, str):
+            self.tokenizer = get_tokenizer(tokenizer)
+            if self.tokenizer is None:
+                raise ValueError(
+                    "Right now, `tokenizer` only supports pre-defined 'en' or 'cn'."
+                )
+        else:
+            assert tokenizer is None, f'`tokenizer` supports Callable, str or None, but not `{type(tokenizer)}`'
+            self.tokenizer = tokenizer
         self.accumulate = accumulate
         self.register_element(name='total_samples',
                               value=0,
@@ -190,15 +211,46 @@ class ROUGE(Metric):
                               aggregate_method='sum',
                               backend=backend)
 
-    def update(self, predictions: Sequence[str],
-               references: Sequence[Sequence[str]]) -> None:
+    def update(
+        self, predictions: Union[str, Sequence[str]],
+        references: Union[str, Sequence[str],
+                          Sequence[Sequence[str]]]) -> None:
         r"""
        :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
        :param predictions: 预测的 ``sentence``, type为``Sequence``，长度可变，假设为 ``L``
+           * predictions可以为str类型，也可以为list类型。
        :param references: 答案译文，type为``Sequence``，长度必须也为``L``，
            保持和``predictions``一致，每一个元素也是一个``Sequence``。
+           * references可以为str类型，但是该情况下predictions也必须为str类型。
+           * references可以为list[str]类型，如果predictions只有一条数据，references数量不受限制，
+                如果predictions数量超过一条，references的长度必须匹配predictions的数量。
        """
+        if isinstance(references, list) and all(
+                isinstance(reference, str) for reference in references):
+            if isinstance(predictions, str):
+                references = [references]
+            else:
+                if len(predictions) == 1:
+                    references = [references]
+                else:
+                    references = [[reference] for reference in references]
 
+        if isinstance(predictions, str):
+            predictions = [predictions]
+
+        if isinstance(references, str):
+            references = [[references]]
+        assert len(predictions) == len(
+            references
+        ), 'The number of predictions and references must be equal'
+
+        if self.tokenizer is None:
+            lang = 'en'
+            for _char in predictions[0]:
+                if '\u4e00' <= _char <= '\u9fa5':
+                    lang = 'cn'
+                    break
+            self.tokenizer = get_tokenizer(lang)
         for prediction, _references in zip(predictions, references):
             self.total_samples += 1
             pred_token = _normalize_and_tokenize(prediction, self.stemmer,
