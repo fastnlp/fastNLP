@@ -97,7 +97,7 @@ def test_list_ddp() -> None:
 @pytest.mark.torch
 def test_torch_return_element():
     # 测试的目的是为了方式直接返回了Element对象
-    metric = DemoMetric('torch',agg)
+    metric = DemoMetric('torch')
     metric.update(a=1)
     res = metric.get_metric()
     metric.reset()
