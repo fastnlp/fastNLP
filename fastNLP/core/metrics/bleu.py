@@ -70,7 +70,7 @@ class BLEU(Metric):
         self.smooth = smooth
         if ngram_weights is not None and len(ngram_weights) != n_gram:
             raise ValueError(
-                f'List of weights has different weights than `n_gram`: {len(ngram_weights)} != {n_gram}'
+                f'The number of weights in weights is different from n_gram: {len(ngram_weights)} != {n_gram}'
             )
         self.ngram_weights = ngram_weights if ngram_weights is not None else [
             1.0 / n_gram
