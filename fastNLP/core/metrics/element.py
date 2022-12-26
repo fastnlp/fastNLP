@@ -320,7 +320,7 @@ class Element:
         if isinstance(self.init_value, Number):
             raise TypeError(f"'{type(self.init_value).__name__}' object is not subscriptable")
         else:
-            return self[item]
+            return self.value[item]
 
     def __setitem__(self, key, value):
         if isinstance(self.init_value, Number):

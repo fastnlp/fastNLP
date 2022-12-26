@@ -144,3 +144,15 @@ def test_apply_to_collection():
 
     assert type(outputs["element1"]) == float
     assert type(outputs["element2"]) == list
+
+def test_getter_setter():
+    ele = Element(name="a",value=[0,1,4,2,3],aggregate_method="sum",backend="torch")
+    x = ele[2]
+    assert x == 4
+    ele[4] = 100
+    assert ele.to_list() == [0,1,4,2,100]
+    ele2 = Element(name="b",value=0,aggregate_method="sum",backend="torch")
+    with pytest.raises(TypeError):
+        ele2[0]
+    with pytest.raises(TypeError):
+        ele2[0]=3
