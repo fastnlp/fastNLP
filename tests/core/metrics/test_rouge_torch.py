@@ -11,7 +11,7 @@ import numpy as np
 from fastNLP import ROUGE
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.metrics.metric import Metric
-from .utils import find_free_network_port, setup_ddp, _assert_allclose
+from .utils import find_free_network_port, setup_ddp
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 
 if _NEED_IMPORT_TORCH:
@@ -20,10 +20,6 @@ if _NEED_IMPORT_TORCH:
     from torch.multiprocessing import Pool, set_start_method
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as set_start_method
-try:
-    from sklearn.metrics import accuracy_score as sklearn_accuracy
-except:
-    pass
 
 set_start_method("spawn", force=True)
 

@@ -173,7 +173,7 @@ class ROUGE(Metric):
                 import nltk
                 self.stemmer = nltk.stem.porter.PorterStemmer()
             else:
-                raise ValueError('the nltk package is needed to use stemmer, check https://www.nltk.org/install.html for installation.')
+                raise ValueError('The nltk package is needed to use stemmer, check https://www.nltk.org/install.html for installation.')
         else:
             self.stemmer = None
         self.normalizer = normalizer
