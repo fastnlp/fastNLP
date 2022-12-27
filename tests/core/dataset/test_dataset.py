@@ -36,11 +36,30 @@ class TestDataSetInit:
         assert ds.field_arrays["x"].content == [[1, 2, 3, 4], ] * 40
         assert ds.field_arrays["y"].content == [[5, 6], ] * 40
 
+    def test_init_v3(self):
+        """
+        测试 list of dict 类型的初始化
+        """
+        ds = DataSet([{"x": [1, 2, 3, 4], "y": [5, 6, 7, 8]}] * 40)
+        assert ("x" in ds.field_arrays and "y" in ds.field_arrays) == True
+        assert ds.field_arrays["x"].content == [[1, 2, 3, 4], ] * 40
+        assert ds.field_arrays["y"].content == [[5, 6, 7, 8], ] * 40
+
     def test_init_assert(self):
         with pytest.raises(AssertionError):
             _ = DataSet({"x": [[1, 2, 3, 4]] * 40, "y": [[5, 6]] * 100})
         with pytest.raises(AssertionError):
             _ = DataSet([[1, 2, 3, 4]] * 10)
+        with pytest.raises(AssertionError):
+            _ = DataSet(
+                    [{"x": [1, 2, 3, 4], "y": [5, 6, 7, 8]}] * 10 + 
+                    [Instance(x=[1, 2, 3, 4], y=[5, 6, 7, 8])]
+                )
+        with pytest.raises(AssertionError):
+            _ = DataSet(
+                    [Instance(x=[1, 2, 3, 4], y=[5, 6, 7, 8])] * 10 +
+                    [{"x": [1, 2, 3, 4], "y": [5, 6, 7, 8]}]
+                )
         with pytest.raises(ValueError):
             _ = DataSet(0.00001)
 

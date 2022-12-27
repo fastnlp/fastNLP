@@ -8,11 +8,12 @@ import socket
 import pytest
 import numpy as np
 
+from fastNLP import Bleu
 from fastNLP.core.dataset import DataSet
-from fastNLP.core.metrics.accuracy import Accuracy
 from fastNLP.core.metrics.metric import Metric
 from .utils import find_free_network_port, setup_ddp, _assert_allclose
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+
 if _NEED_IMPORT_TORCH:
     import torch
     import torch.distributed
@@ -26,7 +27,6 @@ except:
 
 set_start_method("spawn", force=True)
 
-
 NUM_PROCESSES = 2
 pool = None
 
@@ -37,7 +37,6 @@ def _test(local_rank: int,
           dataset: DataSet,
           metric_class: Type[Metric],
           metric_kwargs: Dict[str, Any],
-          sklearn_metric: Callable,
           atol: float = 1e-8) -> None:
     # metric 应该是每个进程有自己的一个 instance，所以在 _test 里面实例化
     metric = metric_class(**metric_kwargs)
@@ -46,23 +45,12 @@ def _test(local_rank: int,
     metric.to(device)
     # 把数据拆到每个 GPU 上，有点模仿 DistributedSampler 的感觉，但这里数据单位是一个 batch（即每个 i 取了一个 batch 到自己的 GPU 上）
     for i in range(local_rank, len(dataset), world_size):
-        pred, tg = torch.tensor(dataset[i]['pred']).to(device), torch.tensor(dataset[i]['target']).to(device)
-        metric.update(pred, tg)
-
-        # my_result = metric.get_metric()
-        # using_predict, using_target = dataset[: i + world_size]['pred'], dataset[: i + world_size]['target']
-        # sklearn_result = sklearn_metric(using_predict, using_target)
-        # _assert_allclose(my_result, sklearn_result, atol=atol)
-
+        predictions = dataset[i]["predictions"]
+        references = dataset[i]["references"]
+        metric.update([predictions], [references])
     my_result = metric.get_metric()
-    my_result = my_result['acc']
-    using_predict, using_target = [], []
-    for i in range(len(dataset)):
-        using_predict.append(dataset[i]['pred'])
-        using_target.append(dataset[i]['target'])
-    using_target, using_predict = np.array(using_target), np.array(using_predict)
-    sklearn_result = sklearn_metric(using_predict, using_target)
-    _assert_allclose(my_result, sklearn_result, atol=atol)
+    if local_rank == 0:
+        print(my_result)
 
 
 @pytest.fixture(scope='class', autouse=True)
@@ -78,25 +66,32 @@ def pre_process():
 
 @pytest.mark.torch
 @pytest.mark.parametrize('dataset', [
-    DataSet({'pred': np.random.randint(low=0, high=1, size=(36, 32)),
-             'target': np.random.randint(low=0, high=1, size=(36, 32))}),
-    DataSet({'pred': np.random.randint(low=0, high=1, size=(360, 32)),
-             'target': np.random.randint(low=0, high=1, size=(360, 32))})
+    DataSet({
+        "predictions": ['the cat is on the mat', 'There is a big tree near the park here',
+                        'The sun rises from the northeast with sunshine', 'I was late for work today for the rainy'],
+        "references": [['a cat is on the mat'], ['A big tree is growing near the park here'],
+                       ["A fierce sun rises in the northeast with sunshine"],
+                       ['I went to work too late today for the rainy']]
+    })
+    # DataSet({'predictions': ['the cat is on the mat'],
+    #          'references': [['there is a cat on the mat', 'a cat is on the mat']]}),
 ])
-@pytest.mark.parametrize('is_ddp', [True, False])
-@pytest.mark.parametrize('metric_class', [Accuracy])
-@pytest.mark.parametrize('metric_kwargs', [{'backend': 'auto'}])
-class TestAccuracy:
+@pytest.mark.parametrize('is_ddp', [1,2,3])
+@pytest.mark.parametrize('metric_class', [Bleu])
+@pytest.mark.parametrize('metric_kwargs', [{'backend': 'torch'}])
+@pytest.mark.parametrize('smooth', [True, False])
+class TestBleu:
 
+    @pytest.mark.skipif(not (torch.cuda.is_available() and torch.cuda.device_count()>1), reason='no cuda')
     def test_v1(self, is_ddp: bool, dataset: DataSet, metric_class: Type['Metric'],
-                metric_kwargs: Dict[str, Any]) -> None:
+                metric_kwargs: Dict[str, Any], smooth: bool) -> None:
         global pool
-        if is_ddp:
-            if not torch.cuda.is_available():
-                return
+        if is_ddp == 1:
+
             if sys.platform == "win32":
                 pytest.skip("DDP not supported on windows")
             metric_kwargs['aggregate_when_get_metric'] = True
+            metric_kwargs["smooth"] = smooth
             processes = NUM_PROCESSES
             pool.starmap(
                 partial(
@@ -104,14 +99,29 @@ class TestAccuracy:
                     dataset=dataset,
                     metric_class=metric_class,
                     metric_kwargs=metric_kwargs,
-                    sklearn_metric=sklearn_accuracy,
                 ),
                 [(rank, processes, torch.device(f'cuda:{rank}')) for rank in range(processes)]
+            )
+        elif is_ddp ==2:
+            if sys.platform == "win32":
+                pytest.skip("DDP not supported on windows")
+            metric_kwargs['aggregate_when_get_metric'] = True
+            metric_kwargs["smooth"] = smooth
+            processes = NUM_PROCESSES
+            pool.starmap(
+                partial(
+                    _test,
+                    dataset=dataset,
+                    metric_class=metric_class,
+                    metric_kwargs=metric_kwargs,
+                ),
+                [(0, processes, torch.device(f'cuda:{0}')), (1, processes, torch.device("cpu"))]
             )
         else:
             device = torch.device(
                 "cuda" if (torch.cuda.is_available() and torch.cuda.device_count() > 0) else "cpu")
             metric_kwargs['aggregate_when_get_metric'] = False
+            metric_kwargs["smooth"] = smooth
             _test(
                 local_rank=0,
                 world_size=1,
@@ -119,5 +129,4 @@ class TestAccuracy:
                 dataset=dataset,
                 metric_class=metric_class,
                 metric_kwargs=metric_kwargs,
-                sklearn_metric=sklearn_accuracy
             )

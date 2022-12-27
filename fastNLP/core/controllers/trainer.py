@@ -43,7 +43,8 @@ class Trainer(TrainerEventTrigger):
     r"""
     用于支持快速训练的训练器。
 
-    :param model: 训练所需要的模型，例如 :class:`torch.nn.Module`；
+    :param model: 训练所需要的模型，例如 :class:`torch.nn.Module`；当 ``driver`` 参数传入为一个 :class:`~fastNLP.core.drivers.Driver`
+        对象时， ``model``参数将被忽略。
 
         .. note::
 
@@ -749,7 +750,7 @@ class Trainer(TrainerEventTrigger):
         if self.evaluator is not None:
             if isinstance(self.evaluate_every, int) and self.evaluate_every < 0:
                 evaluate_every = -self.evaluate_every
-                if self.cur_epoch_idx % evaluate_every == 0:
+                if (self.cur_epoch_idx+1) % evaluate_every == 0:
                     self.run_evaluate()
 
     def add_callback_fn(self, event: Event, fn: Callable):

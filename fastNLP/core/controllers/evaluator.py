@@ -41,7 +41,8 @@ class Evaluator:
         ``Evaluator`` 与 ``Trainer`` 类似，都是使用 ``Driver`` 作为底层来实现评测或者训练，因此大多数与 ``Trainer`` 同名的参数的意义和使用都与
         ``Trainer`` 中的参数相同，对于这些参数，您可以参考 ``Trainer`` 的文档来获取更详细的信息；详见 :class:`~fastNLP.core.controllers.trainer.Trainer`；
 
-    :param model: 训练所需要的模型，例如 ``torch.nn.Module``，等价于 ``Trainer`` 中的 ``model`` 参数；
+    :param model: 训练所需要的模型，例如 ``torch.nn.Module``，等价于 ``Trainer`` 中的 ``model`` 参数；当 ``driver`` 参数传入为一个
+        :class:`~fastNLP.core.drivers.Driver`对象时， ``model``参数将被忽略。
     :param dataloaders: 用于评测的数据集。如果为多个，您需要使用 ``dict`` 传入，即对每一个数据集标上用于标识它们的标签；也可以使用 evaluate_dataloaders
         作为参数的名称。
     :param metrics: 评测时使用的指标。注意该参数必须为 ``dict`` 类型，其中 ``key`` 为一个 ``metric`` 的名称，``value`` 为具体的 ``Metric`` 对象。目前支持以下 metrics：

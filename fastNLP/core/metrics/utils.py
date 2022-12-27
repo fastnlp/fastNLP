@@ -2,15 +2,18 @@ __all__ = [
 ]
 
 from typing import Any
-from functools import wraps
-from fastNLP.envs.imports import _NEED_IMPORT_PADDLE, _NEED_IMPORT_TORCH
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.envs.utils import _module_available
 
 _IS_TORCHMETRICS_AVAILABLE = _module_available('torchmetrics')
 _IS_ALLENNLP_AVAILABLE = _module_available('allennlp')
 _IS_TORCHEVAL_AVAILABLE = _module_available('torcheval')
 if _IS_ALLENNLP_AVAILABLE:
-    from allennlp.training.metrics import Metric as allennlp_Metric
+    try:
+        from allennlp.training.metrics import Metric as allennlp_Metric
+    except Exception:
+        # 由于allennlp经常 import 不成功，这里通过这个来规避下风险
+        _IS_ALLENNLP_AVAILABLE = False
 
 if _IS_TORCHMETRICS_AVAILABLE:
     from torchmetrics import Metric as torchmetrics_Metric

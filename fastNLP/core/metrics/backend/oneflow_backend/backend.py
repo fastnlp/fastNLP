@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 import numpy as np
 
@@ -55,23 +55,25 @@ class OneflowBackend(Backend):
 
         return tensor
 
-    def create_tensor(self, value: float):
+    def create_tensor(self, value: Union[float,List]):
         """
         创建 tensor，并且填入 value 作为值
 
         :param value: 创建张量的初始值
         """
-        tensor = oneflow.ones(1).fill_(value)
+        tensor = oneflow.as_tensor(value)
         return tensor
 
-    def fill_value(self, tensor, value: float):
+    def fill_value(self, tensor, value: Union[float,List]):
         """
         将 tensor 的值设置为 value
 
         :param tensor: 传入的张量
         :param value: 需要 fill 的值。
         """
-        tensor.fill_(value)
+        value = oneflow.as_tensor(value)
+        tensor.copy_(value)
+
         return tensor
 
     def get_scalar(self, tensor) -> float:
@@ -81,6 +83,15 @@ class OneflowBackend(Backend):
         :param tensor: 传入的张量
         """
         return tensor.item()
+
+    def to_list(self, tensor) -> List:
+        """
+       ``tensor`` 的 value 值.
+
+       :param tensor: 传入的张量;
+       :return:
+       """
+        return tensor.tolist()
 
     def tensor2numpy(self, tensor) -> np.array:
         """

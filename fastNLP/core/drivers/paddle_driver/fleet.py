@@ -474,8 +474,8 @@ class PaddleFleetDriver(PaddleDriver):
             args = self.get_dataloader_args(dataloader)
             if type(args.batch_sampler) != BatchSampler:
                 # TODO 这里的目的是判断用户的 batch_sampler 是定制的，可能需要完善
-                logger.warning("Note that you are using customized ``batch_sampler`` in evaluate dataloader or" \
-                                "train dataloader while testing ``overfit_batches``, which may cause that" \
+                logger.warning("Note that you are using customized ``batch_sampler`` in evaluate dataloader or " \
+                                "train dataloader while testing ``overfit_batches``, which may cause that " \
                                 "the data for distributed evaluation is not unrepeated.")
             if isinstance(args.sampler, ReproducibleSampler):
                 sampler = conversion_between_reproducible_and_unrepeated_sampler(args.sampler)

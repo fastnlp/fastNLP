@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 
 from fastNLP import Trainer
-from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _module_available
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.utils import magic_argv_env_context
 
@@ -14,7 +14,8 @@ if _NEED_IMPORT_TORCH:
     import torch.distributed as dist
     from torch.utils.data import Dataset
     import torch
-    from torcheval.metrics import MulticlassAccuracy
+    if _module_available('torcheval'):
+        from torcheval.metrics import MulticlassAccuracy
 
 
     class DataSet(Dataset):
@@ -65,6 +66,7 @@ def trainer_params(request):
 
 @pytest.mark.torch
 @pytest.mark.parametrize("device",["cpu","cuda", 1])
+@pytest.mark.skipif(not _module_available('torcheval'), reason='No torcheval')
 @magic_argv_env_context
 def test_1(trainer_params: TrainerParameters,device):
     trainer = Trainer(

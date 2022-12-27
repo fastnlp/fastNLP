@@ -4,6 +4,9 @@ __all__ = [
 
 import os
 import functools
+from typing import Union, List
+
+import numpy as np
 
 from .backend import Backend, AutoBackend
 from fastNLP.core.log import logger
@@ -43,7 +46,7 @@ class Element:
         为 ``'jittor'`` 。如果没有检测到任何一种 tensor ，就默认使用 :class:`float` 类型作为 element 。
 
     """
-    def __init__(self, name, value: float, aggregate_method, backend: Backend):
+    def __init__(self, name, value: Union[float,List], aggregate_method, backend: Backend):
         self.name = name
         self.init_value = value
         self.aggregate_method = aggregate_method
@@ -112,6 +115,22 @@ class Element:
         """
         self._check_value_initialized()
         return self.backend.get_scalar(self._value)
+
+    def to_list(self) -> List:
+        """
+        获取元素的 values 值
+
+        """
+        self._check_value_initialized()
+        return self.backend.to_list(self._value)
+
+    def tensor2numpy(self) -> np.array:
+        """
+        将 tensor 转为 numpy 值， 主要是在 metric 计算中使用
+
+        """
+        self._check_value_initialized()
+        return self.backend.tensor2numpy(self._value)
 
     def fill_value(self, value):
         """
