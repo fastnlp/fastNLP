@@ -31,6 +31,7 @@ class Saver:
     :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函数应当接受一个文件夹作为参数，不返回任何东西。
         如果传入了 model_save_fn 函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运行该函数。
     :param kwargs: 更多需要传递给 Trainer.save_checkpoint() 或者 Trainer.save_model() 接口的参数。
+        * *use_timestamp_path* bool类型 -- 是否创建以脚本的启动时间命名的文件夹, 默认为 ``True``。
     """
     def __init__(self, folder:str=None, save_object:str='model', only_state_dict:bool=True,
                  model_save_fn:Callable=None, **kwargs):
@@ -48,6 +49,7 @@ class Saver:
         self.kwargs = kwargs
         self.save_object = save_object
         self.save_fn_name = 'save_checkpoint' if save_object == 'trainer' else 'save_model'
+        self.use_timestamp_path = kwargs.get("use_timestamp_path", True)
 
         self.timestamp_path = self.folder.joinpath(os.environ[FASTNLP_LAUNCH_TIME])
         # 打印这次运行时 checkpoint 所保存在的文件夹，因为这个文件夹是根据时间实时生成的，因此需要打印出来防止用户混淆；
@@ -65,7 +67,11 @@ class Saver:
         :param folder_name: 保存的 folder 名称，将被创建。
         :return: 实际发生保存的 folder 绝对路径。如果为 None 则没有创建。
         """
-        folder = self.timestamp_path.joinpath(folder_name)
+        if self.use_timestamp_path:
+            folder = self.timestamp_path.joinpath(folder_name)
+        else:
+            folder = self.folder.joinpath(folder_name)
+
         folder.mkdir(parents=True, exist_ok=True)
 
         save_fn = getattr(trainer, self.save_fn_name)
@@ -106,17 +112,22 @@ class Saver:
     def state_dict(self):
         states = {
             'timestamp_path': str(self.timestamp_path),
+            'use_timestamp_path': bool(self.use_timestamp_path)
         }
         return states
 
     def load_state_dict(self, states):
         timestamp_path = states['timestamp_path']
-        if not os.path.exists(timestamp_path):
-            logger.info(f"The resuming checkpoint folder {timestamp_path} is not exists, checkpoint will save to "
-                        f" {self.timestamp_path.absolute()}.")
+        self.use_timestamp_path = states['use_timestamp_path']
+        if not self.use_timestamp_path:
+            logger.info(f"Resume to save checkpoint in path: {self.folder}.")
         else:
-            logger.info(f"Resume to save checkpoint in path: {timestamp_path}.")
-            self.timestamp_path = Path(timestamp_path)
+            if not os.path.exists(timestamp_path):
+                logger.info(f"The resuming checkpoint folder {timestamp_path} is not exists, checkpoint will save to "
+                            f" {self.timestamp_path.absolute()}.")
+            else:
+                logger.info(f"Resume to save checkpoint in path: {timestamp_path}.")
+                self.timestamp_path = Path(timestamp_path)
 
     def __str__(self):
         return f'saver:{self.save_object}'
