@@ -9,6 +9,7 @@ if _NEED_IMPORT_JITTOR:
 
 __all__ = []
 
+
 class JittorBackend(Backend):
 
     def __init__(self):
@@ -21,22 +22,22 @@ class JittorBackend(Backend):
         """
         return tensor
 
-    def create_tensor(self, value: Union[float,List]):
+    def create_tensor(self, value: Union[float, List]):
         """
         创建 tensor，并且填入 value 作为值
         """
         tensor = jittor.array(value)
         return tensor
 
-    def fill_value(self, tensor, value: Union[float,List]):
+    def fill_value(self, tensor, value: Union[float, List]):
         """
         将 tensor 的值设置为 value
 
         """
-        length = len(value) if type(value)==numpy.ndarray else 1
+        length = len(value) if type(value) == np.ndarray else 1
         value = jittor.array(value)
         for i in range(length):
-            tensor[i]=value[i]
+            tensor[i] = value[i]
         return tensor
 
     def get_scalar(self, tensor) -> float:
