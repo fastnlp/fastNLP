@@ -15,6 +15,7 @@ from .utils import find_free_network_port, setup_ddp
 if _NEED_IMPORT_TORCH:
     import torch
     import torch.distributed
+    import torch.nn.functional as F
     from torch.multiprocessing import Pool, set_start_method
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as set_start_method
@@ -52,8 +53,10 @@ def _test(local_rank: int,
     # 把数据拆到每个 GPU 上，有点模仿 DistributedSampler 的感觉，但这里数据单位是一个 batch（即每个 i 取了一个 batch 到自己的 GPU 上）
     for i in range(local_rank, len(dataset), world_size):
         pred = dataset[i]['pred']
+        pred = F.softmax(pred, dim=2)
         target = dataset[i]['target']
-        target[0, 6:] = -100
+        target[0, 6] = -100
+        target[0, 7] = -101
         metric.update(pred, target)
     results = metric.get_metric()
     np.testing.assert_almost_equal(results['perplexity'], 5.33002, decimal=6)
@@ -102,7 +105,7 @@ class TestPerplexity:
                                      generator=torch.manual_seed(14)),
             )
         ])
-        metric_kwargs['ignore_label'] = -100
+        metric_kwargs['ignore_labels'] = [-100, -101]
         if is_ddp:
             if sys.platform == 'win32':
                 pytest.skip('DDP not supported on windows')
@@ -162,7 +165,7 @@ def test_perplexity_paddle():
     targets = paddle.to_tensor(targets)
     metric = Perplexity(backend='paddle')
     for i in range(4):
-        pred = preds[i]
+        pred = paddle.nn.functional.softmax(preds[i], axis=2)
         target = targets[i]
         metric.update(pred, target)
     my_result = metric.get_metric()
@@ -179,7 +182,7 @@ def test_perplexity_oneflow():
     targets = oneflow.as_tensor(targets)
     metric = Perplexity(backend='oneflow')
     for i in range(4):
-        pred = preds[i]
+        pred = oneflow.nn.functional.softmax(preds[i], dim=2)
         target = targets[i]
         metric.update(pred, target)
     my_result = metric.get_metric()
@@ -196,7 +199,7 @@ def test_perplexity_jittor():
     targets = jittor.array(targets)
     metric = Perplexity(backend='jittor')
     for i in range(4):
-        pred = preds[i]
+        pred = jittor.nn.softmax(preds[i], dim=2)
         target = targets[i]
         metric.update(pred, target)
     my_result = metric.get_metric()

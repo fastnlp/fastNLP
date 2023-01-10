@@ -1,23 +1,17 @@
 __all__ = ['Perplexity']
 
-from typing import Any, Optional, Union
+from typing import Any, Union, List
 
 import numpy as np
 from fastNLP.core.metrics.backend import Backend
 from fastNLP.core.metrics.metric import Metric
 
 
-def softmax(x):
-    # 计算每个元素的指数
-    exps = np.exp(x - np.max(x, axis=1, keepdims=True))
-    # 返回指数的和
-    return exps / np.sum(exps, axis=1, keepdims=True)
-
-
 class Perplexity(Metric):
     """计算 perplexity 的 metric 。
 
-    :param ignore_label: 指定要忽略的目标类的整数。如果给定，则该类索引不起作用。例如单词表中代表未知单词的目标整数。
+    :param ignore_labels: 指定要忽略的目标类的整数。如果给定，则该类索引不起作用。例如单词表中代表未知单词的目标整数。
+        该参数可以给定的类型是[int,List[int],None]。
     :param backend: 目前支持五种类型的backend,
         ``['auto', 'torch', 'paddle', 'jittor', 'oneflow']``。
         其中 ``'auto'`` 表示根据实际调用。
@@ -29,17 +23,23 @@ class Perplexity(Metric):
     """
 
     def __init__(self,
-                 ignore_label: Optional[int] = None,
+                 ignore_labels: Union[int, List[int], None] = None,
                  backend: Union[str, Backend, None] = 'auto',
                  aggregate_when_get_metric: bool = None,
                  **kwargs: Any):
         super().__init__(backend=backend,
                          aggregate_when_get_metric=aggregate_when_get_metric)
-        if ignore_label is not None and not isinstance(ignore_label, int):
-            raise ValueError(
-                f'Argument `ignore_label` expected to either be `None` or an `int` but got {ignore_label}'
-            )
-        self.ignore_label = ignore_label
+        self.ignore_labels = None
+        if isinstance(ignore_labels, int):
+            ignore_labels = [ignore_labels]
+        if ignore_labels is not None:
+            for ignore_label in ignore_labels:
+                if not isinstance(ignore_label, int):
+                    raise ValueError(
+                        f'Argument `ignore_labels` expected to be `None`, `int`,`List[int]` but got {ignore_labels}'
+                    )
+            self.ignore_labels = list(set(ignore_labels))
+
         self.register_element(name='total',
                               value=0.,
                               aggregate_method='sum',
@@ -53,6 +53,7 @@ class Perplexity(Metric):
         r"""
         :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
         :param pred: 分配给序列中每个单词的概率，shape为[batch_size, seq_len, vocab_size]。
+            :meth: 其中，pred最后一维的数据必须是经过softmax之后的，符合softmax的数据特性，加起来为1。
         :param target: 序列的真实标签值，shape为[batch_size, seq_len]。
         """
         if len(pred.shape) != 3:
@@ -70,10 +71,13 @@ class Perplexity(Metric):
             )
         pred = self.tensor2numpy(pred)
         target = self.tensor2numpy(target)
-        probs = softmax(pred.reshape(-1, pred.shape[-1]))
+        probs = pred.reshape(-1, pred.shape[-1])
         target = target.reshape(-1)
-        if self.ignore_label is not None:
-            mask = np.not_equal(target, self.ignore_label)
+        if self.ignore_labels is not None:
+            mask = np.ones(target.shape, dtype=bool)
+            for ignore_label in self.ignore_labels:
+                mask_temp = np.not_equal(target, ignore_label)
+                mask = (mask == mask_temp)
             target = np.ma.array(target, mask=(mask == False),
                                  fill_value=0).filled()
             probs = np.take(probs, target, axis=1).diagonal()[mask]
