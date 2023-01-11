@@ -28,7 +28,7 @@ def get_tokenizer(lang):
 
 
 def _get_brevity_penalty(pred_len: float,
-                         references_len: float) -> float | np.float:
+                         references_len: float) -> float:
     if pred_len >= references_len:
         return float(1.)
     elif pred_len == 0 or references_len == 0:
