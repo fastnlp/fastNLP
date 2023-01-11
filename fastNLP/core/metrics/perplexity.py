@@ -10,6 +10,8 @@ from fastNLP.core.metrics.metric import Metric
 class Perplexity(Metric):
     """计算 perplexity 的 metric 。
 
+    在``Perplexity``中，我们希望传入的预测值``pred``为经过``softmax``的``tensor``，
+    所以``pred``应该为一个三维``tensor``,其中最后一维加起来概率为``1``。
     :param ignore_labels: 指定要忽略的目标类的整数。如果给定，则该类索引不起作用。例如单词表中代表未知单词的目标整数。
         该参数可以给定的类型是[int,List[int],None]。
     :param backend: 目前支持五种类型的backend,
