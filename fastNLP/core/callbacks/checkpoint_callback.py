@@ -56,6 +56,7 @@ class CheckpointCallback(Callback):
     :param save_evaluate_results: 是否保存 evaluate 的结果。如果为 ``True`` ，在保存 topk 模型的 folder 中还将额外保存一个
         ``fastnlp_evaluate_results.json`` 文件，记录当前的 results。仅在设置了 ``topk`` 的场景下有用，默认为 ``True`` 。
     :param kwargs:
+        * *use_timestamp_folder* bool类型 -- 是否创建以脚本的启动时间命名的文件夹, 默认为 ``True``。
     """
     def __init__(self, folder: Optional[Union[str, Path]] = None, every_n_epochs: Optional[int] = None,
                  every_n_batches: Optional[int] = None, last: bool = False, topk: int = 0,
