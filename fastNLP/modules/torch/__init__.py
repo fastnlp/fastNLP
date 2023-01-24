@@ -1,24 +1,23 @@
+# isort: skip_file
+
 __all__ = [
     'ConditionalRandomField',
     'allowed_transitions',
-    "State",
-    "Seq2SeqDecoder",
-    "LSTMSeq2SeqDecoder",
-    "TransformerSeq2SeqDecoder",
-    "MLP",
-
-    "LSTM",
-    "Seq2SeqEncoder",
-    "TransformerSeq2SeqEncoder",
-    "LSTMSeq2SeqEncoder",
-    "StarTransformer",
-    "VarRNN",
-    "VarLSTM",
-    "VarGRU",
-
+    'State',
+    'Seq2SeqDecoder',
+    'LSTMSeq2SeqDecoder',
+    'TransformerSeq2SeqDecoder',
+    'MLP',
+    'LSTM',
+    'Seq2SeqEncoder',
+    'TransformerSeq2SeqEncoder',
+    'LSTMSeq2SeqEncoder',
+    'StarTransformer',
+    'VarRNN',
+    'VarLSTM',
+    'VarGRU',
     'SequenceGenerator',
-
-    "TimestepDropout",
+    'TimestepDropout',
 ]
 
 from .decoder import *

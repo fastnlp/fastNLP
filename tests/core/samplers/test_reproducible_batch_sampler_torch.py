@@ -2,8 +2,8 @@ from array import array
 
 import pytest
 
-from fastNLP.core.samplers import ReproduceBatchSampler
 from fastNLP.core.drivers.torch_driver.utils import replace_batch_sampler
+from fastNLP.core.samplers import ReproduceBatchSampler
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from tests.helpers.datasets.torch_data import TorchNormalDataset
 
@@ -14,12 +14,14 @@ if _NEED_IMPORT_TORCH:
 
 @pytest.mark.torch
 class TestReproducibleBatchSamplerTorch:
+
     def test_torch_dataloader_1(self):
         # no shuffle
         before_batch_size = 7
         dataset = TorchNormalDataset(num_of_data=100)
         dataloader = DataLoader(dataset, batch_size=before_batch_size)
-        re_batchsampler = ReproduceBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
+        re_batchsampler = ReproduceBatchSampler(
+            dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
         dataloader = replace_batch_sampler(dataloader, re_batchsampler)
 
         forward_steps = 3
@@ -31,18 +33,23 @@ class TestReproducibleBatchSamplerTorch:
         _get_re_batchsampler = dataloader.batch_sampler
         assert isinstance(_get_re_batchsampler, ReproduceBatchSampler)
         state = _get_re_batchsampler.state_dict()
-        assert state == {"index_list": array("I", list(range(100))), "num_consumed_samples": forward_steps*before_batch_size,
-                         "sampler_type": "ReproduceBatchSampler"}
+        assert state == {
+            'index_list': array('I', list(range(100))),
+            'num_consumed_samples': forward_steps * before_batch_size,
+            'sampler_type': 'ReproduceBatchSampler'
+        }
 
         # 2. 断点重训，重新生成一个 dataloader；
         # 不改变 batch_size；
         dataloader = DataLoader(dataset, batch_size=before_batch_size)
-        re_batchsampler = ReproduceBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
+        re_batchsampler = ReproduceBatchSampler(
+            dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
         re_batchsampler.load_state_dict(state)
         dataloader = replace_batch_sampler(dataloader, re_batchsampler)
 
         real_res = []
-        supposed_res = (torch.tensor(list(range(21, 28))), torch.tensor(list(range(28, 35))))
+        supposed_res = (torch.tensor(list(range(21, 28))),
+                        torch.tensor(list(range(28, 35))))
         forward_steps = 2
         iter_dataloader = iter(dataloader)
         for _ in range(forward_steps):
@@ -54,12 +61,14 @@ class TestReproducibleBatchSamplerTorch:
         # 改变 batch_size；
         after_batch_size = 3
         dataloader = DataLoader(dataset, batch_size=after_batch_size)
-        re_batchsampler = ReproduceBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
+        re_batchsampler = ReproduceBatchSampler(
+            dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
         re_batchsampler.load_state_dict(state)
         dataloader = replace_batch_sampler(dataloader, re_batchsampler)
 
         real_res = []
-        supposed_res = (torch.tensor(list(range(21, 24))), torch.tensor(list(range(24, 27))))
+        supposed_res = (torch.tensor(list(range(21, 24))),
+                        torch.tensor(list(range(24, 27))))
         forward_steps = 2
         iter_dataloader = iter(dataloader)
         for _ in range(forward_steps):
@@ -75,7 +84,8 @@ class TestReproducibleBatchSamplerTorch:
             try:
                 data = next(iter_dataloader)
                 _batch_size = len(data)
-                assert all(data == torch.tensor(list(range(begin_idx, begin_idx + _batch_size))))
+                assert all(data == torch.tensor(
+                    list(range(begin_idx, begin_idx + _batch_size))))
                 begin_idx += _batch_size
             except StopIteration:
                 break
@@ -87,7 +97,8 @@ class TestReproducibleBatchSamplerTorch:
             try:
                 data = next(iter_dataloader)
                 _batch_size = len(data)
-                assert all(data == torch.tensor(list(range(begin_idx, begin_idx + _batch_size))))
+                assert all(data == torch.tensor(
+                    list(range(begin_idx, begin_idx + _batch_size))))
                 begin_idx += _batch_size
             except StopIteration:
                 break
@@ -98,8 +109,10 @@ class TestReproducibleBatchSamplerTorch:
         before_batch_size = 7
         dataset = TorchNormalDataset(num_of_data=100)
         # 开启 shuffle，来检验断点重训后的第二轮的 index list 是不是重新生成的；
-        dataloader = DataLoader(dataset, batch_size=before_batch_size, shuffle=True)
-        re_batchsampler = ReproduceBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
+        dataloader = DataLoader(
+            dataset, batch_size=before_batch_size, shuffle=True)
+        re_batchsampler = ReproduceBatchSampler(
+            dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
         dataloader = replace_batch_sampler(dataloader, re_batchsampler)
 
         # 将一轮的所有数据保存下来，看是否恢复的是正确的；
@@ -116,14 +129,16 @@ class TestReproducibleBatchSamplerTorch:
 
         # 2. 断点重训，重新生成一个 dataloader；
         # 不改变 batch_size；
-        dataloader = DataLoader(dataset, batch_size=before_batch_size, shuffle=True)
-        re_batchsampler = ReproduceBatchSampler(dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
+        dataloader = DataLoader(
+            dataset, batch_size=before_batch_size, shuffle=True)
+        re_batchsampler = ReproduceBatchSampler(
+            dataloader.batch_sampler, dataloader.batch_size, drop_last=False)
         re_batchsampler.load_state_dict(state)
         dataloader = replace_batch_sampler(dataloader, re_batchsampler)
 
         iter_dataloader = iter(dataloader)
         # 先把这一轮的数据过完；
-        pre_index_list = dataloader.batch_sampler.state_dict()["index_list"]
+        pre_index_list = dataloader.batch_sampler.state_dict()['index_list']
         while True:
             try:
                 all_supposed_data.extend(next(iter_dataloader).tolist())
@@ -141,4 +156,3 @@ class TestReproducibleBatchSamplerTorch:
                 except StopIteration:
                     break
             assert res != all_supposed_data
-

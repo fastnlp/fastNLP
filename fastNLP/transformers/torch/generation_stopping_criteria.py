@@ -3,9 +3,9 @@ from abc import ABC
 from copy import deepcopy
 from typing import Optional
 
-from .file_utils import add_start_docstrings
-from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from fastNLP.core.log import logger
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from .file_utils import add_start_docstrings
 
 if _NEED_IMPORT_TORCH:
     import torch
@@ -33,17 +33,19 @@ STOPPING_CRITERIA_INPUTS_DOCSTRING = r"""
 
 
 class StoppingCriteria(ABC):
-    """Abstract base class for all stopping criteria that can be applied during generation."""
+    """Abstract base class for all stopping criteria that can be applied during
+    generation."""
 
     @add_start_docstrings(STOPPING_CRITERIA_INPUTS_DOCSTRING)
-    def __call__(self, input_ids: "torch.LongTensor", scores: "torch.FloatTensor", **kwargs) -> bool:
-        raise NotImplementedError("StoppingCriteria needs to be subclassed")
+    def __call__(self, input_ids: 'torch.LongTensor',
+                 scores: 'torch.FloatTensor', **kwargs) -> bool:
+        raise NotImplementedError('StoppingCriteria needs to be subclassed')
 
 
 class MaxLengthCriteria(StoppingCriteria):
-    """
-    This class can be used to stop generation whenever the full generated number of tokens exceeds :obj:`max_length`.
-    Keep in mind for decoder-only type of transformers, this will include the initial prompted tokens.
+    """This class can be used to stop generation whenever the full generated
+    number of tokens exceeds :obj:`max_length`. Keep in mind for decoder-only
+    type of transformers, this will include the initial prompted tokens.
 
     Args:
         max_length (:obj:`int`):
@@ -54,15 +56,17 @@ class MaxLengthCriteria(StoppingCriteria):
         self.max_length = max_length
 
     @add_start_docstrings(STOPPING_CRITERIA_INPUTS_DOCSTRING)
-    def __call__(self, input_ids: "torch.LongTensor", scores: "torch.FloatTensor", **kwargs) -> bool:
+    def __call__(self, input_ids: 'torch.LongTensor',
+                 scores: 'torch.FloatTensor', **kwargs) -> bool:
         return input_ids.shape[-1] >= self.max_length
 
 
 class MaxNewTokensCriteria(StoppingCriteria):
-    """
-    This class can be used to stop generation whenever the generated number of tokens exceeds :obj:`max_new_tokens`.
-    Keep in mind for decoder-only type of transformers, this will **not** include the initial prompted tokens. This is
-    very close to :obj:`MaxLengthCriteria` but ignores the number of initial tokens.
+    """This class can be used to stop generation whenever the generated number
+    of tokens exceeds :obj:`max_new_tokens`. Keep in mind for decoder-only type
+    of transformers, this will **not** include the initial prompted tokens.
+    This is very close to :obj:`MaxLengthCriteria` but ignores the number of
+    initial tokens.
 
     Args:
         start_length (:obj:`int`):
@@ -77,7 +81,8 @@ class MaxNewTokensCriteria(StoppingCriteria):
         self.max_length = start_length + max_new_tokens
 
     @add_start_docstrings(STOPPING_CRITERIA_INPUTS_DOCSTRING)
-    def __call__(self, input_ids: "torch.LongTensor", scores: "torch.FloatTensor", **kwargs) -> bool:
+    def __call__(self, input_ids: 'torch.LongTensor',
+                 scores: 'torch.FloatTensor', **kwargs) -> bool:
         return input_ids.shape[-1] >= self.max_length
 
 
@@ -94,18 +99,24 @@ class MaxTimeCriteria(StoppingCriteria):
             The start of the generation allowed time.
     """
 
-    def __init__(self, max_time: float, initial_timestamp: Optional[float] = None):
+    def __init__(self,
+                 max_time: float,
+                 initial_timestamp: Optional[float] = None):
         self.max_time = max_time
-        self.initial_timestamp = time.time() if initial_timestamp is None else initial_timestamp
+        self.initial_timestamp = time.time(
+        ) if initial_timestamp is None else initial_timestamp
 
     @add_start_docstrings(STOPPING_CRITERIA_INPUTS_DOCSTRING)
-    def __call__(self, input_ids: "torch.LongTensor", scores: "torch.FloatTensor", **kwargs) -> bool:
+    def __call__(self, input_ids: 'torch.LongTensor',
+                 scores: 'torch.FloatTensor', **kwargs) -> bool:
         return time.time() - self.initial_timestamp > self.max_time
 
 
 class StoppingCriteriaList(list):
+
     @add_start_docstrings(STOPPING_CRITERIA_INPUTS_DOCSTRING)
-    def __call__(self, input_ids: "torch.LongTensor", scores: "torch.FloatTensor", **kwargs) -> bool:
+    def __call__(self, input_ids: 'torch.LongTensor',
+                 scores: 'torch.FloatTensor', **kwargs) -> bool:
         return any(criteria(input_ids, scores) for criteria in self)
 
     @property
@@ -118,11 +129,14 @@ class StoppingCriteriaList(list):
         return None
 
 
-def validate_stopping_criteria(stopping_criteria: StoppingCriteriaList, max_length: int) -> StoppingCriteriaList:
+def validate_stopping_criteria(stopping_criteria: StoppingCriteriaList,
+                               max_length: int) -> StoppingCriteriaList:
     stopping_max_length = stopping_criteria.max_length
     new_stopping_criteria = deepcopy(stopping_criteria)
     if stopping_max_length is not None and stopping_max_length != max_length:
-        logger.rank_zero_warning("You set different `max_length` for stopping criteria and `max_length` parameter", UserWarning)
+        logger.rank_zero_warning(
+            'You set different `max_length` for stopping criteria and `max_length` parameter',
+            UserWarning)
     elif stopping_max_length is None:
         new_stopping_criteria.append(MaxLengthCriteria(max_length=max_length))
     return new_stopping_criteria

@@ -6,56 +6,52 @@ import sys
 from pathlib import Path
 from typing import Dict, Optional, Union
 
-from fastNLP.transformers.torch.file_utils import (
-    HF_MODULES_CACHE,
-    TRANSFORMERS_DYNAMIC_MODULE_NAME,
-    cached_path,
-    hf_bucket_url,
-    is_offline_mode,
-)
 from fastNLP.core.log import logger
+from fastNLP.transformers.torch.file_utils import (
+    HF_MODULES_CACHE, TRANSFORMERS_DYNAMIC_MODULE_NAME, cached_path,
+    hf_bucket_url, is_offline_mode)
+
 
 def init_hf_modules():
-    """
-    Creates the cache directory for modules with an init, and adds it to the Python path.
-    """
+    """Creates the cache directory for modules with an init, and adds it to the
+    Python path."""
     # This function has already been executed if HF_MODULES_CACHE already is in the Python path.
     if HF_MODULES_CACHE in sys.path:
         return
 
     sys.path.append(HF_MODULES_CACHE)
     os.makedirs(HF_MODULES_CACHE, exist_ok=True)
-    init_path = Path(HF_MODULES_CACHE) / "__init__.py"
+    init_path = Path(HF_MODULES_CACHE) / '__init__.py'
     if not init_path.exists():
         init_path.touch()
 
+
 def create_dynamic_module(name: Union[str, os.PathLike]):
-    """
-    Creates a dynamic module in the cache directory for modules.
-    """
+    """Creates a dynamic module in the cache directory for modules."""
     init_hf_modules()
     dynamic_module_path = Path(HF_MODULES_CACHE) / name
     # If the parent module does not exist yet, recursively create it.
     if not dynamic_module_path.parent.exists():
         create_dynamic_module(dynamic_module_path.parent)
     os.makedirs(dynamic_module_path, exist_ok=True)
-    init_path = dynamic_module_path / "__init__.py"
+    init_path = dynamic_module_path / '__init__.py'
     if not init_path.exists():
         init_path.touch()
 
+
 def check_imports(filename):
-    """
-    Check if the current Python environment contains all the libraries that are imported in a file.
-    """
-    with open(filename, "r", encoding="utf-8") as f:
+    """Check if the current Python environment contains all the libraries that
+    are imported in a file."""
+    with open(filename, 'r', encoding='utf-8') as f:
         content = f.read()
 
     # Imports of the form `import xxx`
-    imports = re.findall("^\s*import\s+(\S+)\s*$", content, flags=re.MULTILINE)
+    imports = re.findall('^\s*import\s+(\S+)\s*$', content, flags=re.MULTILINE)
     # Imports of the form `from xxx import yyy`
-    imports += re.findall("^\s*from\s+(\S+)\s+import", content, flags=re.MULTILINE)
+    imports += re.findall(
+        '^\s*from\s+(\S+)\s+import', content, flags=re.MULTILINE)
     # Only keep the top-level module
-    imports = [imp.split(".")[0] for imp in imports if not imp.startswith(".")]
+    imports = [imp.split('.')[0] for imp in imports if not imp.startswith('.')]
 
     # Unique-ify and test we got them all
     imports = list(set(imports))
@@ -68,18 +64,18 @@ def check_imports(filename):
 
     if len(missing_packages) > 0:
         raise ImportError(
-            "This modeling file requires the following packages that were not found in your environment: "
+            'This modeling file requires the following packages that were not found in your environment: '
             f"{', '.join(missing_packages)}. Run `pip install {' '.join(missing_packages)}`"
         )
 
 
 def get_class_in_module(class_name, module_path):
-    """
-    Import a module on the cache directory for modules and extract a class from it.
-    """
-    module_path = module_path.replace(os.path.sep, ".")
+    """Import a module on the cache directory for modules and extract a class
+    from it."""
+    module_path = module_path.replace(os.path.sep, '.')
     module = importlib.import_module(module_path)
     return getattr(module, class_name)
+
 
 def get_class_from_dynamic_module(
     pretrained_model_name_or_path: Union[str, os.PathLike],
@@ -94,8 +90,8 @@ def get_class_from_dynamic_module(
     local_files_only: bool = False,
     **kwargs,
 ):
-    """
-    Extracts a class from a module file, present in the local folder or repository of a model.
+    """Extracts a class from a module file, present in the local folder or
+    repository of a model.
 
     .. warning::
 
@@ -152,19 +148,22 @@ def get_class_from_dynamic_module(
         cls = get_class_from_dynamic_module("sgugger/my-bert-model", "modeling.py", "MyBertModel")
     """
     if is_offline_mode() and not local_files_only:
-        logger.info("Offline mode: forcing local_files_only=True")
+        logger.info('Offline mode: forcing local_files_only=True')
         local_files_only = True
 
     # Download and cache module_file from the repo `pretrained_model_name_or_path` of grab it if it's a local file.
     pretrained_model_name_or_path = str(pretrained_model_name_or_path)
     if os.path.isdir(pretrained_model_name_or_path):
-        module_file_or_url = os.path.join(pretrained_model_name_or_path, module_file)
-        submodule = "local"
+        module_file_or_url = os.path.join(pretrained_model_name_or_path,
+                                          module_file)
+        submodule = 'local'
     else:
         module_file_or_url = hf_bucket_url(
-            pretrained_model_name_or_path, filename=module_file, revision=revision, mirror=None
-        )
-        submodule = pretrained_model_name_or_path.replace("/", os.path.sep)
+            pretrained_model_name_or_path,
+            filename=module_file,
+            revision=revision,
+            mirror=None)
+        submodule = pretrained_model_name_or_path.replace('/', os.path.sep)
 
     try:
         # Load from URL or cache if already cached
@@ -179,7 +178,9 @@ def get_class_from_dynamic_module(
         )
 
     except EnvironmentError:
-        logger.error(f"Could not locate the {module_file} inside {pretrained_model_name_or_path}.")
+        logger.error(
+            f'Could not locate the {module_file} inside {pretrained_model_name_or_path}.'
+        )
         raise
 
     # Check we have all the requirements in our environment
@@ -189,7 +190,7 @@ def get_class_from_dynamic_module(
     full_submodule = TRANSFORMERS_DYNAMIC_MODULE_NAME + os.path.sep + submodule
     create_dynamic_module(full_submodule)
     submodule_path = Path(HF_MODULES_CACHE) / full_submodule
-    if submodule == "local":
+    if submodule == 'local':
         # We always copy local files (we could hash the file to see if there was a change, and give them the name of
         # that hash, to only copy when there is a modification but it seems overkill for now).
         # The only reason we do the copy is to avoid putting too many folders in sys.path.
@@ -198,11 +199,12 @@ def get_class_from_dynamic_module(
     else:
         # The module file will end up being named module_file + the etag. This way we get the benefit of versioning.
         resolved_module_file_name = Path(resolved_module_file).name
-        module_name_parts = [module_file.replace(".py", "")] + resolved_module_file_name.split(".")
-        module_name = "_".join(module_name_parts) + ".py"
+        module_name_parts = [module_file.replace('.py', '')
+                             ] + resolved_module_file_name.split('.')
+        module_name = '_'.join(module_name_parts) + '.py'
         if not (submodule_path / module_name).exists():
             shutil.copy(resolved_module_file, submodule_path / module_name)
 
     # And lastly we get the class inside our newly created module
-    final_module = os.path.join(full_submodule, module_name.replace(".py", ""))
+    final_module = os.path.join(full_submodule, module_name.replace('.py', ''))
     return get_class_in_module(class_name, final_module)

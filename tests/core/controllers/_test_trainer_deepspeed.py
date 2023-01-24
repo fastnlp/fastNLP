@@ -1,25 +1,24 @@
-"""
-这个文件测试多卡情况下使用 deepspeed 的情况::
+"""这个文件测试多卡情况下使用 deepspeed 的情况::
 
     >>> # 测试直接使用多卡
     >>> python _test_trainer_deepspeed.py
     >>> # 测试通过 deepspeed 拉起
     >>> deepspeed _test_trainer_deepspeed.py
-
 """
 import sys
-sys.path.append("../../../")
-from dataclasses import dataclass
 
-from fastNLP.core.controllers.trainer import Trainer
-from fastNLP.core.metrics.accuracy import Accuracy
-from fastNLP.core.callbacks.progress_callback import RichCallback
+sys.path.append('../../../')
+from dataclasses import dataclass
 
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 
-from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
+from fastNLP.core.callbacks.progress_callback import RichCallback
+from fastNLP.core.controllers.trainer import Trainer
+from fastNLP.core.metrics.accuracy import Accuracy
 from tests.helpers.datasets.torch_data import TorchArgMaxDataset
+from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
+
 
 @dataclass
 class TrainDeepSpeedConfig:
@@ -30,6 +29,7 @@ class TrainDeepSpeedConfig:
     shuffle: bool = True
     evaluate_every = 2
 
+
 def test_trainer_deepspeed(
     device,
     callbacks,
@@ -39,57 +39,54 @@ def test_trainer_deepspeed(
 ):
     model = TorchNormalModel_Classification_1(
         num_labels=TrainDeepSpeedConfig.num_labels,
-        feature_dimension=TrainDeepSpeedConfig.feature_dimension
-    )
+        feature_dimension=TrainDeepSpeedConfig.feature_dimension)
     optimizers = Adam(params=model.parameters(), lr=0.0001)
     train_dataloader = DataLoader(
         dataset=TorchArgMaxDataset(TrainDeepSpeedConfig.feature_dimension, 20),
         batch_size=TrainDeepSpeedConfig.batch_size,
-        shuffle=True
-    )
+        shuffle=True)
     val_dataloader = DataLoader(
         dataset=TorchArgMaxDataset(TrainDeepSpeedConfig.feature_dimension, 12),
         batch_size=TrainDeepSpeedConfig.batch_size,
-        shuffle=True
-    )
+        shuffle=True)
     train_dataloader = train_dataloader
     evaluate_dataloaders = val_dataloader
     evaluate_every = TrainDeepSpeedConfig.evaluate_every
-    metrics = {"acc": Accuracy()}
+    metrics = {'acc': Accuracy()}
     if config is not None:
-        config["train_micro_batch_size_per_gpu"] = TrainDeepSpeedConfig.batch_size
+        config[
+            'train_micro_batch_size_per_gpu'] = TrainDeepSpeedConfig.batch_size
     trainer = Trainer(
         model=model,
-        driver="deepspeed",
+        driver='deepspeed',
         device=device,
         optimizers=optimizers,
         train_dataloader=train_dataloader,
         evaluate_dataloaders=evaluate_dataloaders,
         evaluate_every=evaluate_every,
         metrics=metrics,
-        output_mapping={"preds": "pred"},
-
+        output_mapping={'preds': 'pred'},
         n_epochs=n_epochs,
         callbacks=callbacks,
         deepspeed_kwargs={
-            "strategy": strategy,
-            "config": config
-        }
-    )
+            'strategy': strategy,
+            'config': config
+        })
     trainer.run()
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     device = [4, 5]
     # device = [0,1,3]
     callbacks = [
-        # RecordMetricCallback(monitor="acc#acc", metric_threshold=0.0, larger_better=True), 
+        # RecordMetricCallback(monitor="acc#acc", metric_threshold=0.0, larger_better=True),
         RichCallback(5),
     ]
     config = None
     test_trainer_deepspeed(
         device=device,
         callbacks=callbacks,
-        strategy="deepspeed",
+        strategy='deepspeed',
         config=config,
         n_epochs=5,
     )

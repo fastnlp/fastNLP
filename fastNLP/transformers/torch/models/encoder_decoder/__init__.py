@@ -1,5 +1,5 @@
 __all__ = [
-    "EncoderDecoderConfig",
+    'EncoderDecoderConfig',
 ]
 
 from .configuration_encoder_decoder import EncoderDecoderConfig

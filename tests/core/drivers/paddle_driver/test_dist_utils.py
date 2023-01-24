@@ -1,35 +1,31 @@
 import os
-import sys
 import signal
-import pytest
+import sys
 import traceback
 
 import numpy as np
+import pytest
 
 from fastNLP.core.drivers.paddle_driver.dist_utils import (
-    _tensor_to_object,
-    _object_to_tensor,
-    fastnlp_paddle_all_gather,
-    fastnlp_paddle_broadcast_object,
-)
+    _object_to_tensor, _tensor_to_object, fastnlp_paddle_all_gather,
+    fastnlp_paddle_broadcast_object)
 from fastNLP.core.drivers.paddle_driver.fleet_launcher import FleetLauncher
-from tests.helpers.utils import magic_argv_env_context
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+from tests.helpers.utils import magic_argv_env_context, skip_no_cuda
+
 if _NEED_IMPORT_PADDLE:
     import paddle
     import paddle.distributed as dist
 
+
 @pytest.mark.paddledist
 class TestDistUtilsTools:
-    """
-    测试一些工具函数
-    """
+    """测试一些工具函数."""
 
-    @pytest.mark.parametrize("device", (["cpu", 0]))
+    @pytest.mark.parametrize('device', (['cpu', 0]))
     def test_tensor_object_transfer_tensor(self, device):
-        """
-        测试 _tensor_to_object 和 _object_to_tensor 二者的结果能否互相转换
-        """
+        """测试 _tensor_to_object 和 _object_to_tensor 二者的结果能否互相转换."""
+        skip_no_cuda()
         # 张量
         paddle_tensor = paddle.rand((3, 4, 5)).cpu()
         obj_tensor, size = _object_to_tensor(paddle_tensor, device=device)
@@ -52,43 +48,47 @@ class TestDistUtilsTools:
         assert isinstance(res, tuple)
         for before, after in zip(paddle_list, res):
             assert paddle.equal_all(after, before)
-            
+
         # 字典
         paddle_dict = {
-            "tensor": paddle.rand((3, 4)),
-            "list": [paddle.rand((6, 4, 2)) for i in range(10)],
-            "dict":{
-                "list": [paddle.rand((6, 4, 2)) for i in range(10)],
-                "tensor": paddle.rand((3, 4))
+            'tensor': paddle.rand((3, 4)),
+            'list': [paddle.rand((6, 4, 2)) for i in range(10)],
+            'dict': {
+                'list': [paddle.rand((6, 4, 2)) for i in range(10)],
+                'tensor': paddle.rand((3, 4))
             },
-            "int": 2,
-            "string": "test string"
+            'int': 2,
+            'string': 'test string'
         }
         obj_tensor, size = _object_to_tensor(paddle_dict, device=device)
         res = _tensor_to_object(obj_tensor, size)
         assert isinstance(res, dict)
-        assert paddle.equal_all(res["tensor"], paddle_dict["tensor"])
-        assert isinstance(res["list"], list)
-        for before, after in zip(paddle_dict["list"], res["list"]):
+        assert paddle.equal_all(res['tensor'], paddle_dict['tensor'])
+        assert isinstance(res['list'], list)
+        for before, after in zip(paddle_dict['list'], res['list']):
             assert paddle.equal_all(after, before)
 
-        assert isinstance(res["dict"], dict)
-        assert paddle.equal_all(res["dict"]["tensor"], paddle_dict["dict"]["tensor"])
-        for before, after in zip(paddle_dict["dict"]["list"], res["dict"]["list"]):
+        assert isinstance(res['dict'], dict)
+        assert paddle.equal_all(res['dict']['tensor'],
+                                paddle_dict['dict']['tensor'])
+        for before, after in zip(paddle_dict['dict']['list'],
+                                 res['dict']['list']):
             assert paddle.equal_all(after, before)
-        assert res["int"] == paddle_dict["int"]
-        assert res["string"] == paddle_dict["string"]
+        assert res['int'] == paddle_dict['int']
+        assert res['string'] == paddle_dict['string']
+
 
 @pytest.mark.paddledist
 class TestAllGatherAndBroadCast:
 
     @classmethod
     def setup_class(cls):
-        devices = [0,1]
-        output_from_new_proc = "all"
+        devices = [0, 1]
+        output_from_new_proc = 'all'
 
-        launcher = FleetLauncher(devices=devices, output_from_new_proc=output_from_new_proc)
-        cls.local_rank = int(os.getenv("PADDLE_RANK_IN_NODE", "0"))
+        launcher = FleetLauncher(
+            devices=devices, output_from_new_proc=output_from_new_proc)
+        cls.local_rank = int(os.getenv('PADDLE_RANK_IN_NODE', '0'))
         if cls.local_rank == 0:
             launcher = FleetLauncher(devices, output_from_new_proc)
             launcher.launch()
@@ -106,7 +106,9 @@ class TestAllGatherAndBroadCast:
 
             exc_type, exc_value, exc_traceback_obj = sys.exc_info()
             traceback.print_tb(exc_traceback_obj, file=sys.stderr)
-            sys.stderr.write(f"Start to stop these pids:{self._pids}, please wait several seconds.\n")
+            sys.stderr.write(
+                f'Start to stop these pids:{self._pids}, please wait several seconds.\n'
+            )
             for pid in self._pids:
                 pid = pid.item()
                 if pid != os.getpid():
@@ -115,18 +117,26 @@ class TestAllGatherAndBroadCast:
     @magic_argv_env_context
     def test_fastnlp_paddle_all_gather(self):
         obj = {
-            'tensor': paddle.full(shape=(2, ), fill_value=self.local_rank).cuda(),
-            'numpy': np.full(shape=(2, ), fill_value=self.local_rank),
-            'bool': self.local_rank % 2 == 0,
-            'float': self.local_rank + 0.1,
-            'int': self.local_rank,
+            'tensor':
+            paddle.full(shape=(2, ), fill_value=self.local_rank).cuda(),
+            'numpy':
+            np.full(shape=(2, ), fill_value=self.local_rank),
+            'bool':
+            self.local_rank % 2 == 0,
+            'float':
+            self.local_rank + 0.1,
+            'int':
+            self.local_rank,
             'dict': {
                 'rank': self.local_rank
             },
             'list': [self.local_rank] * 2,
-            'str': f'{self.local_rank}',
-            'tensors': [paddle.full(shape=(2,), fill_value=self.local_rank).cuda(),
-                        paddle.full(shape=(2,), fill_value=self.local_rank).cuda()]
+            'str':
+            f'{self.local_rank}',
+            'tensors': [
+                paddle.full(shape=(2, ), fill_value=self.local_rank).cuda(),
+                paddle.full(shape=(2, ), fill_value=self.local_rank).cuda()
+            ]
         }
         data = fastnlp_paddle_all_gather(obj)
         world_size = int(os.environ['PADDLE_TRAINERS_NUM'])
@@ -150,26 +160,37 @@ class TestAllGatherAndBroadCast:
         dist.barrier()
 
     @magic_argv_env_context
-    @pytest.mark.parametrize("src_rank", ([0, 1]))
+    @pytest.mark.parametrize('src_rank', ([0, 1]))
     def test_fastnlp_paddle_broadcast_object(self, src_rank):
         if self.local_rank == src_rank:
             obj = {
-                'tensor': paddle.full(shape=(2, ), fill_value=self.local_rank).cuda(),
-                'numpy': np.full(shape=(2, ), fill_value=self.local_rank),
-                'bool': self.local_rank % 2 == 0,
-                'float': self.local_rank + 0.1,
-                'int': self.local_rank,
+                'tensor':
+                paddle.full(shape=(2, ), fill_value=self.local_rank).cuda(),
+                'numpy':
+                np.full(shape=(2, ), fill_value=self.local_rank),
+                'bool':
+                self.local_rank % 2 == 0,
+                'float':
+                self.local_rank + 0.1,
+                'int':
+                self.local_rank,
                 'dict': {
                     'rank': self.local_rank
                 },
                 'list': [self.local_rank] * 2,
-                'str': f'{self.local_rank}',
-                'tensors': [paddle.full(shape=(2,), fill_value=self.local_rank).cuda(),
-                            paddle.full(shape=(2,), fill_value=self.local_rank).cuda()]
+                'str':
+                f'{self.local_rank}',
+                'tensors': [
+                    paddle.full(shape=(2, ),
+                                fill_value=self.local_rank).cuda(),
+                    paddle.full(shape=(2, ),
+                                fill_value=self.local_rank).cuda()
+                ]
             }
         else:
             obj = None
-        data = fastnlp_paddle_broadcast_object(obj, src=src_rank, device=paddle.device.get_device())
+        data = fastnlp_paddle_broadcast_object(
+            obj, src=src_rank, device=paddle.device.get_device())
         assert data['tensor'][0] == src_rank
         assert data['numpy'][0] == src_rank
         assert data['bool'] == (src_rank % 2 == 0)
@@ -180,7 +201,12 @@ class TestAllGatherAndBroadCast:
         assert data['str'] == f'{src_rank}'
         assert data['tensors'][0][0] == src_rank
 
-        for obj in [self.local_rank, bool(self.local_rank == 1), str(self.local_rank)]:
-            data = fastnlp_paddle_broadcast_object(obj, src=0, device=paddle.device.get_device())
-            assert int (data) == 0
+        for obj in [
+                self.local_rank,
+                bool(self.local_rank == 1),
+                str(self.local_rank)
+        ]:
+            data = fastnlp_paddle_broadcast_object(
+                obj, src=0, device=paddle.device.get_device())
+            assert int(data) == 0
         dist.barrier()

@@ -1,21 +1,21 @@
 import pytest
 
-from fastNLP.core.drivers.oneflow_driver.utils import (
-    replace_batch_sampler,
-    replace_sampler,
-)
-from fastNLP.core.samplers import ReproduceBatchSampler, RandomSampler
+from fastNLP.core.drivers.oneflow_driver.utils import (replace_batch_sampler,
+                                                       replace_sampler)
+from fastNLP.core.samplers import RandomSampler, ReproduceBatchSampler
 from fastNLP.envs.imports import _NEED_IMPORT_ONEFLOW
 from tests.helpers.datasets.oneflow_data import OneflowNormalDataset
 
 if _NEED_IMPORT_ONEFLOW:
-    from oneflow.utils.data import DataLoader, BatchSampler
+    from oneflow.utils.data import BatchSampler, DataLoader
+
 
 @pytest.mark.oneflow
 def test_replace_batch_sampler():
     dataset = OneflowNormalDataset(10)
     dataloader = DataLoader(dataset, batch_size=32)
-    batch_sampler = ReproduceBatchSampler(dataloader.batch_sampler, batch_size=16, drop_last=False)
+    batch_sampler = ReproduceBatchSampler(
+        dataloader.batch_sampler, batch_size=16, drop_last=False)
 
     replaced_loader = replace_batch_sampler(dataloader, batch_sampler)
 

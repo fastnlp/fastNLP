@@ -1,25 +1,25 @@
-from typing import Optional, Callable, Dict
+from typing import Callable, Dict, Optional
 
-__all__ = [
-    'EvaluateBatchLoop'
-]
-
-from .loop import Loop
 from fastNLP.core.log import logger
 from fastNLP.core.utils import match_and_substitute_params
+from .loop import Loop
+
+__all__ = ['EvaluateBatchLoop']
 
 
 class EvaluateBatchLoop(Loop):
     r"""
-    ``EvaluateBatchLoop`` 针对一个 dataloader 的数据完成一个 epoch 的评测迭代过程；
+    ``EvaluateBatchLoop`` 针对一个 dataloader 的数据完成一个 epoch 的评测迭代过
+    程；
 
     :param batch_step_fn: 您可以传入该参数来替换默认的 ``bath_step_fn``；
     """
-    def __init__(self, batch_step_fn:Optional[Callable]=None):
+
+    def __init__(self, batch_step_fn: Optional[Callable] = None):
         if batch_step_fn is not None:
-            self.batch_step_fn = batch_step_fn
+            self.batch_step_fn = batch_step_fn  # type: ignore
         else:
-            self.batch_step_fn = EvaluateBatchLoop.batch_step_fn
+            self.batch_step_fn = EvaluateBatchLoop.batch_step_fn  # type: ignore
 
     def run(self, evaluator, dataloader) -> Dict:
         r"""
@@ -37,23 +37,30 @@ class EvaluateBatchLoop(Loop):
             except StopIteration:
                 break
             try:
-                batch = match_and_substitute_params(evaluator.input_mapping, batch)
+                batch = match_and_substitute_params(evaluator.input_mapping,
+                                                    batch)
                 batch = evaluator.move_data_to_device(batch)
 
                 self.batch_step_fn(evaluator, batch)
                 batch_idx += 1
-                evaluator.update_progress_bar(batch_idx, evaluator.cur_dataloader_name)
+                evaluator.update_progress_bar(batch_idx,
+                                              evaluator.cur_dataloader_name)
 
             except BaseException as e:
                 if callable(getattr(dataloader, 'get_batch_indices', None)):
                     indices = dataloader.get_batch_indices()
                     if evaluator.cur_dataloader_name is not None:
-                        logger.error(f"Exception happens when evaluating on samples in dataloader:"
-                                     f"{evaluator.cur_dataloader_name}: {indices}")
+                        logger.error(
+                            'Exception happens when evaluating on samples in '
+                            f'dataloader:{evaluator.cur_dataloader_name}: '
+                            f'{indices}')
                     else:
-                        logger.error(f"Exception happens when evaluating on samples: {indices}")
+                        logger.error(
+                            'Exception happens when evaluating on samples: '
+                            f'{indices}')
                 raise e
-        # 获取metric结果。返回的dict内容示例为{'metric_name1': metric_results, 'metric_name2': metric_results, ...}
+        # 获取metric结果。返回的dict内容示例为：
+        # {'metric_name1': metric_results, 'metric_name2': metric_results, ...}
         results = evaluator.get_metric()
         return results
 
@@ -66,4 +73,5 @@ class EvaluateBatchLoop(Loop):
         :param batch: 当前需要评测的一个 ``batch`` 的数据；
         """
         outputs = evaluator.evaluate_step(batch)  # 将batch输入到model中得到结果
-        evaluator.update(batch, outputs)  # evaluator将根据metric的形参名字从batch/outputs中取出对应的值进行赋值
+        # evaluator将根据metric的形参名字从batch/outputs中取出对应的值进行赋值
+        evaluator.update(batch, outputs)

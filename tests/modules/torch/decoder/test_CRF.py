@@ -1,45 +1,56 @@
-import pytest
 import os
+
+import pytest
+
 from fastNLP import Vocabulary
 
 
 @pytest.mark.torch
 class TestCRF:
+
     def test_case1(self):
         from fastNLP.modules.torch.decoder.crf import allowed_transitions
+
         # 检查allowed_transitions()能否正确使用
 
-        id2label = {0: 'B', 1: 'I', 2:'O'}
-        expected_res = {(0, 0), (0, 1), (0, 2), (0, 4), (1, 0), (1, 1), (1, 2), (1, 4), (2, 0), (2, 2),
-                        (2, 4), (3, 0), (3, 2)}
-        assert expected_res == set(allowed_transitions(id2label, include_start_end=True))
+        id2label = {0: 'B', 1: 'I', 2: 'O'}
+        expected_res = {(0, 0), (0, 1), (0, 2), (0, 4), (1, 0), (1, 1), (1, 2),
+                        (1, 4), (2, 0), (2, 2), (2, 4), (3, 0), (3, 2)}
+        assert expected_res == set(
+            allowed_transitions(id2label, include_start_end=True))
 
-        id2label = {0: 'B', 1:'M', 2:'E', 3:'S'}
-        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 5), (3, 0), (3, 3), (3, 5), (4, 0), (4, 3)}
+        id2label = {0: 'B', 1: 'M', 2: 'E', 3: 'S'}
+        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 5),
+                        (3, 0), (3, 3), (3, 5), (4, 0), (4, 3)}
         assert (expected_res == set(
-            allowed_transitions(id2label, encoding_type='BMES', include_start_end=True)))
+            allowed_transitions(
+                id2label, encoding_type='BMES', include_start_end=True)))
 
-        id2label = {0: 'B', 1: 'I', 2:'O', 3: '<pad>', 4:"<unk>"}
+        id2label = {0: 'B', 1: 'I', 2: 'O', 3: '<pad>', 4: '<unk>'}
         allowed_transitions(id2label, include_start_end=True)
 
         labels = ['O']
         for label in ['X', 'Y']:
             for tag in 'BI':
                 labels.append('{}-{}'.format(tag, label))
-        id2label = {idx:label for idx, label in enumerate(labels)}
-        expected_res = {(0, 0), (0, 1), (0, 3), (0, 6), (1, 0), (1, 1), (1, 2), (1, 3), (1, 6), (2, 0), (2, 1),
-                        (2, 2), (2, 3), (2, 6), (3, 0), (3, 1), (3, 3), (3, 4), (3, 6), (4, 0), (4, 1), (4, 3),
-                        (4, 4), (4, 6), (5, 0), (5, 1), (5, 3)}
-        assert (expected_res == set(allowed_transitions(id2label, include_start_end=True)))
+        id2label = {idx: label for idx, label in enumerate(labels)}
+        expected_res = {(0, 0), (0, 1), (0, 3), (0, 6), (1, 0), (1, 1), (1, 2),
+                        (1, 3), (1, 6), (2, 0), (2, 1), (2, 2), (2, 3), (2, 6),
+                        (3, 0), (3, 1), (3, 3), (3, 4), (3, 6), (4, 0), (4, 1),
+                        (4, 3), (4, 4), (4, 6), (5, 0), (5, 1), (5, 3)}
+        assert (expected_res == set(
+            allowed_transitions(id2label, include_start_end=True)))
 
         labels = []
         for label in ['X', 'Y']:
             for tag in 'BMES':
                 labels.append('{}-{}'.format(tag, label))
         id2label = {idx: label for idx, label in enumerate(labels)}
-        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 4), (2, 7), (2, 9), (3, 0), (3, 3), (3, 4),
-                        (3, 7), (3, 9), (4, 5), (4, 6), (5, 5), (5, 6), (6, 0), (6, 3), (6, 4), (6, 7), (6, 9), (7, 0),
-                        (7, 3), (7, 4), (7, 7), (7, 9), (8, 0), (8, 3), (8, 4), (8, 7)}
+        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 4),
+                        (2, 7), (2, 9), (3, 0), (3, 3), (3, 4), (3, 7), (3, 9),
+                        (4, 5), (4, 6), (5, 5), (5, 6), (6, 0), (6, 3), (6, 4),
+                        (6, 7), (6, 9), (7, 0), (7, 3), (7, 4), (7, 7), (7, 9),
+                        (8, 0), (8, 3), (8, 4), (8, 7)}
         assert (expected_res == set(
             allowed_transitions(id2label, include_start_end=True)))
 
@@ -48,16 +59,18 @@ class TestCRF:
         from fastNLP.modules.torch.decoder.crf import allowed_transitions
 
         id2label = {0: 'B', 1: 'I', 2: 'O'}
-        expected_res = {(0, 0), (0, 1), (0, 2), (0, 4), (1, 0), (1, 1), (1, 2), (1, 4), (2, 0), (2, 2),
-                        (2, 4), (3, 0), (3, 2)}
-        assert (expected_res == set(allowed_transitions(id2label, include_start_end=True)))
-
-        id2label = {0: 'B', 1: 'M', 2: 'E', 3: 'S'}
-        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 5), (3, 0), (3, 3), (3, 5), (4, 0), (4, 3)}
+        expected_res = {(0, 0), (0, 1), (0, 2), (0, 4), (1, 0), (1, 1), (1, 2),
+                        (1, 4), (2, 0), (2, 2), (2, 4), (3, 0), (3, 2)}
         assert (expected_res == set(
             allowed_transitions(id2label, include_start_end=True)))
 
-        id2label = {0: 'B', 1: 'I', 2: 'O', 3: '<pad>', 4: "<unk>"}
+        id2label = {0: 'B', 1: 'M', 2: 'E', 3: 'S'}
+        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 5),
+                        (3, 0), (3, 3), (3, 5), (4, 0), (4, 3)}
+        assert (expected_res == set(
+            allowed_transitions(id2label, include_start_end=True)))
+
+        id2label = {0: 'B', 1: 'I', 2: 'O', 3: '<pad>', 4: '<unk>'}
         allowed_transitions(id2label, include_start_end=True)
 
         labels = ['O']
@@ -65,19 +78,23 @@ class TestCRF:
             for tag in 'BI':
                 labels.append('{}-{}'.format(tag, label))
         id2label = {idx: label for idx, label in enumerate(labels)}
-        expected_res = {(0, 0), (0, 1), (0, 3), (0, 6), (1, 0), (1, 1), (1, 2), (1, 3), (1, 6), (2, 0), (2, 1),
-                        (2, 2), (2, 3), (2, 6), (3, 0), (3, 1), (3, 3), (3, 4), (3, 6), (4, 0), (4, 1), (4, 3),
-                        (4, 4), (4, 6), (5, 0), (5, 1), (5, 3)}
-        assert (expected_res == set(allowed_transitions(id2label, include_start_end=True)))
+        expected_res = {(0, 0), (0, 1), (0, 3), (0, 6), (1, 0), (1, 1), (1, 2),
+                        (1, 3), (1, 6), (2, 0), (2, 1), (2, 2), (2, 3), (2, 6),
+                        (3, 0), (3, 1), (3, 3), (3, 4), (3, 6), (4, 0), (4, 1),
+                        (4, 3), (4, 4), (4, 6), (5, 0), (5, 1), (5, 3)}
+        assert (expected_res == set(
+            allowed_transitions(id2label, include_start_end=True)))
 
         labels = []
         for label in ['X', 'Y']:
             for tag in 'BMES':
                 labels.append('{}-{}'.format(tag, label))
         id2label = {idx: label for idx, label in enumerate(labels)}
-        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 4), (2, 7), (2, 9), (3, 0), (3, 3), (3, 4),
-                        (3, 7), (3, 9), (4, 5), (4, 6), (5, 5), (5, 6), (6, 0), (6, 3), (6, 4), (6, 7), (6, 9), (7, 0),
-                        (7, 3), (7, 4), (7, 7), (7, 9), (8, 0), (8, 3), (8, 4), (8, 7)}
+        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 4),
+                        (2, 7), (2, 9), (3, 0), (3, 3), (3, 4), (3, 7), (3, 9),
+                        (4, 5), (4, 6), (5, 5), (5, 6), (6, 0), (6, 3), (6, 4),
+                        (6, 7), (6, 9), (7, 0), (7, 3), (7, 4), (7, 7), (7, 9),
+                        (8, 0), (8, 3), (8, 4), (8, 7)}
         assert (expected_res == set(
             allowed_transitions(id2label, include_start_end=True)))
 
@@ -89,19 +106,21 @@ class TestCRF:
         vocab = Vocabulary(unknown=None, padding=None)
         for idx, tag in id2label.items():
             vocab.add_word(tag)
-        expected_res = {(0, 0), (0, 1), (0, 2), (0, 4), (1, 0), (1, 1), (1, 2), (1, 4), (2, 0), (2, 2),
-                        (2, 4), (3, 0), (3, 2)}
-        assert (expected_res == set(allowed_transitions(vocab, include_start_end=True)))
+        expected_res = {(0, 0), (0, 1), (0, 2), (0, 4), (1, 0), (1, 1), (1, 2),
+                        (1, 4), (2, 0), (2, 2), (2, 4), (3, 0), (3, 2)}
+        assert (expected_res == set(
+            allowed_transitions(vocab, include_start_end=True)))
 
         id2label = {0: 'B', 1: 'M', 2: 'E', 3: 'S'}
         vocab = Vocabulary(unknown=None, padding=None)
         for idx, tag in id2label.items():
             vocab.add_word(tag)
-        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 5), (3, 0), (3, 3), (3, 5), (4, 0), (4, 3)}
+        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 5),
+                        (3, 0), (3, 3), (3, 5), (4, 0), (4, 3)}
         assert (expected_res == set(
             allowed_transitions(vocab, include_start_end=True)))
 
-        id2label = {0: 'B', 1: 'I', 2: 'O', 3: '<pad>', 4: "<unk>"}
+        id2label = {0: 'B', 1: 'I', 2: 'O', 3: '<pad>', 4: '<unk>'}
         vocab = Vocabulary()
         for idx, tag in id2label.items():
             vocab.add_word(tag)
@@ -112,13 +131,15 @@ class TestCRF:
             for tag in 'BI':
                 labels.append('{}-{}'.format(tag, label))
         id2label = {idx: label for idx, label in enumerate(labels)}
-        expected_res = {(0, 0), (0, 1), (0, 3), (0, 6), (1, 0), (1, 1), (1, 2), (1, 3), (1, 6), (2, 0), (2, 1),
-                        (2, 2), (2, 3), (2, 6), (3, 0), (3, 1), (3, 3), (3, 4), (3, 6), (4, 0), (4, 1), (4, 3),
-                        (4, 4), (4, 6), (5, 0), (5, 1), (5, 3)}
+        expected_res = {(0, 0), (0, 1), (0, 3), (0, 6), (1, 0), (1, 1), (1, 2),
+                        (1, 3), (1, 6), (2, 0), (2, 1), (2, 2), (2, 3), (2, 6),
+                        (3, 0), (3, 1), (3, 3), (3, 4), (3, 6), (4, 0), (4, 1),
+                        (4, 3), (4, 4), (4, 6), (5, 0), (5, 1), (5, 3)}
         vocab = Vocabulary(unknown=None, padding=None)
         for idx, tag in id2label.items():
             vocab.add_word(tag)
-        assert (expected_res == set(allowed_transitions(vocab, include_start_end=True)))
+        assert (expected_res == set(
+            allowed_transitions(vocab, include_start_end=True)))
 
         labels = []
         for label in ['X', 'Y']:
@@ -128,9 +149,11 @@ class TestCRF:
         vocab = Vocabulary(unknown=None, padding=None)
         for idx, tag in id2label.items():
             vocab.add_word(tag)
-        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 4), (2, 7), (2, 9), (3, 0), (3, 3), (3, 4),
-                        (3, 7), (3, 9), (4, 5), (4, 6), (5, 5), (5, 6), (6, 0), (6, 3), (6, 4), (6, 7), (6, 9), (7, 0),
-                        (7, 3), (7, 4), (7, 7), (7, 9), (8, 0), (8, 3), (8, 4), (8, 7)}
+        expected_res = {(0, 1), (0, 2), (1, 1), (1, 2), (2, 0), (2, 3), (2, 4),
+                        (2, 7), (2, 9), (3, 0), (3, 3), (3, 4), (3, 7), (3, 9),
+                        (4, 5), (4, 6), (5, 5), (5, 6), (6, 0), (6, 3), (6, 4),
+                        (6, 7), (6, 9), (7, 0), (7, 3), (7, 4), (7, 7), (7, 9),
+                        (8, 0), (8, 3), (8, 4), (8, 7)}
         assert (expected_res == set(
             allowed_transitions(vocab, include_start_end=True)))
 
@@ -222,10 +245,13 @@ class TestCRF:
     def test_case2(self):
         # 测试CRF是否正常work。
         import json
+
         import torch
+
         from fastNLP import seq_len_to_mask
         folder = os.path.dirname(os.path.abspath(__file__))
-        path = os.path.join(folder, '../../../', 'helpers/data/modules/decoder/crf.json')
+        path = os.path.join(folder, '../../../',
+                            'helpers/data/modules/decoder/crf.json')
 
         with open(os.path.abspath(path), 'r') as f:
             data = json.load(f)
@@ -251,9 +277,12 @@ class TestCRF:
 
         mask = seq_len_to_mask(bio_seq_lens)
 
-        from fastNLP.modules.torch.decoder.crf import ConditionalRandomField, allowed_transitions
-        fast_CRF = ConditionalRandomField(num_tags=num_tags, allowed_transitions=allowed_transitions(id2label,
-                                                                                                     include_start_end=True))
+        from fastNLP.modules.torch.decoder.crf import (ConditionalRandomField,
+                                                       allowed_transitions)
+        fast_CRF = ConditionalRandomField(
+            num_tags=num_tags,
+            allowed_transitions=allowed_transitions(
+                id2label, include_start_end=True))
         fast_CRF.trans_m.data = bio_trans_m
         fast_res = fast_CRF.viterbi_decode(bio_logits, mask, unpad=True)
         # score equal
@@ -270,10 +299,12 @@ class TestCRF:
 
         mask = seq_len_to_mask(bmes_seq_lens)
 
-        from fastNLP.modules.torch.decoder.crf import ConditionalRandomField, allowed_transitions
-        fast_CRF = ConditionalRandomField(num_tags=num_tags, allowed_transitions=allowed_transitions(id2label,
-                                                                                                     encoding_type='BMES',
-                                                                                                     include_start_end=True))
+        from fastNLP.modules.torch.decoder.crf import (ConditionalRandomField,
+                                                       allowed_transitions)
+        fast_CRF = ConditionalRandomField(
+            num_tags=num_tags,
+            allowed_transitions=allowed_transitions(
+                id2label, encoding_type='BMES', include_start_end=True))
         fast_CRF.trans_m.data = bmes_trans_m
         fast_res = fast_CRF.viterbi_decode(bmes_logits, mask, unpad=True)
         # score equal
@@ -284,10 +315,10 @@ class TestCRF:
     def test_case3(self):
         # 测试crf的loss不会出现负数
         import torch
-        from fastNLP.modules.torch.decoder.crf import ConditionalRandomField
+        from torch import nn, optim
+
         from fastNLP.core.utils import seq_len_to_mask
-        from torch import optim
-        from torch import nn
+        from fastNLP.modules.torch.decoder.crf import ConditionalRandomField
 
         num_tags, include_start_end_trans = 4, True
         num_samples = 4
@@ -297,31 +328,35 @@ class TestCRF:
         masks = seq_len_to_mask(lengths)
         feats = nn.Parameter(torch.randn(num_samples, max_len, num_tags))
         crf = ConditionalRandomField(num_tags, include_start_end_trans)
-        optimizer = optim.SGD([param for param in crf.parameters() if param.requires_grad] + [feats], lr=0.1)
+        optimizer = optim.SGD(
+            [param
+             for param in crf.parameters() if param.requires_grad] + [feats],
+            lr=0.1)
         for _ in range(10):
             loss = crf(feats, tags, masks).mean()
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if _%1000==0:
+            if _ % 1000 == 0:
                 print(loss)
-            assert (loss.item()> 0)
+            assert (loss.item() > 0)
 
     def test_masking(self):
         # 测试crf的pad masking正常运行
         import torch
+
         from fastNLP.modules.torch.decoder.crf import ConditionalRandomField
         max_len = 5
         n_tags = 5
         pad_len = 5
 
         torch.manual_seed(4)
-        logit = torch.rand(1, max_len+pad_len, n_tags)
+        logit = torch.rand(1, max_len + pad_len, n_tags)
         # logit[0, -1, :] = 0.0
-        mask = torch.ones(1, max_len+pad_len)
-        mask[0,-pad_len] = 0
+        mask = torch.ones(1, max_len + pad_len)
+        mask[0, -pad_len] = 0
         model = ConditionalRandomField(n_tags)
-        pred, score = model.viterbi_decode(logit[:,:-pad_len], mask[:,:-pad_len])
+        pred, score = model.viterbi_decode(logit[:, :-pad_len],
+                                           mask[:, :-pad_len])
         mask_pred, mask_score = model.viterbi_decode(logit, mask)
-        assert (pred[0].tolist() == mask_pred[0,:-pad_len].tolist())
-
+        assert (pred[0].tolist() == mask_pred[0, :-pad_len].tolist())

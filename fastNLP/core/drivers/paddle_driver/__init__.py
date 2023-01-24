@@ -1,8 +1,10 @@
+# isort: skip_file
+
 __all__ = [
-    "PaddleDriver",
-    "PaddleSingleDriver",
-    "PaddleFleetDriver",
-    "paddle_seed_everything",
+    'PaddleDriver',
+    'PaddleSingleDriver',
+    'PaddleFleetDriver',
+    'paddle_seed_everything',
 ]
 
 from .paddle_driver import PaddleDriver

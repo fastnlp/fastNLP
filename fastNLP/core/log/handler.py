@@ -7,10 +7,12 @@ try:
 except ImportError:
     tqdm = None
 
-__all__ = []
+__all__ = []  # type: ignore
 
 if tqdm is not None:
+
     class TqdmLoggingHandler(logging.Handler):
+
         def __init__(self, level=logging.INFO):
             super().__init__(level)
 
@@ -21,27 +23,25 @@ if tqdm is not None:
                 self.flush()
             except (KeyboardInterrupt, SystemExit):
                 raise
-            except:
+            except Exception:
                 self.handleError(record)
 else:
-    class TqdmLoggingHandler(logging.StreamHandler):
+
+    class TqdmLoggingHandler(logging.StreamHandler):  # type: ignore
+
         def __init__(self, level=logging.INFO):
             super().__init__(sys.stdout)
             self.setLevel(level)
 
 
 class StdoutStreamHandler(logging.StreamHandler):
-    """
-    重载 StreamHandler 使得替换 sys.stdout 的时候能够生效。
+    """重载 StreamHandler 使得替换 sys.stdout 的时候能够生效。"""
 
-    """
     def __init__(self):
         super(StdoutStreamHandler, self).__init__()
 
     def flush(self):
-        """
-        Flushes the stream.
-        """
+        """Flushes the stream."""
         self.acquire()
         try:
             sys.stdout.flush()
@@ -49,11 +49,10 @@ class StdoutStreamHandler(logging.StreamHandler):
             self.release()
 
     def emit(self, record):
-        """
-        Emit a record.
+        """Emit a record.
 
-        If a formatter is specified, it is used to format the record.
-        The record is then written to the stream with a trailing newline.  If
+        If a formatter is specified, it is used to format the record. The
+        record is then written to the stream with a trailing newline.  If
         exception information is present, it is formatted using
         traceback.print_exception and appended to the stream.  If the stream
         has an 'encoding' attribute, it is used to determine how to do the
@@ -71,14 +70,13 @@ class StdoutStreamHandler(logging.StreamHandler):
             self.handleError(record)
 
     def setStream(self, stream):
-        """
-        Sets the StreamHandler's stream to the specified value,
-        if it is different.
+        """Sets the StreamHandler's stream to the specified value, if it is
+        different.
 
-        Returns the old stream, if the stream was changed, or None
-        if it wasn't.
+        Returns the old stream, if the stream was changed, or None if it
+        wasn't.
         """
-        raise RuntimeError("Cannot set the stream of FStreamHandler.")
+        raise RuntimeError('Cannot set the stream of FStreamHandler.')
 
     def __repr__(self):
         level = getLevelName(self.level)

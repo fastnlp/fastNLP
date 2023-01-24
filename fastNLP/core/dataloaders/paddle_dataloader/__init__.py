@@ -1,3 +1,5 @@
+# isort: skip_file
+
 __all__ = [
     'PaddleDataLoader',
     'prepare_paddle_dataloader',

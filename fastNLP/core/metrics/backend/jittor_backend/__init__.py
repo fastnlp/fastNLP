@@ -1,5 +1,7 @@
+# isort: skip_file
+
 __all__ = [
-    "JittorBackend",
+    'JittorBackend',
 ]
 
 from .backend import JittorBackend

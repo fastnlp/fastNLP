@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
 # Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
 #
@@ -13,39 +12,61 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" BERT model configuration """
+"""BERT model configuration."""
 
-from fastNLP.transformers.torch.configuration_utils import PretrainedConfig
 from fastNLP.core.log import logger
+from fastNLP.transformers.torch.configuration_utils import PretrainedConfig
 
 __all__ = [
-    "BERT_PRETRAINED_CONFIG_ARCHIVE_MAP",
-    "BertConfig",
+    'BERT_PRETRAINED_CONFIG_ARCHIVE_MAP',
+    'BertConfig',
 ]
 
 BERT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "bert-base-uncased": "https://huggingface.co/bert-base-uncased/resolve/main/config.json",
-    "bert-large-uncased": "https://huggingface.co/bert-large-uncased/resolve/main/config.json",
-    "bert-base-cased": "https://huggingface.co/bert-base-cased/resolve/main/config.json",
-    "bert-large-cased": "https://huggingface.co/bert-large-cased/resolve/main/config.json",
-    "bert-base-multilingual-uncased": "https://huggingface.co/bert-base-multilingual-uncased/resolve/main/config.json",
-    "bert-base-multilingual-cased": "https://huggingface.co/bert-base-multilingual-cased/resolve/main/config.json",
-    "bert-base-chinese": "https://huggingface.co/bert-base-chinese/resolve/main/config.json",
-    "bert-base-german-cased": "https://huggingface.co/bert-base-german-cased/resolve/main/config.json",
-    "bert-large-uncased-whole-word-masking": "https://huggingface.co/bert-large-uncased-whole-word-masking/resolve/main/config.json",
-    "bert-large-cased-whole-word-masking": "https://huggingface.co/bert-large-cased-whole-word-masking/resolve/main/config.json",
-    "bert-large-uncased-whole-word-masking-finetuned-squad": "https://huggingface.co/bert-large-uncased-whole-word-masking-finetuned-squad/resolve/main/config.json",
-    "bert-large-cased-whole-word-masking-finetuned-squad": "https://huggingface.co/bert-large-cased-whole-word-masking-finetuned-squad/resolve/main/config.json",
-    "bert-base-cased-finetuned-mrpc": "https://huggingface.co/bert-base-cased-finetuned-mrpc/resolve/main/config.json",
-    "bert-base-german-dbmdz-cased": "https://huggingface.co/bert-base-german-dbmdz-cased/resolve/main/config.json",
-    "bert-base-german-dbmdz-uncased": "https://huggingface.co/bert-base-german-dbmdz-uncased/resolve/main/config.json",
-    "cl-tohoku/bert-base-japanese": "https://huggingface.co/cl-tohoku/bert-base-japanese/resolve/main/config.json",
-    "cl-tohoku/bert-base-japanese-whole-word-masking": "https://huggingface.co/cl-tohoku/bert-base-japanese-whole-word-masking/resolve/main/config.json",
-    "cl-tohoku/bert-base-japanese-char": "https://huggingface.co/cl-tohoku/bert-base-japanese-char/resolve/main/config.json",
-    "cl-tohoku/bert-base-japanese-char-whole-word-masking": "https://huggingface.co/cl-tohoku/bert-base-japanese-char-whole-word-masking/resolve/main/config.json",
-    "TurkuNLP/bert-base-finnish-cased-v1": "https://huggingface.co/TurkuNLP/bert-base-finnish-cased-v1/resolve/main/config.json",
-    "TurkuNLP/bert-base-finnish-uncased-v1": "https://huggingface.co/TurkuNLP/bert-base-finnish-uncased-v1/resolve/main/config.json",
-    "wietsedv/bert-base-dutch-cased": "https://huggingface.co/wietsedv/bert-base-dutch-cased/resolve/main/config.json",
+    'bert-base-uncased':
+    'https://huggingface.co/bert-base-uncased/resolve/main/config.json',
+    'bert-large-uncased':
+    'https://huggingface.co/bert-large-uncased/resolve/main/config.json',
+    'bert-base-cased':
+    'https://huggingface.co/bert-base-cased/resolve/main/config.json',
+    'bert-large-cased':
+    'https://huggingface.co/bert-large-cased/resolve/main/config.json',
+    'bert-base-multilingual-uncased':
+    'https://huggingface.co/bert-base-multilingual-uncased/resolve/main/config.json',
+    'bert-base-multilingual-cased':
+    'https://huggingface.co/bert-base-multilingual-cased/resolve/main/config.json',
+    'bert-base-chinese':
+    'https://huggingface.co/bert-base-chinese/resolve/main/config.json',
+    'bert-base-german-cased':
+    'https://huggingface.co/bert-base-german-cased/resolve/main/config.json',
+    'bert-large-uncased-whole-word-masking':
+    'https://huggingface.co/bert-large-uncased-whole-word-masking/resolve/main/config.json',
+    'bert-large-cased-whole-word-masking':
+    'https://huggingface.co/bert-large-cased-whole-word-masking/resolve/main/config.json',
+    'bert-large-uncased-whole-word-masking-finetuned-squad':
+    'https://huggingface.co/bert-large-uncased-whole-word-masking-finetuned-squad/resolve/main/config.json',
+    'bert-large-cased-whole-word-masking-finetuned-squad':
+    'https://huggingface.co/bert-large-cased-whole-word-masking-finetuned-squad/resolve/main/config.json',
+    'bert-base-cased-finetuned-mrpc':
+    'https://huggingface.co/bert-base-cased-finetuned-mrpc/resolve/main/config.json',
+    'bert-base-german-dbmdz-cased':
+    'https://huggingface.co/bert-base-german-dbmdz-cased/resolve/main/config.json',
+    'bert-base-german-dbmdz-uncased':
+    'https://huggingface.co/bert-base-german-dbmdz-uncased/resolve/main/config.json',
+    'cl-tohoku/bert-base-japanese':
+    'https://huggingface.co/cl-tohoku/bert-base-japanese/resolve/main/config.json',
+    'cl-tohoku/bert-base-japanese-whole-word-masking':
+    'https://huggingface.co/cl-tohoku/bert-base-japanese-whole-word-masking/resolve/main/config.json',
+    'cl-tohoku/bert-base-japanese-char':
+    'https://huggingface.co/cl-tohoku/bert-base-japanese-char/resolve/main/config.json',
+    'cl-tohoku/bert-base-japanese-char-whole-word-masking':
+    'https://huggingface.co/cl-tohoku/bert-base-japanese-char-whole-word-masking/resolve/main/config.json',
+    'TurkuNLP/bert-base-finnish-cased-v1':
+    'https://huggingface.co/TurkuNLP/bert-base-finnish-cased-v1/resolve/main/config.json',
+    'TurkuNLP/bert-base-finnish-uncased-v1':
+    'https://huggingface.co/TurkuNLP/bert-base-finnish-uncased-v1/resolve/main/config.json',
+    'wietsedv/bert-base-dutch-cased':
+    'https://huggingface.co/wietsedv/bert-base-dutch-cased/resolve/main/config.json',
     # See all BERT models at https://huggingface.co/models?filter=bert
 }
 
@@ -117,28 +138,26 @@ class BertConfig(PretrainedConfig):
         >>> # Accessing the model configuration
         >>> configuration = model.config
     """
-    model_type = "bert"
+    model_type = 'bert'
 
-    def __init__(
-        self,
-        vocab_size=30522,
-        hidden_size=768,
-        num_hidden_layers=12,
-        num_attention_heads=12,
-        intermediate_size=3072,
-        hidden_act="gelu",
-        hidden_dropout_prob=0.1,
-        attention_probs_dropout_prob=0.1,
-        max_position_embeddings=512,
-        type_vocab_size=2,
-        initializer_range=0.02,
-        layer_norm_eps=1e-12,
-        pad_token_id=0,
-        position_embedding_type="absolute",
-        use_cache=True,
-        classifier_dropout=None,
-        **kwargs
-    ):
+    def __init__(self,
+                 vocab_size=30522,
+                 hidden_size=768,
+                 num_hidden_layers=12,
+                 num_attention_heads=12,
+                 intermediate_size=3072,
+                 hidden_act='gelu',
+                 hidden_dropout_prob=0.1,
+                 attention_probs_dropout_prob=0.1,
+                 max_position_embeddings=512,
+                 type_vocab_size=2,
+                 initializer_range=0.02,
+                 layer_norm_eps=1e-12,
+                 pad_token_id=0,
+                 position_embedding_type='absolute',
+                 use_cache=True,
+                 classifier_dropout=None,
+                 **kwargs):
         super().__init__(pad_token_id=pad_token_id, **kwargs)
 
         self.vocab_size = vocab_size

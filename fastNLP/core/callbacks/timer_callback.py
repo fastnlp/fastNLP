@@ -1,6 +1,8 @@
 import time
-from .callback import Callback
+
 from ..log import logger
+from .callback import Callback
+
 __all__ = ['TimerCallback']
 
 
@@ -15,7 +17,8 @@ class _Timer:
 
     def start(self):
         """Start the timer."""
-        assert not self.started_, f'{self.name_} timer has already been started'
+        assert not self.started_, f'{self.name_} timer has already ' \
+                                  'been started'
         self.start_time = time.time()
         self.started_ = True
 
@@ -67,10 +70,9 @@ class Timers:
 
 
 class TimerCallback(Callback):
-    """
-    这个 callback 的作用是打印训练过程中的相关时间信息，例如训练时长、评测时长、总时长等
+    r"""这个 callback 的作用是打印训练过程中的相关时间信息，例如训练时长、评测时
+    长、 总时长等。"""
 
-    """
     def __init__(self, print_every=-1, time_ndigit=3):
         """
 
@@ -82,7 +84,8 @@ class TimerCallback(Callback):
 
         :param time_ndigit: 保留多少位的小数
         """
-        assert isinstance(print_every, int), "print_every must be an int number."
+        assert isinstance(print_every, int), 'print_every must be an ' \
+                                             'int number.'
         self.timers = Timers()
         self.print_every = print_every
         self.time_ndigit = time_ndigit
@@ -123,9 +126,12 @@ class TimerCallback(Callback):
 
     def format_timer(self, reset=True):
         line = ''
-        timers = ['fetch-data', 'forward', 'backward', 'optimize', 'evaluate', 'train', 'total']
+        timers = [
+            'fetch-data', 'forward', 'backward', 'optimize', 'evaluate',
+            'train', 'total'
+        ]
         for timer_name in timers:
-            if not timer_name in self.timers:
+            if timer_name not in self.timers:
                 continue
             timer = self.timers(timer_name)
             elapsed = round(timer.elapsed(reset=reset), self.time_ndigit)
@@ -134,19 +140,18 @@ class TimerCallback(Callback):
         return line
 
     def on_train_batch_end(self, trainer):
-        if self.print_every>0 and trainer.global_forward_batches % self.print_every == 0:
+        if self.print_every > 0 and \
+                trainer.global_forward_batches % self.print_every == 0:
             line = self.format_timer()
-            logger.info(f"Running {self.print_every} batches{line}")
+            logger.info(f'Running {self.print_every} batches{line}')
 
     def on_train_epoch_end(self, trainer):
-        if self.print_every < 0 and trainer.cur_epoch_idx % abs(self.print_every) == 0:
+        if self.print_every < 0 and trainer.cur_epoch_idx % abs(
+                self.print_every) == 0:
             line = self.format_timer()
-            logger.info(f"Running {abs(self.print_every)} epochs{line}")
+            logger.info(f'Running {abs(self.print_every)} epochs{line}')
 
     def on_train_end(self, trainer):
         if self.print_every == 0:
             line = self.format_timer()
-            logger.info(f"Training finished{line}")
-
-
-
+            logger.info(f'Training finished{line}')

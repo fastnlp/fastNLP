@@ -1,21 +1,21 @@
-from typing import Any
 from dataclasses import dataclass
+from typing import Any
 
 import pytest
 
-from fastNLP import Metric, Accuracy
-from tests.helpers.utils import magic_argv_env_context
-from fastNLP import Trainer, Evaluator, RichCallback, RawTextCallback, TqdmCallback
+from fastNLP import (Accuracy, Evaluator, Metric, RawTextCallback,
+                     RichCallback, TqdmCallback, Trainer)
 from fastNLP.core.callbacks import ExtraInfoStatistics
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from tests.helpers.utils import magic_argv_env_context, skip_no_cuda
+
 if _NEED_IMPORT_TORCH:
     from torch.utils.data import DataLoader
     from torch.optim import SGD
     import torch.distributed as dist
-    import torch
 
-from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.datasets.torch_data import TorchArgMaxDataset
+from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 
 
 @dataclass
@@ -41,30 +41,29 @@ class TrainerParameters:
     more_metrics: Any = None
 
 
-@pytest.fixture(scope="module", params=[0], autouse=True)
+@pytest.fixture(scope='module', params=[0], autouse=True)
 def model_and_optimizers(request):
     trainer_params = TrainerParameters()
 
     trainer_params.model = TorchNormalModel_Classification_1(
         num_labels=ArgMaxDatasetConfig.num_labels,
-        feature_dimension=ArgMaxDatasetConfig.feature_dimension
-    )
-    trainer_params.optimizers = SGD(trainer_params.model.parameters(), lr=0.001)
+        feature_dimension=ArgMaxDatasetConfig.feature_dimension)
+    trainer_params.optimizers = SGD(
+        trainer_params.model.parameters(), lr=0.001)
     dataset = TorchArgMaxDataset(
         feature_dimension=ArgMaxDatasetConfig.feature_dimension,
         data_num=ArgMaxDatasetConfig.data_num,
-        seed=ArgMaxDatasetConfig.seed
-    )
+        seed=ArgMaxDatasetConfig.seed)
     _dataloader = DataLoader(
         dataset=dataset,
         batch_size=ArgMaxDatasetConfig.batch_size,
-        shuffle=True
-    )
+        shuffle=True)
 
     class LossMetric(Metric):
+
         def __init__(self):
             super().__init__()
-            self.register_element('loss')
+            self.register_element('loss', value=0)
 
         def update(self, loss):
             self.loss += loss.item()
@@ -76,7 +75,7 @@ def model_and_optimizers(request):
     trainer_params.evaluate_dataloaders = _dataloader
     trainer_params.metrics = {'loss': LossMetric()}
 
-    trainer_params.more_metrics = {"acc": Accuracy()}
+    trainer_params.more_metrics = {'acc': Accuracy()}
 
     return trainer_params
 
@@ -84,10 +83,9 @@ def model_and_optimizers(request):
 @pytest.mark.torch
 @pytest.mark.parametrize('device', ['cpu', [0, 1]])
 @magic_argv_env_context
-def test_run( model_and_optimizers: TrainerParameters, device):
+def test_run(model_and_optimizers: TrainerParameters, device):
 
-    if device != 'cpu' and not torch.cuda.is_available():
-        pytest.skip(f"No cuda for device:{device}")
+    skip_no_cuda(device, f'No cuda for device:{device}')
     n_epochs = 2
     for progress_bar in ['rich', 'auto', None, 'raw', 'tqdm']:
         trainer = Trainer(
@@ -103,16 +101,19 @@ def test_run( model_and_optimizers: TrainerParameters, device):
             n_epochs=n_epochs,
             callbacks=None,
             progress_bar=progress_bar,
-            output_from_new_proc="all",
+            output_from_new_proc='all',
             evaluate_fn='train_step',
-            larger_better=False
-        )
+            larger_better=False)
 
         trainer.run()
 
-        evaluator = Evaluator(model=model_and_optimizers.model, dataloaders=model_and_optimizers.train_dataloader,
-                              driver=trainer.driver, metrics=model_and_optimizers.metrics,
-                              progress_bar=progress_bar, evaluate_fn='train_step')
+        evaluator = Evaluator(
+            model=model_and_optimizers.model,
+            dataloaders=model_and_optimizers.train_dataloader,
+            driver=trainer.driver,
+            metrics=model_and_optimizers.metrics,
+            progress_bar=progress_bar,
+            evaluate_fn='train_step')
         evaluator.run()
 
     if dist.is_initialized():
@@ -123,11 +124,11 @@ def test_run( model_and_optimizers: TrainerParameters, device):
 @pytest.mark.parametrize('device', ['cpu', [0, 1]])
 @magic_argv_env_context
 def test_show_extra_keys(model_and_optimizers: TrainerParameters, device):
-    if device != 'cpu' and not torch.cuda.is_available():
-        pytest.skip(f"No cuda for device:{device}")
+    skip_no_cuda(device, f'No cuda for device:{device}')
     n_epochs = 2
 
     class MyExtraInfoStatistics(ExtraInfoStatistics):
+
         def __init__(self):
             pass
 
@@ -135,10 +136,13 @@ def test_show_extra_keys(model_and_optimizers: TrainerParameters, device):
             pass
 
         def get_stat(self) -> dict:
-            return dict(key1="value1", key2="value2")
+            return dict(key1='value1', key2='value2')
 
-    for progress_callback_module in [RichCallback, RawTextCallback, TqdmCallback]:
-        progress_callback = progress_callback_module(extra_show_keys=MyExtraInfoStatistics())
+    for progress_callback_module in [
+            RichCallback, RawTextCallback, TqdmCallback
+    ]:
+        progress_callback = progress_callback_module(
+            extra_show_keys=MyExtraInfoStatistics())
         trainer = Trainer(
             model=model_and_optimizers.model,
             driver='torch',
@@ -151,13 +155,14 @@ def test_show_extra_keys(model_and_optimizers: TrainerParameters, device):
             metrics=model_and_optimizers.metrics,
             n_epochs=n_epochs,
             callbacks=[progress_callback],
-            output_from_new_proc="all",
+            output_from_new_proc='all',
             evaluate_fn='train_step',
-            larger_better=False
-        )
+            larger_better=False)
         trainer.run()
 
-    for progress_callback_module in [RichCallback, RawTextCallback, TqdmCallback]:
+    for progress_callback_module in [
+            RichCallback, RawTextCallback, TqdmCallback
+    ]:
         progress_callback = progress_callback_module(extra_show_keys='loss2')
         trainer = Trainer(
             model=model_and_optimizers.model,
@@ -167,16 +172,17 @@ def test_show_extra_keys(model_and_optimizers: TrainerParameters, device):
             train_dataloader=model_and_optimizers.train_dataloader,
             evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
             input_mapping=model_and_optimizers.input_mapping,
-            output_mapping=lambda x:{'loss': x['loss'], 'loss2': x['loss']},
+            output_mapping=lambda x: {
+                'loss': x['loss'],
+                'loss2': x['loss']
+            },
             metrics=model_and_optimizers.metrics,
             n_epochs=n_epochs,
             callbacks=[progress_callback],
-            output_from_new_proc="all",
+            output_from_new_proc='all',
             evaluate_fn='train_step',
-            larger_better=False
-        )
+            larger_better=False)
         trainer.run()
 
     if dist.is_available() and dist.is_initialized():
         dist.destroy_process_group()
-

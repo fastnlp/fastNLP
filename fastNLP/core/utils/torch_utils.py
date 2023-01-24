@@ -1,18 +1,20 @@
 from abc import ABC
-from typing import Any, Union, Optional
+from typing import Any, Optional, Union
+
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _TORCH_GREATER_EQUAL_1_8
+
 DEFAULT_TORCH_GROUP = None
 if _NEED_IMPORT_TORCH:
     import torch
     if not _TORCH_GREATER_EQUAL_1_8:
         DEFAULT_TORCH_GROUP = torch.distributed.distributed_c10d.group.WORLD
 
+from .utils import apply_to_collection
+
 __all__ = [
     'torch_move_data_to_device',
     'is_torch_module',
 ]
-
-from .utils import apply_to_collection
 
 
 class TorchTransferableDataType(ABC):
@@ -37,18 +39,22 @@ class TorchTransferableDataType(ABC):
     @classmethod
     def __subclasshook__(cls, subclass: Any) -> Union[bool, Any]:
         if cls is TorchTransferableDataType:
-            to = getattr(subclass, "to", None)
+            to = getattr(subclass, 'to', None)
             return callable(to)
         return NotImplemented
 
 
-def torch_move_data_to_device(batch: Any, device: Optional[Union[str, "torch.device"]] = None,
+def torch_move_data_to_device(batch: Any,
+                              device: Optional[Union[str,
+                                                     'torch.device']] = None,
                               non_blocking: Optional[bool] = True) -> Any:
     r"""
-    在 **pytorch** 中将数据集合 ``batch`` 传输到给定设备。任何定义方法 ``to(device)`` 的对象都将被移动并且集合中的所有其他对象将保持不变；
+    在 **pytorch** 中将数据集合 ``batch`` 传输到给定设备。任何定义方法 ``to
+    (device)`` 的对象都将被移动并且集合中的所有其他对象将保持不变；
 
     :param batch: 需要迁移的数据；
-    :param device: 数据应当迁移到的设备；当该参数的值为 ``None`` 时则不执行任何操作；
+    :param device: 数据应当迁移到的设备；当该参数的值为 ``None`` 时则不执行任何操
+        作；
     :param non_blocking: **pytorch** 的数据迁移方法 ``to`` 的参数；
     :return: 迁移到新设备上的数据集合；
     """
@@ -56,19 +62,21 @@ def torch_move_data_to_device(batch: Any, device: Optional[Union[str, "torch.dev
         return batch
 
     def batch_to(data: Any) -> Any:
-        kwargs = dict(non_blocking=non_blocking) if isinstance(data, torch.Tensor) else {}
+        kwargs = dict(non_blocking=non_blocking) if isinstance(
+            data, torch.Tensor) else {}
         data_output = data.to(device, **kwargs)
         if data_output is not None:
             return data_output
-        # user wrongly implemented the `TransferableDataType` and forgot to return `self`.
+        # user wrongly implemented the `TransferableDataType` and forgot to
+        # return `self`.
         return data
 
     dtype = TorchTransferableDataType
     return apply_to_collection(batch, dtype=dtype, function=batch_to)
 
+
 def is_torch_module(model) -> bool:
-    """
-    判断传入的 ``model`` 是否是 :class:`torch.nn.Module` 类型
+    """判断传入的 ``model`` 是否是 :class:`torch.nn.Module` 类型.
 
     :param model: 模型；
     :return: 当前模型是否为 ``torch`` 的模型；

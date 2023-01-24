@@ -21,7 +21,7 @@ fastNLP具有如下的特性：
 - 兼容。fastNLP支持多种深度学习框架作为后端。
 
 > :warning: **为了实现对不同深度学习架构的兼容，fastNLP 1.0.0之后的版本重新设计了架构，因此与过去的fastNLP版本不完全兼容，
-> 基于更早的fastNLP代码需要做一定的调整**: 
+> 基于更早的fastNLP代码需要做一定的调整**:
 
 ## fastNLP文档
 [中文文档](http://www.fastnlp.top/docs/fastNLP/master/index.html)
@@ -141,7 +141,7 @@ data_bundle.apply_field_more(tokenize, field_name='raw_chars', num_proc=4)  # �
 data_bundle.apply_field(int, field_name='target', new_field_name='labels')  # 将int函数应用到每个target上，并且放入新的labels field中
 print(data_bundle.get_dataset('train')[:4])
 
-# 初始化 model 
+# 初始化 model
 from paddlenlp.transformers import BertForSequenceClassification, LinearDecayWithWarmup
 from paddle import optimizer, nn
 class SeqClsModel(nn.Layer):
@@ -162,7 +162,7 @@ class SeqClsModel(nn.Layer):
             "logits": logits,
             "loss": loss,
         }
-    
+
     def evaluate_step(self, input_ids, token_type_ids=None, position_ids=None, attention_mask=None):
         logits = self(input_ids, token_type_ids, position_ids, attention_mask)
         return {
@@ -263,4 +263,3 @@ fastNLP的项目结构如下：
 </table>
 
 <hr>
-

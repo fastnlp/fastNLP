@@ -1,8 +1,11 @@
 import pytest
+
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+
 if _NEED_IMPORT_TORCH:
     import torch
     from fastNLP.models.torch.biaffine_parser import BiaffineParser
+
 from fastNLP import Metric, seq_len_to_mask
 from .model_runner import *
 
@@ -20,7 +23,10 @@ class ParserMetric(Metric):
         self.num_sample = 0
 
     def get_metric(self, reset=True):
-        res = {'UAS': self.num_arc * 1.0 / self.num_sample, 'LAS': self.num_label * 1.0 / self.num_sample}
+        res = {
+            'UAS': self.num_arc * 1.0 / self.num_sample,
+            'LAS': self.num_label * 1.0 / self.num_sample
+        }
         if reset:
             self.num_sample = self.num_label = self.num_arc = 0
         return res
@@ -54,15 +60,23 @@ class ParserMetric(Metric):
 def prepare_parser_data():
     index = 'index'
     ds = DataSet({index: list(range(N_SAMPLES))})
-    ds.apply_field(lambda x: RUNNER.gen_var_seq(MAX_LEN, VOCAB_SIZE),
-                   field_name=index, new_field_name='words1')
-    ds.apply_field(lambda x: RUNNER.gen_seq(len(x), NUM_CLS),
-                   field_name='words1', new_field_name='words2')
+    ds.apply_field(
+        lambda x: RUNNER.gen_var_seq(MAX_LEN, VOCAB_SIZE),
+        field_name=index,
+        new_field_name='words1')
+    ds.apply_field(
+        lambda x: RUNNER.gen_seq(len(x), NUM_CLS),
+        field_name='words1',
+        new_field_name='words2')
     # target1 is heads, should in range(0, len(words))
-    ds.apply_field(lambda x: RUNNER.gen_seq(len(x), len(x)),
-                   field_name='words1', new_field_name='target1')
-    ds.apply_field(lambda x: RUNNER.gen_seq(len(x), NUM_CLS),
-                   field_name='words1', new_field_name='target2')
+    ds.apply_field(
+        lambda x: RUNNER.gen_seq(len(x), len(x)),
+        field_name='words1',
+        new_field_name='target1')
+    ds.apply_field(
+        lambda x: RUNNER.gen_seq(len(x), NUM_CLS),
+        field_name='words1',
+        new_field_name='target2')
     ds.apply_field(len, field_name='words1', new_field_name='seq_len')
     dl = TorchDataLoader(ds, batch_size=BATCH_SIZE)
     return dl
@@ -70,22 +84,29 @@ def prepare_parser_data():
 
 @pytest.mark.torch
 class TestBiaffineParser:
+
     def test_train(self):
-        model = BiaffineParser(embed=(VOCAB_SIZE, 10),
-                               pos_vocab_size=VOCAB_SIZE, pos_emb_dim=10,
-                               rnn_hidden_size=10,
-                               arc_mlp_size=10,
-                               label_mlp_size=10,
-                               num_label=NUM_CLS, encoder='var-lstm')
+        model = BiaffineParser(
+            embed=(VOCAB_SIZE, 10),
+            pos_vocab_size=VOCAB_SIZE,
+            pos_emb_dim=10,
+            rnn_hidden_size=10,
+            arc_mlp_size=10,
+            label_mlp_size=10,
+            num_label=NUM_CLS,
+            encoder='var-lstm')
         ds = prepare_parser_data()
         RUNNER.run_model(model, ds, metrics=ParserMetric())
 
     def test_train2(self):
-        model = BiaffineParser(embed=(VOCAB_SIZE, 10),
-                               pos_vocab_size=VOCAB_SIZE, pos_emb_dim=10,
-                               rnn_hidden_size=16,
-                               arc_mlp_size=10,
-                               label_mlp_size=10,
-                               num_label=NUM_CLS, encoder='transformer')
+        model = BiaffineParser(
+            embed=(VOCAB_SIZE, 10),
+            pos_vocab_size=VOCAB_SIZE,
+            pos_emb_dim=10,
+            rnn_hidden_size=16,
+            arc_mlp_size=10,
+            label_mlp_size=10,
+            num_label=NUM_CLS,
+            encoder='transformer')
         ds = prepare_parser_data()
         RUNNER.run_model(model, ds, metrics=ParserMetric())

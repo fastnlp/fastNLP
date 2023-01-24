@@ -1,18 +1,15 @@
-
-__all__ = [
-    'get_padded_numpy_array'
-]
-
-
-from typing import Sequence, List
 import re
 from inspect import isclass
+from typing import List, Sequence
 
 import numpy as np
+
 np_str_obj_array_pattern = re.compile(r'[SaUO]')
 
+__all__ = ['get_padded_numpy_array']
 
-def get_shape(batch_field:List, shape=None):
+
+def get_shape(batch_field: List, shape=None):
     """
     给定 field 返回这个 field pad 完成之后的 shape 。
     例如: [[1, 2, 3], [3]] -> [2, 3]
@@ -45,9 +42,8 @@ def get_shape(batch_field:List, shape=None):
         return shape
 
 
-def fill_array(batch_field:List, padded_batch:np.ndarray):
-    """
-    将 batch_field 中的值填入到 array 中。
+def fill_array(batch_field: List, padded_batch: np.ndarray):
+    """将 batch_field 中的值填入到 array 中。
 
     :param batch_field: 需要填充进入 array 中的内容
     :param padded_batch: 待填充的 np.ndarray
@@ -63,7 +59,7 @@ def fill_array(batch_field:List, padded_batch:np.ndarray):
     elif padded_batch.ndim == 4:
         try:  # 应该是图像，所以直接应该就 ok 了。
             padded_batch = np.array(batch_field)
-        except:
+        except Exception:
             for i, content_i in enumerate(batch_field):
                 for j, content_ii in enumerate(content_i):
                     for k, content_iii in enumerate(content_ii):
@@ -71,16 +67,20 @@ def fill_array(batch_field:List, padded_batch:np.ndarray):
     elif padded_batch.ndim == 1:
         padded_batch[:] = batch_field
     else:
-        raise RuntimeError("fastNLP does not support padding for more than 3 dimensions. If you need this, please "
-                           "report.")
+        raise RuntimeError(
+            'fastNLP does not support padding for more than 3 dimensions. '
+            'If you need this, please report.')
     return padded_batch
 
 
-def get_padded_numpy_array(batch_field: List, dtype=None, pad_val=0) -> np.ndarray:
-    """
-    将输入 pad 为 :class:`numpy.arraay` 类型，如：``[[1,2], [3]] -> np.array([[1, 2], [3, 0]])``
+def get_padded_numpy_array(batch_field: List,
+                           dtype=None,
+                           pad_val=0) -> np.ndarray:
+    r"""将输入 pad 为 :class:`numpy.arraay` 类型，如：``[[1,2], [3]] -> np.
+    array ([[1, 2], [3, 0]])``
 
-    :param batch_field: 需要 pad 的对象。需要保证应该是可以进行 pad 的。支持 **1d** （多为句子长度）/ **2d** （多为文本序列）/ **3d** （多为字符序列）
+    :param batch_field: 需要 pad 的对象。需要保证应该是可以进行 pad 的。支持
+        **1d** （多为句子长度）/ **2d** （多为文本序列）/ **3d** （多为字符序列）
         /4d（多为图片）；
     :param dtype: 输出数据的 dtype 类型；
     :param pad_val: 填充值；
@@ -97,28 +97,39 @@ def get_padded_nest_list(batch_field: List, pad_val=0) -> List:
     例如:
         [[1,2], [3]] -> [[1, 2], [3, 0]]
 
-    :param batch_field: 需要 pad 的对象。需要保证应该是可以进行 pad 的。支持 1d（多为句子长度）/2d（多为文本序列）/3d（多为字符序列）
-        /4d（多为图片）。
+    :param batch_field: 需要 pad 的对象。需要保证应该是可以进行 pad 的。支持
+        **1d** （多为句子长度）/ **2d** （多为文本序列）/ **3d** （多为字符序列）
+        /4d（多为图片）；
     :param pad_val: pad 的 value
     :return:
     """
 
-    array = get_padded_numpy_array(batch_field, pad_val=pad_val, dtype=None).tolist()
+    array = get_padded_numpy_array(
+        batch_field, pad_val=pad_val, dtype=None).tolist()
     return array
 
 
 def is_number_or_numpy_number(dtype):
-    """
-    判断 dtype 是否是数字类型，或者 numpy 的数字类型。
-    is_number_or_numpy_number(type(3))  # True
-    is_number_or_numpy_number(type(3.1))  # True
-    is_number_or_numpy_number(type('3'))  # False
-    is_number_or_numpy_number(type(True))  # True
-    is_number_or_numpy_number(type(np.zeros(3)[0]))  # True
-    is_number_or_numpy_number(np.zeros(3, dtype=float).dtype)  # True
-    is_number_or_numpy_number(np.zeros(3, dtype=int).dtype)  # True
-    is_number_or_numpy_number(np.zeros(3, dtype=str).dtype)  # False
-    is_number_or_numpy_number(np.array([1, [2]]).dtype)  # False
+    """判断 dtype 是否是数字类型，或者 numpy 的数字类型。
+
+    >>> is_number_or_numpy_number(type(3))
+    True
+    >>> is_number_or_numpy_number(type(3.1))
+    True
+    >>> is_number_or_numpy_number(type('3'))
+    False
+    >>> is_number_or_numpy_number(type(True))
+    True
+    >>> is_number_or_numpy_number(type(np.zeros(3)[0]))
+    True
+    >>> is_number_or_numpy_number(np.zeros(3, dtype=float).dtype)
+    True
+    >>> is_number_or_numpy_number(np.zeros(3, dtype=int).dtype)
+    True
+    >>> is_number_or_numpy_number(np.zeros(3, dtype=str).dtype)
+    False
+    >>> is_number_or_numpy_number(np.array([1, [2]]).dtype)
+    False
 
     :param dtype:
     :return:
@@ -128,20 +139,22 @@ def is_number_or_numpy_number(dtype):
     else:
         if isclass(dtype):
             return is_numpy_generic_class(dtype)
-        elif isinstance(dtype, np.dtype) and np_str_obj_array_pattern.search(dtype.str) is None:
+        elif isinstance(dtype, np.dtype) and np_str_obj_array_pattern.search(
+                dtype.str) is None:
             return True
     return False
 
 
 def is_numpy_number_dtype(dtype):
-    if not isclass(dtype) and isinstance(dtype, np.dtype) and np_str_obj_array_pattern.search(dtype.str) is None:
+    if not isclass(dtype) and isinstance(
+            dtype,
+            np.dtype) and np_str_obj_array_pattern.search(dtype.str) is None:
         return True
     return False
 
 
 def is_numpy_generic_class(dtype):
-    """
-    形如 np.int64，或者 np.zeros(1).dtype.type 的值
+    """形如 np.int64，或者 np.zeros(1).dtype.type 的值.
 
     :param dtype:
     :return:
@@ -153,13 +166,13 @@ def is_numpy_generic_class(dtype):
 
 def is_number(dtype):
     try:
-        if dtype in (float, int, complex, bool) and not is_numpy_generic_class(dtype) \
+        if dtype in (float, int, complex, bool) and \
+                not is_numpy_generic_class(dtype) \
                 and not is_numpy_number_dtype(dtype):
             return True
         return False
-    except:
+    except Exception:
         return False
-
 
 
 if __name__ == '__main__':
@@ -172,11 +185,10 @@ if __name__ == '__main__':
     print(is_number(type('a')))
     print(is_number_or_numpy_number(type(3)))  # True
     print(is_number_or_numpy_number(type(3.1)))  # True
-    print(is_number_or_numpy_number(type('3'))) # False
+    print(is_number_or_numpy_number(type('3')))  # False
     print(is_number_or_numpy_number(type(True)))  # True
     print(is_number_or_numpy_number(type(np.zeros(3)[0])))  # True
     print(is_number_or_numpy_number(np.zeros(3, dtype=float).dtype))  # True
     print(is_number_or_numpy_number(np.zeros(3, dtype=int).dtype))  # True
     print(is_number_or_numpy_number(np.zeros(3, dtype=str).dtype))  # False
     print(is_number_or_numpy_number(np.array([1, [2]]).dtype))  # False
-

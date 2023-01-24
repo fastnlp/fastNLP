@@ -5,22 +5,24 @@ r"""
 
 from copy import deepcopy
 
-from .pipe import Pipe
-from fastNLP.io.data_bundle import DataBundle
-from ..loader.qa import CMRC2018Loader
-from .utils import get_tokenizer
 from fastNLP.core.dataset import DataSet
 from fastNLP.core.vocabulary import Vocabulary
+from fastNLP.io.data_bundle import DataBundle
+from ..loader.qa import CMRC2018Loader
+from .pipe import Pipe
+from .utils import get_tokenizer
 
 __all__ = ['CMRC2018BertPipe']
 
 
 def _concat_clip(data_bundle, max_len, concat_field_name='raw_chars'):
     r"""
-    处理data_bundle中的DataSet，将context与question按照character进行tokenize，然后使用[SEP]将两者连接起来。
+    处理 data_bundle 中的 DataSet，将 context 与 question 按照 character 进行
+    tokenize，然后使用 [SEP] 将两者连接起来。
 
-    会新增field: context_len(int), raw_words(list[str]), target_start(int), target_end(int)其中target_start
-    与target_end是与raw_chars等长的。其中target_start和target_end是前闭后闭的区间。
+    会新增 field: context_len(int), raw_words(list[str]), target_start(int),
+    target_end(int) 其中 target_start 与target_end 是与 raw_chars 等长的。其中
+    target_start 和 target_end 是前闭后闭的区间。
 
     :param DataBundle data_bundle: 类似["a", "b", "[SEP]", "c", ]
     :return:
@@ -40,7 +42,8 @@ def _concat_clip(data_bundle, max_len, concat_field_name='raw_chars'):
 
             answer_start = -1
 
-            if len(cnt_lst) + len(q_lst) + 3 > max_len:  # 预留开头的[CLS]和[SEP]和中间的[sep]
+            if len(cnt_lst) + len(
+                    q_lst) + 3 > max_len:  # 预留开头的[CLS]和[SEP]和中间的[sep]
                 if 'answer_starts' in ins and 'answers' in ins:
                     answer_start = int(ins['answer_starts'][0])
                     answer = ins['answers'][0]
@@ -82,14 +85,15 @@ class CMRC2018BertPipe(Pipe):
 
     .. csv-table::
         :header: "context_len", "raw_chars",  "target_start", "target_end", "chars"
-        
+
         492, "['范', '廷', '颂... ]", 30, 34, "[21, 25, ...]"
         491, "['范', '廷', '颂... ]", 41, 61, "[21, 25, ...]"
         ".", "...", "...","...", "..."
 
-    ``raw_chars`` 列是 ``context`` 与 ``question`` 拼起来的结果（连接的地方加入了 ``[SEP]`` ）， ``chars`` 是转为
-    index 的值， ``target_start`` 为答案开始的位置， ``target_end`` 为答案结束的位置（闭区间）； ``context_len``
-    指示的是 ``chars`` 列中 context 的长度。
+    ``raw_chars`` 列是 ``context`` 与 ``question`` 拼起来的结果（连接的地方加入了
+    ``[SEP]`` ），``chars`` 是转为 index 的值，``target_start`` 为答案开始的位置，
+    ``target_end`` 为答案结束的位置（闭区间）；``context_len`` 指示的是 ``chars``
+    列中 context 的长度。
 
     :param max_len:
     """
@@ -100,7 +104,8 @@ class CMRC2018BertPipe(Pipe):
 
     def process(self, data_bundle: DataBundle) -> DataBundle:
         r"""
-        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该包含 ``raw_words`` ：
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该包含
+        ``raw_words`` ：
 
         .. csv-table::
            :header: "title", "context", "question", "answers", "answer_starts", "id"
@@ -112,22 +117,32 @@ class CMRC2018BertPipe(Pipe):
         :param data_bundle:
         :return: 处理后的 ``data_bundle``
         """
-        data_bundle = _concat_clip(data_bundle, max_len=self.max_len, concat_field_name='raw_chars')
+        data_bundle = _concat_clip(
+            data_bundle, max_len=self.max_len, concat_field_name='raw_chars')
 
         src_vocab = Vocabulary()
-        src_vocab.from_dataset(*[ds for name, ds in data_bundle.iter_datasets() if 'train' in name],
-                               field_name='raw_chars',
-                               no_create_entry_dataset=[ds for name, ds in data_bundle.iter_datasets()
-                                                        if 'train' not in name]
-                               )
-        src_vocab.index_dataset(*data_bundle.datasets.values(), field_name='raw_chars', new_field_name='chars')
+        src_vocab.from_dataset(
+            *[
+                ds for name, ds in data_bundle.iter_datasets()
+                if 'train' in name
+            ],
+            field_name='raw_chars',
+            no_create_entry_dataset=[
+                ds for name, ds in data_bundle.iter_datasets()
+                if 'train' not in name
+            ])
+        src_vocab.index_dataset(
+            *data_bundle.datasets.values(),
+            field_name='raw_chars',
+            new_field_name='chars')
         data_bundle.set_vocab(src_vocab, 'chars')
 
         return data_bundle
 
     def process_from_file(self, paths=None) -> DataBundle:
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
+        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:

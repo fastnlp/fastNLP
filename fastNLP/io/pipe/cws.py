@@ -1,15 +1,13 @@
-__all__ = [
-    "CWSPipe"
-]
-
 import re
 from itertools import chain
+from typing import Optional
 
-from .pipe import Pipe
-from .utils import _indexize
 from fastNLP.io.data_bundle import DataBundle
 from fastNLP.io.loader import CWSLoader
-# from ...core.const import Const
+from .pipe import Pipe
+from .utils import _indexize
+
+__all__ = ['CWSPipe']
 
 
 def _word_lens_to_bmes(word_lens):
@@ -52,7 +50,7 @@ def _alpha_span_to_special_tag(span):
     :param str span:
     :return:
     """
-    if 'oo' == span.lower():  # speical case when represent 2OO8
+    if 'oo' == span.lower():  # special case when represent 2OO8
         return span
     if len(span) == 1:
         return span
@@ -92,7 +90,7 @@ def _digit_span_to_special_tag(span):
         if char == '.' or char == '﹒' or char == '·':
             decimal_point_count += 1
     if span[-1] == '.' or span[-1] == '﹒' or span[
-        -1] == '·':  # last digit being decimal point means this is not a number
+            -1] == '·':  # last digit being decimal point means this is not a number
         if decimal_point_count == 1:
             return span
         else:
@@ -108,15 +106,15 @@ def _digit_span_to_special_tag(span):
 def _find_and_replace_digit_spans(line):
     r"""
     only consider words start with number, contains '.', characters.
-    
+
         If ends with space, will be processed
-        
+
         If ends with Chinese character, will be processed
-        
+
         If ends with or contains english char, not handled.
-    
+
     floats are replaced by <DEC>
-    
+
     otherwise unkdgt
     """
     new_line = ''
@@ -133,7 +131,8 @@ def _find_and_replace_digit_spans(line):
 
 class CWSPipe(Pipe):
     r"""
-    对 **CWS** 数据进行处理，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
+    对 **CWS** 数据进行处理，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如
+    下：
 
     .. csv-table::
        :header: "raw_words", "chars", "target", "seq_len"
@@ -142,32 +141,44 @@ class CWSPipe(Pipe):
        "2001年  新年  钟声...", "[8, 9, 9, 7, ...]", "[0, 1, 1, 1, 2...]", 20
        "...", "[...]","[...]", .
 
-    :param dataset_name: data 的名称，支持 ``['pku', 'msra', 'cityu'(繁体), 'as'(繁体), None]``
-    :param encoding_type: ``target`` 列使用什么类型的 encoding 方式，支持 ``['bmes', 'segapp']`` 两种。``"我 来自 复旦大学..."`` 这句话 ``bmes``的 
-        tag为 ``[S, B, E, B, M, M, E...]`` ； ``segapp`` 的 tag 为 ``[seg, app, seg, app, app, app, seg, ...]`` 。
+    :param dataset_name: data 的名称，支持 ``['pku', 'msra', 'cityu'(繁体),
+        'as'(繁体), None]``
+    :param encoding_type: ``target`` 列使用什么类型的 encoding 方式，支持
+        ``['bmes', 'segapp']`` 两种。``"我 来自 复旦大学..."`` 这句话 ``bmes``的
+        tag 为 ``[S, B, E, B, M, M, E...]``；``segapp`` 的 tag 为 ``[seg, app,
+        seg, app, app, app, seg, ...]``。
     :param replace_num_alpha: 是否将数字和字母用特殊字符替换。
-    :param bigrams: 是否增加一列 ``bigrams`` 。 ``bigrams`` 会对原文进行如下转化： ``['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]`` 。如果
-        设置为 ``True`` ，返回的 :class:`~fastNLP.core.DataSet` 将有一列名为 ``bigrams`` ，且已经转换为了 index 并设置为 input，对应的词表可以通过
+    :param bigrams: 是否增加一列 ``bigrams``。``bigrams`` 会对原文进行如下转化：
+        ``['复', '旦', '大', '学', ...]->["复旦", "旦大", ...]``。如果设置为
+        ``True``，返回的 :class:`~fastNLP.core.DataSet` 将有一列名为
+        ``bigrams``，且已经转换为了 index 并设置为 input，对应的词表可以通过
         ``data_bundle.get_vocab('bigrams')`` 获取。
-    :param trigrams: 是否增加一列 ``trigrams`` 。 ``trigrams`` 会对原文进行如下转化 ``['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]`` 。
-        如果设置为 ``True`` ，返回的 :class:`~fastNLP.core.DataSet` 将有一列名为 ``trigrams`` ，且已经转换为了 index 并设置为 input，对应的词表可以通过
+    :param trigrams: 是否增加一列 ``trigrams``。``trigrams`` 会对原文进行如下转化
+        ``['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]``。如果设置为
+        ``True``，返回的 :class:`~fastNLP.core.DataSet` 将有一列名为
+        ``trigrams``，且已经转换为了 index 并设置为 input，对应的词表可以通过
         ``data_bundle.get_vocab('trigrams')`` 获取。
     :param num_proc: 处理数据时使用的进程数目。
     """
-    
-    def __init__(self, dataset_name: str=None, encoding_type: str='bmes', replace_num_alpha: bool=True,
-                 bigrams: bool=False, trigrams: bool=False, num_proc: int = 0):
+
+    def __init__(self,
+                 dataset_name: Optional[str] = None,
+                 encoding_type: str = 'bmes',
+                 replace_num_alpha: bool = True,
+                 bigrams: bool = False,
+                 trigrams: bool = False,
+                 num_proc: int = 0):
         if encoding_type == 'bmes':
             self.word_lens_to_tags = _word_lens_to_bmes
         else:
             self.word_lens_to_tags = _word_lens_to_segapp
-        
+
         self.dataset_name = dataset_name
         self.bigrams = bigrams
         self.trigrams = trigrams
         self.replace_num_alpha = replace_num_alpha
         self.num_proc = num_proc
-    
+
     def _tokenize(self, data_bundle):
         r"""
         将data_bundle中的'chars'列切分成一个一个的word.
@@ -176,6 +187,7 @@ class CWSPipe(Pipe):
         :param data_bundle:
         :return:
         """
+
         def split_word_into_chars(raw_chars):
             words = raw_chars.split()
             chars = []
@@ -189,7 +201,7 @@ class CWSPipe(Pipe):
                             subchar = []
                         subchar.append(c)
                         continue
-                    if c == '>' and len(subchar)>0 and subchar[0] == '<':
+                    if c == '>' and len(subchar) > 0 and subchar[0] == '<':
                         subchar.append(c)
                         char.append(''.join(subchar))
                         subchar = []
@@ -201,15 +213,19 @@ class CWSPipe(Pipe):
                 char.extend(subchar)
                 chars.append(char)
             return chars
-        
+
         for name, dataset in data_bundle.iter_datasets():
-            dataset.apply_field(split_word_into_chars, field_name='chars',
-                                new_field_name='chars', num_proc=self.num_proc)
+            dataset.apply_field(
+                split_word_into_chars,
+                field_name='chars',
+                new_field_name='chars',
+                num_proc=self.num_proc)
         return data_bundle
-    
+
     def process(self, data_bundle: DataBundle) -> DataBundle:
         r"""
-        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该包含 ``raw_words`` ：
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该包含
+        ``raw_words`` ：
 
         .. csv-table::
            :header: "raw_words"
@@ -222,11 +238,19 @@ class CWSPipe(Pipe):
         :return: 处理后的 ``data_bundle``
         """
         data_bundle.copy_field('raw_words', 'chars')
-        
+
         if self.replace_num_alpha:
-            data_bundle.apply_field(_find_and_replace_alpha_spans, 'chars', 'chars', num_proc=self.num_proc)
-            data_bundle.apply_field(_find_and_replace_digit_spans, 'chars', 'chars', num_proc=self.num_proc)
-        
+            data_bundle.apply_field(
+                _find_and_replace_alpha_spans,
+                'chars',
+                'chars',
+                num_proc=self.num_proc)
+            data_bundle.apply_field(
+                _find_and_replace_digit_spans,
+                'chars',
+                'chars',
+                num_proc=self.num_proc)
+
         self._tokenize(data_bundle)
 
         def func1(chars):
@@ -234,46 +258,68 @@ class CWSPipe(Pipe):
 
         def func2(chars):
             return list(chain(*chars))
-        
+
         for name, dataset in data_bundle.iter_datasets():
-            dataset.apply_field(func1, field_name='chars', new_field_name='target', num_proc=self.num_proc)
-            dataset.apply_field(func2, field_name='chars', new_field_name='chars', num_proc=self.num_proc)
+            dataset.apply_field(
+                func1,
+                field_name='chars',
+                new_field_name='target',
+                num_proc=self.num_proc)
+            dataset.apply_field(
+                func2,
+                field_name='chars',
+                new_field_name='chars',
+                num_proc=self.num_proc)
         input_field_names = ['chars']
 
         def bigram(chars):
             return [c1 + c2 for c1, c2 in zip(chars, chars[1:] + ['<eos>'])]
 
         def trigrams(chars):
-            return [c1 + c2 + c3 for c1, c2, c3 in
-                    zip(chars, chars[1:] + ['<eos>'], chars[2:] + ['<eos>'] * 2)]
+            return [
+                c1 + c2 + c3
+                for c1, c2, c3 in zip(chars, chars[1:] + ['<eos>'], chars[2:] +
+                                      ['<eos>'] * 2)
+            ]
 
         if self.bigrams:
             for name, dataset in data_bundle.iter_datasets():
-                dataset.apply_field(bigram, field_name='chars', new_field_name='bigrams', num_proc=self.num_proc)
+                dataset.apply_field(
+                    bigram,
+                    field_name='chars',
+                    new_field_name='bigrams',
+                    num_proc=self.num_proc)
             input_field_names.append('bigrams')
         if self.trigrams:
             for name, dataset in data_bundle.iter_datasets():
-                dataset.apply_field(trigrams, field_name='chars', new_field_name='trigrams', num_proc=self.num_proc)
+                dataset.apply_field(
+                    trigrams,
+                    field_name='chars',
+                    new_field_name='trigrams',
+                    num_proc=self.num_proc)
             input_field_names.append('trigrams')
-        
+
         _indexize(data_bundle, input_field_names, 'target')
 
         for name, dataset in data_bundle.iter_datasets():
             dataset.add_seq_len('chars')
 
         return data_bundle
-    
+
     def process_from_file(self, paths=None) -> DataBundle:
         r"""
-        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
+        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param paths:
         :return:
         """
         if self.dataset_name is None and paths is None:
             raise RuntimeError(
-                "You have to set `paths` when calling process_from_file() or `dataset_name `when initialization.")
+                'You have to set `paths` when calling process_from_file() '
+                'or `dataset_name `when initialization.')
         if self.dataset_name is not None and paths is not None:
-            raise RuntimeError("You cannot specify `paths` and `dataset_name` simultaneously")
+            raise RuntimeError(
+                'You cannot specify `paths` and `dataset_name` simultaneously')
         data_bundle = CWSLoader(self.dataset_name).load(paths)
         return self.process(data_bundle)

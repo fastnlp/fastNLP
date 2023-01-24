@@ -1,3 +1,5 @@
+# isort: skip_file
+
 __all__ = [
     'Backend',
     'AutoBackend',
@@ -6,7 +8,6 @@ __all__ = [
     'JittorBackend',
     'OneflowBackend',
 ]
-
 
 from .backend import Backend
 from .auto_backend import AutoBackend

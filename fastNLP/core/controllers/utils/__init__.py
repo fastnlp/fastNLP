@@ -1,6 +1,3 @@
-__all__ = [
-    'State',
-    'TrainerState'
-]
+__all__ = ['State', 'TrainerState']
 
 from .state import State, TrainerState

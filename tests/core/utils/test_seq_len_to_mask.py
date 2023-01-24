@@ -1,7 +1,10 @@
-import pytest
 import numpy as np
+import pytest
+
 from fastNLP.core.utils.seq_len_to_mask import seq_len_to_mask
-from fastNLP.envs.imports import _NEED_IMPORT_JITTOR, _NEED_IMPORT_PADDLE, _NEED_IMPORT_TORCH, _NEED_IMPORT_ONEFLOW
+from fastNLP.envs.imports import (_NEED_IMPORT_JITTOR, _NEED_IMPORT_ONEFLOW,
+                                  _NEED_IMPORT_PADDLE, _NEED_IMPORT_TORCH)
+
 if _NEED_IMPORT_TORCH:
     import torch
 
@@ -23,7 +26,7 @@ class TestSeqLenToMask:
             length = seq_len[i]
             mask_i = mask[i]
             for j in range(max_len):
-                assert mask_i[j].item() == (j<length), (i, j, length)
+                assert mask_i[j].item() == (j < length), (i, j, length)
 
     def test_numpy_seq_len(self):
         # 测试能否转换numpy类型的seq_len
@@ -43,7 +46,7 @@ class TestSeqLenToMask:
             mask = seq_len_to_mask(seq_len)
 
         # 3. pad到指定长度
-        seq_len = np.random.randint(1, 10, size=(10,))
+        seq_len = np.random.randint(1, 10, size=(10, ))
         mask = seq_len_to_mask(seq_len, 100)
         assert 100 == mask.shape[1]
 
@@ -69,7 +72,7 @@ class TestSeqLenToMask:
     @pytest.mark.paddle
     def test_paddle_seq_len(self):
         # 1. 随机测试
-        seq_len = paddle.randint(1, 10, shape=(10,))
+        seq_len = paddle.randint(1, 10, shape=(10, ))
         max_len = seq_len.max()
         mask = seq_len_to_mask(seq_len)
         assert max_len == mask.shape[1]
@@ -81,14 +84,14 @@ class TestSeqLenToMask:
             mask = seq_len_to_mask(seq_len)
 
         # 3. pad到指定长度
-        seq_len = paddle.randint(1, 10, shape=(10,))
+        seq_len = paddle.randint(1, 10, shape=(10, ))
         mask = seq_len_to_mask(seq_len, 100)
         assert 100 == mask.shape[1]
 
     @pytest.mark.jittor
     def test_jittor_seq_len(self):
         # 1. 随机测试
-        seq_len = jittor.randint(1, 10, shape=(10,))
+        seq_len = jittor.randint(1, 10, shape=(10, ))
         max_len = seq_len.max()
         mask = seq_len_to_mask(seq_len)
         assert max_len == mask.shape[1]
@@ -100,12 +103,12 @@ class TestSeqLenToMask:
             mask = seq_len_to_mask(seq_len)
 
         # 3. pad到指定长度
-        seq_len = jittor.randint(1, 10, shape=(10,))
+        seq_len = jittor.randint(1, 10, shape=(10, ))
         mask = seq_len_to_mask(seq_len, 100)
         assert 100 == mask.shape[1]
 
     @pytest.mark.oneflow
-    def test_pytorch_seq_len(self):
+    def test_oneflow_seq_len(self):
         # 1. 随机测试
         seq_len = oneflow.randint(1, 10, size=(10, ))
         max_len = seq_len.max()

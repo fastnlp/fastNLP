@@ -1,6 +1,6 @@
-import os
-import pytest
 from dataclasses import dataclass
+
+import pytest
 
 from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.core.metrics.accuracy import Accuracy
@@ -10,10 +10,11 @@ if _NEED_IMPORT_ONEFLOW:
     from oneflow.optim import Adam
     from oneflow.utils.data import DataLoader
 
-
-from tests.helpers.models.oneflow_model import OneflowNormalModel_Classification_1
 from tests.helpers.datasets.oneflow_data import OneflowArgMaxDataset
-from tests.helpers.utils import magic_argv_env_context
+from tests.helpers.models.oneflow_model import \
+    OneflowNormalModel_Classification_1
+from tests.helpers.utils import magic_argv_env_context, skip_no_cuda
+
 
 @dataclass
 class TrainOneflowConfig:
@@ -24,37 +25,36 @@ class TrainOneflowConfig:
     shuffle: bool = True
     evaluate_every = 2
 
-@pytest.mark.parametrize("device", ["cpu", 1])
-@pytest.mark.parametrize("callbacks", [[]])
+
+@pytest.mark.parametrize('device', ['cpu', 1])
+@pytest.mark.parametrize('callbacks', [[]])
 @pytest.mark.oneflow
 @magic_argv_env_context
 def test_trainer_oneflow(
-        device,
-        callbacks,
-        n_epochs=2,
+    device,
+    callbacks,
+    n_epochs=2,
 ):
+    skip_no_cuda(device)
     model = OneflowNormalModel_Classification_1(
         num_labels=TrainOneflowConfig.num_labels,
-        feature_dimension=TrainOneflowConfig.feature_dimension
-    )
+        feature_dimension=TrainOneflowConfig.feature_dimension)
     optimizers = Adam(params=model.parameters(), lr=0.0001)
     train_dataloader = DataLoader(
         dataset=OneflowArgMaxDataset(20, TrainOneflowConfig.feature_dimension),
         batch_size=TrainOneflowConfig.batch_size,
-        shuffle=True
-    )
+        shuffle=True)
     val_dataloader = DataLoader(
         dataset=OneflowArgMaxDataset(12, TrainOneflowConfig.feature_dimension),
         batch_size=TrainOneflowConfig.batch_size,
-        shuffle=True
-    )
+        shuffle=True)
     train_dataloader = train_dataloader
     evaluate_dataloaders = val_dataloader
     evaluate_every = TrainOneflowConfig.evaluate_every
-    metrics = {"acc": Accuracy()}
+    metrics = {'acc': Accuracy()}
     trainer = Trainer(
         model=model,
-        driver="oneflow",
+        driver='oneflow',
         device=device,
         optimizers=optimizers,
         train_dataloader=train_dataloader,
@@ -63,7 +63,6 @@ def test_trainer_oneflow(
         input_mapping=None,
         output_mapping=None,
         metrics=metrics,
-
         n_epochs=n_epochs,
         callbacks=callbacks,
     )

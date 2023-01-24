@@ -1,45 +1,42 @@
 import io
-import pickle
 import os
-_pickler = pickle.Pickler
-_unpickler = pickle.Unpickler
+import pickle
 from typing import Any, List
 
-from fastNLP.envs.imports import _TORCH_GREATER_EQUAL_1_8
 from fastNLP.core.utils.torch_utils import DEFAULT_TORCH_GROUP
-from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from fastNLP.envs.env import FASTNLP_NO_SYNC
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _TORCH_GREATER_EQUAL_1_8
+
 if _NEED_IMPORT_TORCH:
     import torch
     from torch import distributed as dist
     if _TORCH_GREATER_EQUAL_1_8:
         try:
-            from torch._C._distributed_c10d import ProcessGroupGloo
             from torch._C._distributed_c10d import _ProcessGroupWrapper
         except ImportError:
             pass
 
-
 from fastNLP.core.utils import apply_to_collection
 
-__all__ = []
+__all__ = []  # type: ignore
+
+_pickler = pickle.Pickler
+_unpickler = pickle.Unpickler
+
 
 def _validate_output_list_for_rank(my_rank, dst, gather_list):
     if dst == my_rank:
         if not gather_list:
             raise ValueError(
-                "Argument ``gather_list`` must be specified on destination rank."
-            )
+                'Argument ``gather_list`` must be specified on destination '
+                'rank.')
     elif gather_list:
-        raise ValueError(
-            "Argument ``gather_list`` must NOT be specified "
-            "on non-destination ranks."
-        )
+        raise ValueError('Argument ``gather_list`` must NOT be specified '
+                         'on non-destination ranks.')
 
 
 def fastnlp_torch_gather_object(obj, dst=0, group=DEFAULT_TORCH_GROUP):
-    """
-    从其它 rank gather 东西到 dst rank 。
+    """从其它 rank gather 东西到 dst rank 。
 
     Example::
         >>> # Assumes world_size of 3.
@@ -77,19 +74,22 @@ def fastnlp_torch_gather_object(obj, dst=0, group=DEFAULT_TORCH_GROUP):
     my_rank = dist.get_rank()
     _validate_output_list_for_rank(my_rank, dst, object_gather_list)
     # 防止 unpickle 的时候出现在了发送的 gpu 上。
-    obj = apply_to_collection(obj, torch.Tensor, _to_device, device=torch.device('cpu'))
+    obj = apply_to_collection(
+        obj, torch.Tensor, _to_device, device=torch.device('cpu'))
     input_tensor, local_size = _object_to_tensor(obj)
     group_backend = dist.get_backend(group)
-    current_device = torch.device("cpu")
+    current_device = torch.device('cpu')
     is_nccl_backend = group_backend == dist.Backend.NCCL
     if is_nccl_backend:
         current_device = torch.device('cuda', torch.cuda.current_device())
         input_tensor = input_tensor.to(current_device)
         local_size = local_size.to(current_device)
-    # Gather all local sizes. This is so that we can find the max size, and index
-    # until the correct size when deserializing the tensors.
+    # Gather all local sizes. This is so that we can find the
+    # max size, and index until the correct size when deserializing
+    # the tensors.
     group_size = dist.get_world_size(group=group)
-    object_sizes_tensor = torch.zeros(group_size, dtype=torch.long, device=current_device)
+    object_sizes_tensor = torch.zeros(
+        group_size, dtype=torch.long, device=current_device)
     object_size_list = [
         object_sizes_tensor[i].unsqueeze(dim=0) for i in range(group_size)
     ]
@@ -97,18 +97,21 @@ def fastnlp_torch_gather_object(obj, dst=0, group=DEFAULT_TORCH_GROUP):
     # gather, since each rank needs to broadcast a tensor of the same (maximal)
     # size.
     dist.all_gather(object_size_list, local_size, group=group)
-    max_object_size = int(max(object_size_list).item())  # type: ignore[type-var]
+    max_object_size = int(
+        max(object_size_list).item())  # type: ignore[type-var]
     # Resize tensor to max size across all ranks.
     input_tensor.resize_(max_object_size)
-    # Avoid populating output tensors if the result won't be gathered on this rank.
+    # Avoid populating output tensors if the result won't be
+    # gathered on this rank.
     if my_rank == dst:
         coalesced_output_tensor = torch.empty(
-            max_object_size * group_size, dtype=torch.uint8, device=current_device
-        )
+            max_object_size * group_size,
+            dtype=torch.uint8,
+            device=current_device)
         # Output tensors are nonoverlapping views of coalesced_output_tensor
         output_tensors = [
-            coalesced_output_tensor[max_object_size * i : max_object_size * (i + 1)]
-            for i in range(group_size)
+            coalesced_output_tensor[max_object_size * i:max_object_size *
+                                    (i + 1)] for i in range(group_size)
         ]
     # All ranks call gather with equal-sized tensors.
     dist.gather(
@@ -128,9 +131,11 @@ def fastnlp_torch_gather_object(obj, dst=0, group=DEFAULT_TORCH_GROUP):
 def _object_to_tensor(obj, device=None):
     f = io.BytesIO()
     _pickler(f).dump(obj)
-    byte_storage = torch.ByteStorage.from_buffer(f.getvalue())  # type: ignore[attr-defined]
-    # Do not replace `torch.ByteTensor` or `torch.LongTensor` with torch.tensor and specifying dtype.
-    # Otherwise, it will casue 100X slowdown.
+    byte_storage = torch.ByteStorage.from_buffer(
+        f.getvalue())  # type: ignore[attr-defined]
+    # Do not replace `torch.ByteTensor` or `torch.LongTensor`
+    # with torch.tensor and specifying dtype.
+    # Otherwise, it will cause 100X slowdown.
     # See: https://github.com/pytorch/pytorch/issues/65696
     byte_tensor = torch.ByteTensor(byte_storage)
     local_size = torch.LongTensor([byte_tensor.numel()])
@@ -193,9 +198,11 @@ def _to_device(tensor, device):
     return tensor.contiguous().to(device)
 
 
-def fastnlp_torch_all_gather(obj: Any, device=None, group=DEFAULT_TORCH_GROUP) ->List:
-    """
-    实现任何类型的数据都使用该接口可以进行 all_gather 操作。对于非 tensor 类型的数据，通过 pickle 序列化再反序列化的方式进行传输。
+def fastnlp_torch_all_gather(obj: Any,
+                             device=None,
+                             group=DEFAULT_TORCH_GROUP) -> List:
+    r"""实现任何类型的数据都使用该接口可以进行 all_gather 操作。对于非 tensor 类型的
+    数据，通过 pickle 序列化再反序列化的方式进行传输。
 
     example::
 
@@ -209,11 +216,12 @@ def fastnlp_torch_all_gather(obj: Any, device=None, group=DEFAULT_TORCH_GROUP) -
                 {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
             ]
 
-    :param obj: 任意结构的数据，如果为 tensor ，需要保证每个显卡上的 tensor 的形状是一样的。如果传入的是非 tensor 对象都将直接进行
-        序列化之后进行传输。
+    :param obj: 任意结构的数据，如果为 tensor ，需要保证每个显卡上的 tensor 的形状
+        是一样的。如果传入的是非 tensor 对象都将直接进行序列化之后进行传输。
     :param device: 当前该参数无意义。
     :param group:
-    :return: 返回的结果是 [obj0, obj1, ...]，其中 obj_i 即为第 i 个 rank 上的 obj 。
+    :return: 返回的结果是 [obj0, obj1, ...]，其中 obj_i 即为第 i 个 rank 上的
+        obj 。
     """
     if int(os.environ.get(FASTNLP_NO_SYNC, '0')) == 2:
         return [obj]
@@ -221,12 +229,15 @@ def fastnlp_torch_all_gather(obj: Any, device=None, group=DEFAULT_TORCH_GROUP) -
     if group is None:
         group = DEFAULT_TORCH_GROUP
     if isinstance(obj, torch.Tensor):
-        objs = [torch.zeros_like(obj) for _ in range(dist.get_world_size(group))]
+        objs = [
+            torch.zeros_like(obj) for _ in range(dist.get_world_size(group))
+        ]
         dist.all_gather(objs, obj, group=group)
     else:
         objs = [None for _ in range(dist.get_world_size(group))]
         # 防止 unpickle 的时候弄到发送的 gpu 上了
-        obj = apply_to_collection(obj, torch.Tensor, _to_device, device=torch.device('cpu'))
+        obj = apply_to_collection(
+            obj, torch.Tensor, _to_device, device=torch.device('cpu'))
         if _TORCH_GREATER_EQUAL_1_8:
             dist.all_gather_object(objs, obj, group=group)
         else:
@@ -234,9 +245,11 @@ def fastnlp_torch_all_gather(obj: Any, device=None, group=DEFAULT_TORCH_GROUP) -
     return objs
 
 
-def fastnlp_torch_broadcast_object(obj, src, device=None, group=DEFAULT_TORCH_GROUP):
-    """
-    将 src 上的 obj 对象广播到其它 rank 上。
+def fastnlp_torch_broadcast_object(obj,
+                                   src,
+                                   device=None,
+                                   group=DEFAULT_TORCH_GROUP):
+    """将 src 上的 obj 对象广播到其它 rank 上。
 
     :param obj: 需要发送的对象
     :param src: 从哪里发出。
@@ -254,10 +267,12 @@ def fastnlp_torch_broadcast_object(obj, src, device=None, group=DEFAULT_TORCH_GR
         group = DEFAULT_TORCH_GROUP
     cur_rank = dist.get_rank(group)
     if cur_rank == src:
-        # 如果有 tensor 全部移动到 cpu 上，方便 pickle , 不然 unpickle 的时候可能会 pickle 到发送过来的卡那里
-        obj = apply_to_collection(obj, torch.Tensor, _to_device, device=torch.device('cpu'))
+        # 如果有 tensor 全部移动到 cpu 上，方便 pickle , 不然 unpickle 的时候可能
+        # 会 pickle 到发送过来的卡那里
+        obj = apply_to_collection(
+            obj, torch.Tensor, _to_device, device=torch.device('cpu'))
     if _TORCH_GREATER_EQUAL_1_8:
-        if cur_rank!=src:
+        if cur_rank != src:
             get_obj = [None]
             dist.broadcast_object_list(get_obj, src=src, group=group)
             return get_obj[0]
@@ -277,8 +292,7 @@ def fastnlp_torch_broadcast_object(obj, src, device=None, group=DEFAULT_TORCH_GR
         tensor = torch.empty(
             size.int().item(),  # type: ignore[arg-type]
             dtype=torch.uint8,
-            device=device
-        )
+            device=device)
     dist.broadcast(tensor, src=src, group=group)
 
     return _tensor_to_object(tensor, tensor_size=size.item())
@@ -291,15 +305,11 @@ def _check_for_nccl_backend(group):
     while isinstance(pg, _ProcessGroupWrapper):
         pg = pg.wrapped_pg
 
-    return (
-            dist.is_nccl_available() and
-            isinstance(pg, dist.ProcessGroupNCCL)
-    )
+    return (dist.is_nccl_available() and isinstance(pg, dist.ProcessGroupNCCL))
 
 
 def all_gather_object(object_list, obj, group=None):
-    """
-    复制 pytorch 的代码，使得可以版本兼容低版本的 pytorch 。
+    """复制 pytorch 的代码，使得可以版本兼容低版本的 pytorch 。
 
     Example::
         >>> # Note: Process group initialization omitted on each rank.
@@ -321,45 +331,45 @@ def all_gather_object(object_list, obj, group=None):
     if dist.distributed_c10d._rank_not_in_group(group):
         return
     if _TORCH_GREATER_EQUAL_1_8:
-        current_device = torch.device("cpu")
+        current_device = torch.device('cpu')
         is_nccl_backend = _check_for_nccl_backend(group)
         if is_nccl_backend:
-            # See note about using torch.cuda.current_device() here in docstring.
-            # We cannot simply use my_rank since rank == device is not necessarily
-            # true.
-            current_device = torch.device("cuda", torch.cuda.current_device())
+            # See note about using torch.cuda.current_device() here
+            # in docstring. We cannot simply use my_rank since rank == device
+            # is not necessarily true.
+            current_device = torch.device('cuda', torch.cuda.current_device())
     else:
         current_device = torch.cuda.current_device()
 
     input_tensor, local_size = _object_to_tensor(obj, device=current_device)
 
-    # Gather all local sizes. This is so that we can find the max size, and index
-    # until the correct size when deserializing the tensors.
+    # Gather all local sizes. This is so that we can find the
+    # max size, and index until the correct size when deserializing
+    # the tensors.
     group_size = dist.get_world_size(group=group)
     object_sizes_tensor = torch.zeros(
-        group_size, dtype=torch.long, device=current_device
-    )
+        group_size, dtype=torch.long, device=current_device)
     object_size_list = [
         object_sizes_tensor[i].unsqueeze(dim=0) for i in range(group_size)
     ]
     # Allgather tensor sizes
     dist.all_gather(object_size_list, local_size, group=group)
-    max_object_size = int(max(object_size_list).item())  # type: ignore[type-var]
+    max_object_size = int(
+        max(object_size_list).item())  # type: ignore[type-var]
     # Resize tensor to max size across all ranks.
     input_tensor.resize_(max_object_size)
     coalesced_output_tensor = torch.empty(
-        max_object_size * group_size, dtype=torch.uint8, device=current_device
-    )
+        max_object_size * group_size, dtype=torch.uint8, device=current_device)
     # Output tensors are nonoverlapping views of coalesced_output_tensor
     output_tensors = [
-        coalesced_output_tensor[max_object_size * i : max_object_size * (i + 1)]
+        coalesced_output_tensor[max_object_size * i:max_object_size * (i + 1)]
         for i in range(group_size)
     ]
     dist.all_gather(output_tensors, input_tensor, group=group)
     # Deserialize outputs back to object.
     for i, tensor in enumerate(output_tensors):
         tensor = tensor.type(torch.uint8)
-        if tensor.device != torch.device("cpu"):
+        if tensor.device != torch.device('cpu'):
             tensor = tensor.cpu()
         tensor_size = object_size_list[i]
         object_list[i] = _tensor_to_object(tensor, tensor_size)
@@ -367,8 +377,8 @@ def all_gather_object(object_list, obj, group=None):
 
 
 def convert_sync_batchnorm(model, group=None):
-    """
-    将模型中所有继承 :class:`torch.nn.modules.batchnorm._BatchNorm` 的层转换为 :class:`torch.nn.SyncBatchNorm` 。
+    """将模型中所有继承 :class:`torch.nn.modules.batchnorm._BatchNorm` 的层转换为
+    :class:`torch.nn.SyncBatchNorm`。
 
     Example::
         >>> import torch
@@ -385,6 +395,6 @@ def convert_sync_batchnorm(model, group=None):
     :param model: 要转换的模型
     :param process_group: 同步的进程组，如果为None，则使用默认的进程组。
     :return: 转换后的模型
-
     """
-    return torch.nn.SyncBatchNorm.convert_sync_batchnorm(model, process_group=group)
+    return torch.nn.SyncBatchNorm.convert_sync_batchnorm(
+        model, process_group=group)

@@ -1,7 +1,6 @@
-import pytest
-from fastNLP.core.dataloaders.utils import _match_param
 from fastNLP import logger
-from tests.helpers.utils import recover_logger, Capturing
+from fastNLP.core.dataloaders.utils import _match_param
+from tests.helpers.utils import Capturing, recover_logger
 
 
 def demo():
@@ -9,20 +8,26 @@ def demo():
 
 
 def test_no_args():
+
     def f(*args, a, b, **kwarg):
         c = 100
         call_kwargs = _match_param(f, demo)
+        return c, call_kwargs
+
     f(a=1, b=2)
 
     def f(a, *args, b, **kwarg):
         c = 100
         call_kwargs = _match_param(f, demo)
+        return c, call_kwargs
+
     f(a=1, b=2)
 
 
 @recover_logger
 def test_warning():
     logger.set_stdout('raw')
+
     def f1(a, b):
         return 1
 

@@ -1,17 +1,19 @@
 import os
+
 import pytest
 
-from fastNLP.envs.distributed import rank_zero_call, all_rank_call_context
-from tests.helpers.utils import re_run_current_cmd_for_torch, Capturing, magic_argv_env_context
+from fastNLP.envs.distributed import all_rank_call_context, rank_zero_call
+from tests.helpers.utils import (Capturing, magic_argv_env_context,
+                                 re_run_current_cmd_for_torch)
 
 
 @rank_zero_call
 def write_something():
-    print(os.environ.get('RANK', '0')*5, flush=True)
+    print(os.environ.get('RANK', '0') * 5, flush=True)
 
 
 def write_other_thing():
-    print(os.environ.get('RANK', '0')*5, flush=True)
+    print(os.environ.get('RANK', '0') * 5, flush=True)
 
 
 class PaddleTest:
@@ -31,8 +33,10 @@ class JittorTest:
     def test_all_rank_run(self):
         pass
 
+
 @pytest.mark.torch
 class TestTorch:
+
     @magic_argv_env_context
     def test_rank_zero_call(self):
         os.environ['MASTER_ADDR'] = '127.0.0.1'

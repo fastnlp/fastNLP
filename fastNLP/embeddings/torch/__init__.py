@@ -1,12 +1,9 @@
-"""
-torch 可使用的几种 Embedding 。
-"""
+"""torch 可使用的几种 Embedding 。"""
+# isort: skip_file
+
 __all__ = [
-    "CNNCharEmbedding",
-    "LSTMCharEmbedding",
-    "Embedding",
-    "StackEmbedding",
-    "StaticEmbedding"
+    'CNNCharEmbedding', 'LSTMCharEmbedding', 'Embedding', 'StackEmbedding',
+    'StaticEmbedding'
 ]
 
 from .char_embedding import *

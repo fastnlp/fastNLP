@@ -1,27 +1,27 @@
 r"""
 **Variational RNN** 及相关模型的 **fastNLP** 实现，相关论文参考：
-`A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016) <https://arxiv.org/abs/1512.05287>`_
+`A Theoretically Grounded Application of Dropout in Recurrent Neural Networks
+(Yarin Gal and Zoubin Ghahramani, 2016) <https://arxiv.org/abs/1512.05287>`_
 """
-
-__all__ = [
-    "VarRNN",
-    "VarLSTM",
-    "VarGRU"
-]
 
 import torch
 import torch.nn as nn
-from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
+from torch.nn.utils.rnn import (PackedSequence, pack_padded_sequence,
+                                pad_packed_sequence)
 
 try:
     from torch import flip
 except ImportError:
+
     def flip(x, dims):
         indices = [slice(None)] * x.dim()
         for dim in dims:
             indices[dim] = torch.arange(
                 x.size(dim) - 1, -1, -1, dtype=torch.long, device=x.device)
         return x[tuple(indices)]
+
+
+__all__ = ['VarRNN', 'VarLSTM', 'VarGRU']
 
 
 class VarRnnCellWrapper(nn.Module):
@@ -44,8 +44,8 @@ class VarRnnCellWrapper(nn.Module):
         :param mask_x: [batch_size, input_size] dropout mask for input
         :param mask_h: [batch_size, hidden_size] dropout mask for hidden
         :return PackedSequence output: [seq_len, bacth_size, hidden_size]
-                hidden: for LSTM, tuple of (h_n, c_n), [batch_size, hidden_size]
-                        for other RNN, h_n, [batch_size, hidden_size]
+                hidden: for LSTM, tuple of (h_n, c_n), [batch_size,
+                hidden_size] for other RNN, h_n, [batch_size, hidden_size]
         """
 
         def get_hi(hi, h0, size):
@@ -72,16 +72,16 @@ class VarRnnCellWrapper(nn.Module):
         hi = hidden
         for size in batch_iter:
             if is_reversed:
-                input_i = input[idx - size: idx] * mask_x[:size]
+                input_i = input[idx - size:idx] * mask_x[:size]
                 idx -= size
             else:
-                input_i = input[idx: idx + size] * mask_x[:size]
+                input_i = input[idx:idx + size] * mask_x[:size]
                 idx += size
             mask_hi = mask_h[:size]
             if is_lstm:
                 hx, cx = hi
-                hi = (get_hi(hx, hidden[0], size) *
-                      mask_hi, get_hi(cx, hidden[1], size))
+                hi = (get_hi(hx, hidden[0], size) * mask_hi,
+                      get_hi(cx, hidden[1], size))
                 hi = cell(input_i, hi)
                 hn[0][:size] = hi[0]
                 hn[1][:size] = hi[1]
@@ -102,16 +102,25 @@ class VarRNNBase(nn.Module):
     r"""
     Variational Dropout RNN 实现.
 
-    论文参考: `A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016)
+    论文参考: `A Theoretically Grounded Application of Dropout in Recurrent
+    Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016)
     https://arxiv.org/abs/1512.05287`.
 
     """
 
-    def __init__(self, mode, Cell, input_size, hidden_size, num_layers=1,
-                 bias=True, batch_first=False,
-                 input_dropout=0, hidden_dropout=0, bidirectional=False):
+    def __init__(self,
+                 mode,
+                 Cell,
+                 input_size,
+                 hidden_size,
+                 num_layers=1,
+                 bias=True,
+                 batch_first=False,
+                 input_dropout=0,
+                 hidden_dropout=0,
+                 bidirectional=False):
         r"""
-        
+
         :param mode: rnn 模式, (lstm or not)
         :param Cell: rnn cell 类型, (lstm, gru, etc)
         :param input_size:  输入 `x` 的特征维度
@@ -140,9 +149,10 @@ class VarRNNBase(nn.Module):
             for direction in range(self.num_directions):
                 input_size = self.input_size if layer == 0 else self.hidden_size * self.num_directions
                 cell = Cell(input_size, self.hidden_size, bias)
-                self._all_cells.append(VarRnnCellWrapper(
-                    cell, self.hidden_size, input_dropout, hidden_dropout))
-        self.is_lstm = (self.mode == "LSTM")
+                self._all_cells.append(
+                    VarRnnCellWrapper(cell, self.hidden_size, input_dropout,
+                                      hidden_dropout))
+        self.is_lstm = (self.mode == 'LSTM')
 
     def _forward_one(self, n_layer, n_direction, input, hx, mask_x, mask_h):
         is_lstm = self.is_lstm
@@ -157,9 +167,10 @@ class VarRNNBase(nn.Module):
         r"""
 
         :param x: [batch, seq_len, input_size] 输入序列
-        :param hx: [batch, hidden_size] 初始隐状态, 若为 ``None`` , 设为全1向量. Default: ``None``
-        :return (output, ht): [batch, seq_len, hidden_size*num_direction] 输出序列
-            和 [batch, hidden_size*num_direction] 最后时刻隐状态
+        :param hx: [batch, hidden_size] 初始隐状态, 若为 ``None``。设为全1向量。
+            默认为 ``None``
+        :return (output, ht): [batch, seq_len, hidden_size*num_direction] 输出
+            序列和 [batch, hidden_size*num_direction] 最后时刻隐状态
         """
         is_lstm = self.is_lstm
         is_packed = isinstance(x, PackedSequence)
@@ -174,8 +185,11 @@ class VarRNNBase(nn.Module):
         x, batch_sizes = x.data, x.batch_sizes
 
         if hx is None:
-            hx = x.new_zeros(self.num_layers * self.num_directions,
-                             max_batch_size, self.hidden_size, requires_grad=True)
+            hx = x.new_zeros(
+                self.num_layers * self.num_directions,
+                max_batch_size,
+                self.hidden_size,
+                requires_grad=True)
             if is_lstm:
                 hx = (hx, hx.new_zeros(hx.size(), requires_grad=True))
 
@@ -183,24 +197,31 @@ class VarRNNBase(nn.Module):
         mask_out = x.new_ones(
             (max_batch_size, self.hidden_size * self.num_directions))
         mask_h_ones = x.new_ones((max_batch_size, self.hidden_size))
-        nn.functional.dropout(mask_x, p=self.input_dropout,
-                              training=self.training, inplace=True)
-        nn.functional.dropout(mask_out, p=self.hidden_dropout,
-                              training=self.training, inplace=True)
+        nn.functional.dropout(
+            mask_x, p=self.input_dropout, training=self.training, inplace=True)
+        nn.functional.dropout(
+            mask_out,
+            p=self.hidden_dropout,
+            training=self.training,
+            inplace=True)
 
-        hidden = x.new_zeros(
-            (self.num_layers * self.num_directions, max_batch_size, self.hidden_size))
+        hidden = x.new_zeros((self.num_layers * self.num_directions,
+                              max_batch_size, self.hidden_size))
         if is_lstm:
-            cellstate = x.new_zeros(
-                (self.num_layers * self.num_directions, max_batch_size, self.hidden_size))
+            cellstate = x.new_zeros((self.num_layers * self.num_directions,
+                                     max_batch_size, self.hidden_size))
         for layer in range(self.num_layers):
             output_list = []
             input_seq = PackedSequence(x, batch_sizes)
             mask_h = nn.functional.dropout(
-                mask_h_ones, p=self.hidden_dropout, training=self.training, inplace=False)
+                mask_h_ones,
+                p=self.hidden_dropout,
+                training=self.training,
+                inplace=False)
             for direction in range(self.num_directions):
-                output_x, hidden_x = self._forward_one(layer, direction, input_seq, hx,
-                                                       mask_x if layer == 0 else mask_out, mask_h)
+                output_x, hidden_x = self._forward_one(
+                    layer, direction, input_seq, hx,
+                    mask_x if layer == 0 else mask_out, mask_h)
                 output_list.append(output_x.data)
                 idx = self.num_directions * layer + direction
                 if is_lstm:
@@ -225,7 +246,9 @@ class VarRNNBase(nn.Module):
 class VarLSTM(VarRNNBase):
     r"""
     Variational Dropout LSTM.
-    相关论文参考：`A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016) <https://arxiv.org/abs/1512.05287>`_
+    相关论文参考：`A Theoretically Grounded Application of Dropout in Recurrent
+    Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016)
+    <https://arxiv.org/abs/1512.05287>`_
 
     :param input_size:  输入 `x` 的特征维度。
     :param hidden_size: 隐状态 `h` 的特征维度。
@@ -240,14 +263,16 @@ class VarLSTM(VarRNNBase):
 
     def __init__(self, *args, **kwargs):
         super(VarLSTM, self).__init__(
-            mode="LSTM", Cell=nn.LSTMCell, *args, **kwargs)
+            mode='LSTM', Cell=nn.LSTMCell, *args, **kwargs)
 
     def forward(self, x, hx=None):
         """
         :param x: 输入序列 ``[batch_size, seq_len, input_size]``。
-        :param hx: 初始隐状态 ``[batch_size, hidden_size]``，若为 ``None`` 则初始化为全 **1** 向量。
-        :return: ``(output, ht)`` 格式的结果: ``output`` 形状为 ``[batch_size, seq_len, hidden_size*num_direction]``，
-            表示输出序列，``ht`` 形状为 ``[batch_size, hidden_size*num_direction]``，表示最后时刻隐状态。
+        :param hx: 初始隐状态 ``[batch_size, hidden_size]``，若为 ``None`` 则初
+            始化为全 **1** 向量。
+        :return: ``(output, ht)`` 格式的结果: ``output`` 形状为 ``[batch_size,
+            seq_len, hidden_size*num_direction]``，表示输出序列，``ht`` 形状为
+            ``[batch_size, hidden_size*num_direction]``，表示最后时刻隐状态。
         """
         return super(VarLSTM, self).forward(x, hx)
 
@@ -255,7 +280,9 @@ class VarLSTM(VarRNNBase):
 class VarRNN(VarRNNBase):
     r"""
     **Variational Dropout RNN**。
-    相关论文参考：`A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016) <https://arxiv.org/abs/1512.05287>`_
+    相关论文参考：`A Theoretically Grounded Application of Dropout in Recurrent
+    Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016) <https://arxiv.org/
+    abs/1512.05287>`_
 
     :param input_size:  输入 `x` 的特征维度。
     :param hidden_size: 隐状态 `h` 的特征维度。
@@ -270,14 +297,16 @@ class VarRNN(VarRNNBase):
 
     def __init__(self, *args, **kwargs):
         super(VarRNN, self).__init__(
-            mode="RNN", Cell=nn.RNNCell, *args, **kwargs)
+            mode='RNN', Cell=nn.RNNCell, *args, **kwargs)
 
     def forward(self, x, hx=None):
         """
         :param x: 输入序列 ``[batch_size, seq_len, input_size]``。
-        :param hx: 初始隐状态 ``[batch_size, hidden_size]``，若为 ``None`` 则初始化为全 **1** 向量。
-        :return: ``(output, ht)`` 格式的结果: ``output`` 形状为 ``[batch_size, seq_len, hidden_size*num_direction]``，
-            表示输出序列，``ht`` 形状为 ``[batch_size, hidden_size*num_direction]``，表示最后时刻隐状态。
+        :param hx: 初始隐状态 ``[batch_size, hidden_size]``，若为 ``None`` 则初
+            始化为全 **1** 向量。
+        :return: ``(output, ht)`` 格式的结果: ``output`` 形状为 ``[batch_size,
+            seq_len, hidden_size*num_direction]``，表示输出序列，``ht`` 形状为
+            ``[batch_size, hidden_size*num_direction]``，表示最后时刻隐状态。
         """
         return super(VarRNN, self).forward(x, hx)
 
@@ -285,8 +314,10 @@ class VarRNN(VarRNNBase):
 class VarGRU(VarRNNBase):
     r"""
     **Variational Dropout GRU**。
-    相关论文参考：`A Theoretically Grounded Application of Dropout in Recurrent Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016) <https://arxiv.org/abs/1512.05287>`_
-    
+    相关论文参考：`A Theoretically Grounded Application of Dropout in Recurrent
+    Neural Networks (Yarin Gal and Zoubin Ghahramani, 2016)
+    <https://arxiv.org/abs/1512.05287>`_
+
     :param input_size:  输入 `x` 的特征维度。
     :param hidden_size: 隐状态 `h` 的特征维度。
     :param num_layers: rnn的层数，默认为 1。
@@ -300,13 +331,15 @@ class VarGRU(VarRNNBase):
 
     def __init__(self, *args, **kwargs):
         super(VarGRU, self).__init__(
-            mode="GRU", Cell=nn.GRUCell, *args, **kwargs)
+            mode='GRU', Cell=nn.GRUCell, *args, **kwargs)
 
     def forward(self, x, hx=None):
         """
         :param x: 输入序列 ``[batch_size, seq_len, input_size]``。
-        :param hx: 初始隐状态 ``[batch_size, hidden_size]``，若为 ``None`` 则初始化为全 **1** 向量。
-        :return: ``(output, ht)`` 格式的结果: ``output`` 形状为 ``[batch_size, seq_len, hidden_size*num_direction]``，
-            表示输出序列，``ht`` 形状为 ``[batch_size, hidden_size*num_direction]``，表示最后时刻隐状态。
+        :param hx: 初始隐状态 ``[batch_size, hidden_size]``，若为 ``None`` 则初
+            始化为全 **1** 向量。
+        :return: ``(output, ht)`` 格式的结果: ``output`` 形状为 ``[batch_size,
+            seq_len, hidden_size*num_direction]``，表示输出序列，``ht`` 形状为
+            ``[batch_size, hidden_size*num_direction]``，表示最后时刻隐状态。
         """
         return super(VarGRU, self).forward(x, hx)

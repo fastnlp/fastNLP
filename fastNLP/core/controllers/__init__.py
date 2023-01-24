@@ -1,3 +1,5 @@
+# isort: skip_file
+
 __all__ = [
     'Loop',
     'EvaluateBatchLoop',
@@ -7,7 +9,6 @@ __all__ = [
 ]
 
 from .loops import Loop, EvaluateBatchLoop, TrainBatchLoop
-from .utils import State, TrainerState
+from .utils import State, TrainerState  # noqa: F401
 from .evaluator import Evaluator
 from .trainer import Trainer
-

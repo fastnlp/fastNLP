@@ -1,31 +1,31 @@
-__all__ = [
-    'f_tqdm_progress'
-]
-
-import uuid
+import operator
 import sys
-from ...envs.utils import _module_available, _compare_version, _get_version
+import uuid
 
 from ...envs import get_global_rank
-from .utils import is_notebook
+from ...envs.utils import _compare_version, _get_version, _module_available
 from ..log import logger
+from .utils import is_notebook
+
 if _module_available('tqdm'):
     from tqdm.autonotebook import tqdm
-import operator
 
+__all__ = ['f_tqdm_progress']
 
 
 class Singleton(type):
-    _instances = {}
+    _instances: dict = {}
 
     def __call__(cls, *args, **kwargs):
         if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+            cls._instances[cls] = super(Singleton,
+                                        cls).__call__(*args, **kwargs)
         return cls._instances[cls]
 
 
 # 如果不打印的时候，使得整个 progress 没有任何意义
 class DummyFTqdmProgress:
+
     def __getattr__(self, item):
         return DummyFTqdmProgress()
 
@@ -34,9 +34,8 @@ class DummyFTqdmProgress:
         return None
 
     @property
-    def dummy(self)->bool:
-        """
-        当前对象是否是 dummy 的 tqdm 对象。
+    def dummy(self) -> bool:
+        """当前对象是否是 dummy 的 tqdm 对象。
 
         :return:
         """
@@ -44,18 +43,36 @@ class DummyFTqdmProgress:
 
 
 class TqdmProgress(metaclass=Singleton):
+
     def __init__(self):
         self.bars = {}
 
-    def add_task(self, description=None, total=None, leave=False,
-                 ncols=None, mininterval=0.1, maxinterval=10.0, miniters=None,
-                 ascii=None, visible=True, unit='it', unit_scale=False,
-                 dynamic_ncols=False, smoothing=0.3, bar_format=None, initial=0,
-                 postfix=None, unit_divisor=1000, write_bytes=None,
-                 lock_args=None, nrows=None, colour=None, gui=False, **kwargs):
-        """
-        主要就模仿了 tqdm bar 的创建，为了和 FRichProgress 的接口尽量统一，将 desc 重名为了 description，以及 disable 专为了
-        visible 。
+    def add_task(self,
+                 description=None,
+                 total=None,
+                 leave=False,
+                 ncols=None,
+                 mininterval=0.1,
+                 maxinterval=10.0,
+                 miniters=None,
+                 ascii=None,
+                 visible=True,
+                 unit='it',
+                 unit_scale=False,
+                 dynamic_ncols=False,
+                 smoothing=0.3,
+                 bar_format=None,
+                 initial=0,
+                 postfix=None,
+                 unit_divisor=1000,
+                 write_bytes=None,
+                 lock_args=None,
+                 nrows=None,
+                 colour=None,
+                 gui=False,
+                 **kwargs):
+        r"""主要就模仿了 tqdm bar 的创建，为了和 FRichProgress 的接口尽量统一，将
+        desc 重名为了 description，以及 disable 转为了 visible 。
 
         :param description:
         :param total:
@@ -83,24 +100,47 @@ class TqdmProgress(metaclass=Singleton):
         :return:
         """
         if not _module_available('tqdm'):
-            raise ModuleNotFoundError("Package tqdm is not installed.")
+            raise ModuleNotFoundError('Package tqdm is not installed.')
         elif not _compare_version('tqdm', operator.ge, '4.57'):
-            raise RuntimeError(f"Package tqdm>=4.57 is needed, instead of {_get_version('tqdm')}.")
+            raise RuntimeError('Package tqdm>=4.57 is needed, instead of '
+                               f"{_get_version('tqdm')}.")
 
         from .rich_progress import f_rich_progress
-        assert not f_rich_progress.not_empty(), "Cannot use tqdm before rich finish loop."
+        assert not f_rich_progress.not_empty(
+        ), 'Cannot use tqdm before rich finish loop.'
 
         if hasattr(self, 'orig_out_err'):
             file = self.orig_out_err[0]
         else:
             file = sys.stdout
 
-        bar = tqdm(iterable=None, desc=description, total=total, leave=leave, file=file,
-                 ncols=ncols, mininterval=mininterval, maxinterval=maxinterval, miniters=miniters,
-                 ascii=ascii, disable=not visible, unit=unit, unit_scale=unit_scale,
-                 dynamic_ncols=dynamic_ncols, smoothing=smoothing, bar_format=bar_format, initial=initial,
-                 position=len(self.bars), postfix=postfix, unit_divisor=unit_divisor, write_bytes=write_bytes,
-                 lock_args=lock_args, nrows=nrows, colour=colour, gui=gui, **kwargs)
+        bar = tqdm(
+            iterable=None,
+            desc=description,
+            total=total,
+            leave=leave,
+            file=file,
+            ncols=ncols,
+            mininterval=mininterval,
+            maxinterval=maxinterval,
+            miniters=miniters,
+            ascii=ascii,
+            disable=not visible,
+            unit=unit,
+            unit_scale=unit_scale,
+            dynamic_ncols=dynamic_ncols,
+            smoothing=smoothing,
+            bar_format=bar_format,
+            initial=initial,
+            position=len(self.bars),
+            postfix=postfix,
+            unit_divisor=unit_divisor,
+            write_bytes=write_bytes,
+            lock_args=lock_args,
+            nrows=nrows,
+            colour=colour,
+            gui=gui,
+            **kwargs)
         _uuid = str(uuid.uuid1())
         self.bars[_uuid] = bar
         if not hasattr(self, 'orig_out_err') and not is_notebook():
@@ -110,7 +150,7 @@ class TqdmProgress(metaclass=Singleton):
 
         return _uuid
 
-    def update(self, task_id:str, advance:int, refresh=True):
+    def update(self, task_id: str, advance: int, refresh=True):
         self.bars[task_id].update(advance)
 
     def set_postfix_str(self, task_id, s, refresh=True):
@@ -120,8 +160,7 @@ class TqdmProgress(metaclass=Singleton):
         self.bars[task_id].set_description_str(desc=desc, refresh=refresh)
 
     def destroy_task(self, task_id):
-        """
-        关闭 task_id 对应的 tqdm bar 。
+        """关闭 task_id 对应的 tqdm bar 。
 
         :param task_id:
         :return:
@@ -144,19 +183,16 @@ class TqdmProgress(metaclass=Singleton):
 
     @property
     def dummy(self) -> bool:
-        """
-        当前对象是否是 dummy 的 tqdm 对象。
+        """当前对象是否是 dummy 的 tqdm 对象。
 
         :return:
         """
         return False
 
 
-if ((sys.stdin and sys.stdin.isatty()) or is_notebook()) and get_global_rank() == 0:
+if ((sys.stdin and sys.stdin.isatty())
+        or is_notebook()) and get_global_rank() == 0:
     f_tqdm_progress = TqdmProgress()
 else:
-    f_tqdm_progress = DummyFTqdmProgress()
-    logger.debug("Use dummy tqdm...")
-
-
-
+    f_tqdm_progress = DummyFTqdmProgress()  # type: ignore
+    logger.debug('Use dummy tqdm...')

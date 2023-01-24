@@ -15,8 +15,8 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
-from .file_utils import ModelOutput
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from .file_utils import ModelOutput
 
 if _NEED_IMPORT_TORCH:
     import torch
@@ -24,8 +24,8 @@ if _NEED_IMPORT_TORCH:
 
 @dataclass
 class BaseModelOutput(ModelOutput):
-    """
-    Base class for model's outputs, with potential hidden states and attentions.
+    """Base class for model's outputs, with potential hidden states and
+    attentions.
 
     Args:
         last_hidden_state (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_length, hidden_size)`):
@@ -43,15 +43,15 @@ class BaseModelOutput(ModelOutput):
             heads.
     """
 
-    last_hidden_state: "torch.FloatTensor" = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    last_hidden_state: 'torch.FloatTensor' = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class BaseModelOutputWithPooling(ModelOutput):
-    """
-    Base class for model's outputs that also contains a pooling of the last hidden states.
+    """Base class for model's outputs that also contains a pooling of the last
+    hidden states.
 
     Args:
         last_hidden_state (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_length, hidden_size)`):
@@ -74,16 +74,16 @@ class BaseModelOutputWithPooling(ModelOutput):
             heads.
     """
 
-    last_hidden_state: "torch.FloatTensor" = None
-    pooler_output: "torch.FloatTensor" = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    last_hidden_state: 'torch.FloatTensor' = None
+    pooler_output: 'torch.FloatTensor' = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class BaseModelOutputWithPast(ModelOutput):
-    """
-    Base class for model's outputs that may also contain a past key/values (to speed up sequential decoding).
+    """Base class for model's outputs that may also contain a past key/values
+    (to speed up sequential decoding).
 
     Args:
         last_hidden_state (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_length, hidden_size)`):
@@ -113,16 +113,16 @@ class BaseModelOutputWithPast(ModelOutput):
             heads.
     """
 
-    last_hidden_state: "torch.FloatTensor" = None
-    past_key_values: Optional[Tuple[Tuple["torch.FloatTensor"]]] = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    last_hidden_state: 'torch.FloatTensor' = None
+    past_key_values: Optional[Tuple[Tuple['torch.FloatTensor']]] = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class BaseModelOutputWithCrossAttentions(ModelOutput):
-    """
-    Base class for model's outputs, with potential hidden states and attentions.
+    """Base class for model's outputs, with potential hidden states and
+    attentions.
 
     Args:
         last_hidden_state (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_length, hidden_size)`):
@@ -146,16 +146,16 @@ class BaseModelOutputWithCrossAttentions(ModelOutput):
             weighted average in the cross-attention heads.
     """
 
-    last_hidden_state: "torch.FloatTensor" = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
-    cross_attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    last_hidden_state: 'torch.FloatTensor' = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
+    cross_attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class BaseModelOutputWithPoolingAndCrossAttentions(ModelOutput):
-    """
-    Base class for model's outputs that also contains a pooling of the last hidden states.
+    """Base class for model's outputs that also contains a pooling of the last
+    hidden states.
 
     Args:
         last_hidden_state (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_length, hidden_size)`):
@@ -193,18 +193,18 @@ class BaseModelOutputWithPoolingAndCrossAttentions(ModelOutput):
             :obj:`past_key_values` input) to speed up sequential decoding.
     """
 
-    last_hidden_state: "torch.FloatTensor" = None
-    pooler_output: "torch.FloatTensor" = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    past_key_values: Optional[Tuple[Tuple["torch.FloatTensor"]]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
-    cross_attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    last_hidden_state: 'torch.FloatTensor' = None
+    pooler_output: 'torch.FloatTensor' = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    past_key_values: Optional[Tuple[Tuple['torch.FloatTensor']]] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
+    cross_attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class BaseModelOutputWithPastAndCrossAttentions(ModelOutput):
-    """
-    Base class for model's outputs that may also contain a past key/values (to speed up sequential decoding).
+    """Base class for model's outputs that may also contain a past key/values
+    (to speed up sequential decoding).
 
     Args:
         last_hidden_state (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_length, hidden_size)`):
@@ -240,11 +240,11 @@ class BaseModelOutputWithPastAndCrossAttentions(ModelOutput):
             weighted average in the cross-attention heads.
     """
 
-    last_hidden_state: "torch.FloatTensor" = None
-    past_key_values: Optional[Tuple[Tuple["torch.FloatTensor"]]] = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
-    cross_attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    last_hidden_state: 'torch.FloatTensor' = None
+    past_key_values: Optional[Tuple[Tuple['torch.FloatTensor']]] = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
+    cross_attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
@@ -298,20 +298,19 @@ class Seq2SeqModelOutput(ModelOutput):
             self-attention heads.
     """
 
-    last_hidden_state: "torch.FloatTensor" = None
-    past_key_values: Optional[Tuple[Tuple["torch.FloatTensor"]]] = None
-    decoder_hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    decoder_attentions: Optional[Tuple["torch.FloatTensor"]] = None
-    cross_attentions: Optional[Tuple["torch.FloatTensor"]] = None
-    encoder_last_hidden_state: Optional["torch.FloatTensor"] = None
-    encoder_hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    encoder_attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    last_hidden_state: 'torch.FloatTensor' = None
+    past_key_values: Optional[Tuple[Tuple['torch.FloatTensor']]] = None
+    decoder_hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    decoder_attentions: Optional[Tuple['torch.FloatTensor']] = None
+    cross_attentions: Optional[Tuple['torch.FloatTensor']] = None
+    encoder_last_hidden_state: Optional['torch.FloatTensor'] = None
+    encoder_hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    encoder_attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class CausalLMOutput(ModelOutput):
-    """
-    Base class for causal language model (or autoregressive) outputs.
+    """Base class for causal language model (or autoregressive) outputs.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`labels` is provided):
@@ -331,16 +330,15 @@ class CausalLMOutput(ModelOutput):
             heads.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    logits: "torch.FloatTensor" = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    logits: 'torch.FloatTensor' = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class CausalLMOutputWithPast(ModelOutput):
-    """
-    Base class for causal language model (or autoregressive) outputs.
+    """Base class for causal language model (or autoregressive) outputs.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`labels` is provided):
@@ -366,17 +364,16 @@ class CausalLMOutputWithPast(ModelOutput):
             heads.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    logits: "torch.FloatTensor" = None
-    past_key_values: Optional[Tuple[Tuple["torch.FloatTensor"]]] = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    logits: 'torch.FloatTensor' = None
+    past_key_values: Optional[Tuple[Tuple['torch.FloatTensor']]] = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class CausalLMOutputWithCrossAttentions(ModelOutput):
-    """
-    Base class for causal language model (or autoregressive) outputs.
+    """Base class for causal language model (or autoregressive) outputs.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`labels` is provided):
@@ -409,18 +406,17 @@ class CausalLMOutputWithCrossAttentions(ModelOutput):
             :obj:`past_key_values` input) to speed up sequential decoding.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    logits: "torch.FloatTensor" = None
-    past_key_values: Optional[Tuple[Tuple["torch.FloatTensor"]]] = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
-    cross_attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    logits: 'torch.FloatTensor' = None
+    past_key_values: Optional[Tuple[Tuple['torch.FloatTensor']]] = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
+    cross_attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class SequenceClassifierOutputWithPast(ModelOutput):
-    """
-    Base class for outputs of sentence classification models.
+    """Base class for outputs of sentence classification models.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`labels` is provided):
@@ -446,17 +442,16 @@ class SequenceClassifierOutputWithPast(ModelOutput):
             heads.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    logits: "torch.FloatTensor" = None
-    past_key_values: Optional[Tuple[Tuple["torch.FloatTensor"]]] = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    logits: 'torch.FloatTensor' = None
+    past_key_values: Optional[Tuple[Tuple['torch.FloatTensor']]] = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class MaskedLMOutput(ModelOutput):
-    """
-    Base class for masked language models outputs.
+    """Base class for masked language models outputs.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`labels` is provided):
@@ -476,16 +471,15 @@ class MaskedLMOutput(ModelOutput):
             heads.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    logits: "torch.FloatTensor" = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    logits: 'torch.FloatTensor' = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class Seq2SeqLMOutput(ModelOutput):
-    """
-    Base class for sequence-to-sequence language models outputs.
+    """Base class for sequence-to-sequence language models outputs.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`labels` is provided):
@@ -531,21 +525,21 @@ class Seq2SeqLMOutput(ModelOutput):
             self-attention heads.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    logits: "torch.FloatTensor" = None
-    past_key_values: Optional[Tuple[Tuple["torch.FloatTensor"]]] = None
-    decoder_hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    decoder_attentions: Optional[Tuple["torch.FloatTensor"]] = None
-    cross_attentions: Optional[Tuple["torch.FloatTensor"]] = None
-    encoder_last_hidden_state: Optional["torch.FloatTensor"] = None
-    encoder_hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    encoder_attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    logits: 'torch.FloatTensor' = None
+    past_key_values: Optional[Tuple[Tuple['torch.FloatTensor']]] = None
+    decoder_hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    decoder_attentions: Optional[Tuple['torch.FloatTensor']] = None
+    cross_attentions: Optional[Tuple['torch.FloatTensor']] = None
+    encoder_last_hidden_state: Optional['torch.FloatTensor'] = None
+    encoder_hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    encoder_attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class NextSentencePredictorOutput(ModelOutput):
-    """
-    Base class for outputs of models predicting if two sentences are consecutive or not.
+    """Base class for outputs of models predicting if two sentences are
+    consecutive or not.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`next_sentence_label` is provided):
@@ -566,16 +560,15 @@ class NextSentencePredictorOutput(ModelOutput):
             heads.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    logits: "torch.FloatTensor" = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    logits: 'torch.FloatTensor' = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class SequenceClassifierOutput(ModelOutput):
-    """
-    Base class for outputs of sentence classification models.
+    """Base class for outputs of sentence classification models.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`labels` is provided):
@@ -595,16 +588,16 @@ class SequenceClassifierOutput(ModelOutput):
             heads.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    logits: "torch.FloatTensor" = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    logits: 'torch.FloatTensor' = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class Seq2SeqSequenceClassifierOutput(ModelOutput):
-    """
-    Base class for outputs of sequence-to-sequence sentence classification models.
+    """Base class for outputs of sequence-to-sequence sentence classification
+    models.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`label` is provided):
@@ -650,21 +643,20 @@ class Seq2SeqSequenceClassifierOutput(ModelOutput):
             self-attention heads.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    logits: "torch.FloatTensor" = None
-    past_key_values: Optional[Tuple[Tuple["torch.FloatTensor"]]] = None
-    decoder_hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    decoder_attentions: Optional[Tuple["torch.FloatTensor"]] = None
-    cross_attentions: Optional[Tuple["torch.FloatTensor"]] = None
-    encoder_last_hidden_state: Optional["torch.FloatTensor"] = None
-    encoder_hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    encoder_attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    logits: 'torch.FloatTensor' = None
+    past_key_values: Optional[Tuple[Tuple['torch.FloatTensor']]] = None
+    decoder_hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    decoder_attentions: Optional[Tuple['torch.FloatTensor']] = None
+    cross_attentions: Optional[Tuple['torch.FloatTensor']] = None
+    encoder_last_hidden_state: Optional['torch.FloatTensor'] = None
+    encoder_hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    encoder_attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class MultipleChoiceModelOutput(ModelOutput):
-    """
-    Base class for outputs of multiple choice models.
+    """Base class for outputs of multiple choice models.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape `(1,)`, `optional`, returned when :obj:`labels` is provided):
@@ -686,16 +678,15 @@ class MultipleChoiceModelOutput(ModelOutput):
             heads.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    logits: "torch.FloatTensor" = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    logits: 'torch.FloatTensor' = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class TokenClassifierOutput(ModelOutput):
-    """
-    Base class for outputs of token classification models.
+    """Base class for outputs of token classification models.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when ``labels`` is provided) :
@@ -715,16 +706,15 @@ class TokenClassifierOutput(ModelOutput):
             heads.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    logits: "torch.FloatTensor" = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    logits: 'torch.FloatTensor' = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class QuestionAnsweringModelOutput(ModelOutput):
-    """
-    Base class for outputs of question answering models.
+    """Base class for outputs of question answering models.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`labels` is provided):
@@ -746,17 +736,17 @@ class QuestionAnsweringModelOutput(ModelOutput):
             heads.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    start_logits: "torch.FloatTensor" = None
-    end_logits: "torch.FloatTensor" = None
-    hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    start_logits: 'torch.FloatTensor' = None
+    end_logits: 'torch.FloatTensor' = None
+    hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    attentions: Optional[Tuple['torch.FloatTensor']] = None
 
 
 @dataclass
 class Seq2SeqQuestionAnsweringModelOutput(ModelOutput):
-    """
-    Base class for outputs of sequence-to-sequence question answering models.
+    """Base class for outputs of sequence-to-sequence question answering
+    models.
 
     Args:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`labels` is provided):
@@ -804,13 +794,13 @@ class Seq2SeqQuestionAnsweringModelOutput(ModelOutput):
             self-attention heads.
     """
 
-    loss: Optional["torch.FloatTensor"] = None
-    start_logits: "torch.FloatTensor" = None
-    end_logits: "torch.FloatTensor" = None
-    past_key_values: Optional[Tuple[Tuple["torch.FloatTensor"]]] = None
-    decoder_hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    decoder_attentions: Optional[Tuple["torch.FloatTensor"]] = None
-    cross_attentions: Optional[Tuple["torch.FloatTensor"]] = None
-    encoder_last_hidden_state: Optional["torch.FloatTensor"] = None
-    encoder_hidden_states: Optional[Tuple["torch.FloatTensor"]] = None
-    encoder_attentions: Optional[Tuple["torch.FloatTensor"]] = None
+    loss: Optional['torch.FloatTensor'] = None
+    start_logits: 'torch.FloatTensor' = None
+    end_logits: 'torch.FloatTensor' = None
+    past_key_values: Optional[Tuple[Tuple['torch.FloatTensor']]] = None
+    decoder_hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    decoder_attentions: Optional[Tuple['torch.FloatTensor']] = None
+    cross_attentions: Optional[Tuple['torch.FloatTensor']] = None
+    encoder_last_hidden_state: Optional['torch.FloatTensor'] = None
+    encoder_hidden_states: Optional[Tuple['torch.FloatTensor']] = None
+    encoder_attentions: Optional[Tuple['torch.FloatTensor']] = None

@@ -1,8 +1,6 @@
-__all__ = [
-    'EvaluateBatchLoop',
-    'Loop',
-    'TrainBatchLoop'
-]
+# isort: skip_file
+
+__all__ = ['EvaluateBatchLoop', 'Loop', 'TrainBatchLoop']
 
 from .loop import Loop
 from .evaluate_batch_loop import EvaluateBatchLoop

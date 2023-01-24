@@ -1,72 +1,88 @@
-__all__ = [
-    'ClassifyFPreRecMetric'
-]
-
-from typing import Union, List
 from collections import Counter
+from typing import List, Optional, Union
+
 import numpy as np
 
-from .metric import Metric
-from .backend import Backend
-from fastNLP.core.vocabulary import Vocabulary
-from fastNLP.core.utils.seq_len_to_mask import seq_len_to_mask
-from .utils import _compute_f_pre_rec
 from fastNLP.core.log import logger
+from fastNLP.core.utils.seq_len_to_mask import seq_len_to_mask
+from fastNLP.core.vocabulary import Vocabulary
+from .backend import Backend
+from .metric import Metric
+from .utils import _compute_f_pre_rec
+
+__all__ = ['ClassifyFPreRecMetric']
+
 
 class ClassifyFPreRecMetric(Metric):
-    """
-    计算分类结果 **F值** 的 **Metric** 。
+    """计算分类结果 **F值** 的 **Metric**。
 
-    :param tag_vocab: 标签的 :class:`~fastNLP.core.Vocabulary` 。 默认值为 ``None``。若为 ``None`` 则使用数字来作为标签内容，
-        否则使用 vocab 来作为标签内容
-    :param ignore_labels: :class:`str` 组成的 :class:`list`. 这个 :class:`list` 中的 class 不会被用于计算。例如在 POS tagging 时传入 ``['NN']``，
-        则不会计算 'NN' 个 label
-    :param only_gross: 是否只计算总的 ``f1``, ``precision``, ``recall``的值；如果为 ``False``，不仅返回总的 ``f1``, ``pre``,
-        ``rec``, 还会返回每个 label 的 ``f1``, ``pre``, ``rec``
-    :param f_type: `micro` 或 `macro` 。
+    :param tag_vocab: 标签的 :class:`~fastNLP.core.Vocabulary`。默认值为
+        ``None``。若为 ``None`` 则使用数字来作为标签内容，否则使用 vocab 来作为标签
+        内容。
+    :param ignore_labels: 由 :class:`str` 组成的 :class:`list`. 这个列表中的
+        class 不会被用于计算。例如在 POS tagging 时传入 ``['NN']``，则不会计算
+        'NN' 个 label。
+    :param only_gross: 是否只计算总的 ``f1``, ``precision``, ``recall``的值；如果
+        为 ``False``，不仅返回总的 ``f1``, ``pre``, ``rec``, 还会返回每个 label
+        的 ``f1``, ``pre``, ``rec``。
+    :param f_type: `micro` 或 `macro`。
 
-        * `micro` : 通过先计算总体的 TP，FN 和 FP 的数量，再计算 f, precision, recall;
-        * `macro` : 分布计算每个类别的 f, precision, recall，然后做平均（各类别 f 的权重相同）
+        * `micro` : 通过先计算总体的 TP，FN 和 FP 的数量，再计算 f, precision,
+          recall；
+        * `macro` : 分布计算每个类别的 f, precision, recall，然后做平均（各类别 f
+          的权重相同）。
 
-    :param beta: **f_beta** 分数中的 ``beta`` 值。 常用为 ``beta=0.5, 1, 2`` 若为 0.5 则 **精确率** 的权重高于 **召回率** ；若为1，则两者平等；若为2，则
-        **召回率** 权重高于 **精确率** 。**f_beta** 分数的计算公式为：
-        
+    :param beta: **f_beta** 分数中的 ``beta`` 值。常用为 ``beta=0.5, 1, 2`` 若
+        为 0.5 则 **精确率** 的权重高于 **召回率**；若为1，则两者平等；若为2，则
+        **召回率** 权重高于 **精确率**。**f_beta** 分数的计算公式为：
+
         .. math::
 
             f_{beta} = \\frac{(1 + {beta}^{2})*(pre*rec)}{({beta}^{2}*pre + rec)}
 
-    :param backend: 目前支持五种类型的 backend, ``['torch', 'paddle', 'jittor', 'oneflow', 'auto']``。其中 ``'auto'`` 表示根据实际调用 :meth:`update`
+    :param backend: 目前支持五种类型的 backend, ``['torch', 'paddle', 'jittor',
+        'oneflow', 'auto']``。其中 ``'auto'`` 表示根据实际调用 :meth:`update`
         函数时传入的参数决定具体的 backend ，大部分情况下直接使用 ``'auto'`` 即可。
-    :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字聚合后再得到 metric，
-        当 backend 不支持分布式时，该参数无意义。如果为 ``None`` ，将在 :class:`~fastNLP.core.controllers.Evaluator` 中根据
-        sampler 是否使用分布式进行自动设置。
+    :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相
+        同的 element 的数字聚合后再得到 metric，当 ``backend`` 不支持分布式时，该参
+        数无意义。如果为 ``None``，将在 :class:`~fastNLP.core.controllers.
+        Evaluator` 中根据 ``sampler`` 是否使用分布式进行自动设置。
     """
-    def __init__(self, tag_vocab: Vocabulary = None, ignore_labels: List[str] = None,
-                 only_gross: bool = True, f_type='micro', beta=1, backend: Union[str, Backend, None] = 'auto',
-                 aggregate_when_get_metric: bool = None) -> None:
-        super(ClassifyFPreRecMetric, self).__init__(backend=backend,
-                                                    aggregate_when_get_metric=aggregate_when_get_metric)
+
+    def __init__(self,
+                 tag_vocab: Optional[Vocabulary] = None,
+                 ignore_labels: Optional[List[str]] = None,
+                 only_gross: bool = True,
+                 f_type='micro',
+                 beta=1,
+                 backend: Union[str, Backend, None] = 'auto',
+                 aggregate_when_get_metric: Optional[bool] = None) -> None:
+        super(ClassifyFPreRecMetric, self).__init__(
+            backend=backend,
+            aggregate_when_get_metric=aggregate_when_get_metric)
         if f_type not in ('micro', 'macro'):
-            raise ValueError("f_type only supports `micro` or `macro`', got {}.".format(f_type))
+            raise ValueError(
+                "f_type only supports `micro` or `macro`', got {}.".format(
+                    f_type))
         if tag_vocab:
             if not isinstance(tag_vocab, Vocabulary):
-                raise TypeError("tag_vocab can only be fastNLP.Vocabulary, not {}.".format(type(tag_vocab)))
+                raise TypeError(
+                    'tag_vocab can only be fastNLP.Vocabulary, not {}.'.format(
+                        type(tag_vocab)))
         self.ignore_labels = ignore_labels
         self.f_type = f_type
         self.beta = beta
-        self.beta_square = self.beta ** 2
+        self.beta_square = self.beta**2
         self.only_gross = only_gross
 
         self.tag_vocab = tag_vocab
 
-        self._tp = Counter()
-        self._fp = Counter()
-        self._fn = Counter()
+        self._tp: Counter = Counter()
+        self._fp: Counter = Counter()
+        self._fn: Counter = Counter()
 
     def reset(self):
-        """
-        重置 ``tp``, ``fp``, ``fn`` 的值
-        """
+        """重置 ``tp``, ``fp``, ``fn`` 的值."""
         # 由于不是 element 了，需要自己手动清零一下
         self._tp.clear()
         self._fp.clear()
@@ -74,7 +90,8 @@ class ClassifyFPreRecMetric(Metric):
 
     def get_metric(self) -> dict:
         r"""
-        :meth:`get_metric` 函数将根据 :meth:`update` 函数累计的评价指标统计量来计算最终的评价结果。
+        :meth:`get_metric` 函数将根据 :meth:`update` 函数累计的评价指标统计量来计
+        算最终的评价结果。
 
         :return: 包含以下内容的字典：``{"acc": float}``
         """
@@ -83,7 +100,7 @@ class ClassifyFPreRecMetric(Metric):
         # 通过 all_gather_object 将各个卡上的结果收集过来，并加和。
         ls = self.all_gather_object([self._tp, self._fp, self._fn])
         tps, fps, fns = zip(*ls)
-        _tp, _fp, _fn = Counter(), Counter(), Counter()
+        _tp, _fp, _fn = Counter(), Counter(), Counter()  # type: ignore
         for c, cs in zip([_tp, _fp, _fn], [tps, fps, fns]):
             for _c in cs:
                 c.update(_c)
@@ -123,7 +140,10 @@ class ClassifyFPreRecMetric(Metric):
                 evaluate_result['rec'] = rec_sum / len(tags)
 
         if self.f_type == 'micro':
-            f, pre, rec = _compute_f_pre_rec(self.beta_square, sum(_tp.values()), sum(_fn.values()), sum(_fp.values()))
+            f, pre, rec = _compute_f_pre_rec(self.beta_square,
+                                             sum(_tp.values()),
+                                             sum(_fn.values()),
+                                             sum(_fp.values()))
             evaluate_result['f'] = f
             evaluate_result['pre'] = pre
             evaluate_result['rec'] = rec
@@ -137,10 +157,10 @@ class ClassifyFPreRecMetric(Metric):
         r"""
         :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
 
-        :param pred: 预测的 tensor, tensor 的形状可以是 ``[B,]`` 、``[B, n_classes]`` 、
-                ``[B, max_len]`` 或 ``[B, max_len, n_classes]``
-        :param target: 真实值的 tensor, tensor 的形状可以是 ``[B,]`` 、``[B,]`` 、``[B, max_len]``
-            或 ``[B, max_len]``
+        :param pred: 预测的 tensor, tensor 的形状可以是 ``[B,]`` 、``[B,
+            n_classes]``、``[B, max_len]`` 或 ``[B, max_len, n_classes]``
+        :param target: 真实值的 tensor, tensor 的形状可以是 ``[B,]``、``[B,]``、
+            ``[B, max_len]`` 或 ``[B, max_len]``
         :param seq_len: 序列长度标记, 标记的形状可以是 ``None``,  或者 ``[B]``
 
         """
@@ -157,21 +177,33 @@ class ClassifyFPreRecMetric(Metric):
 
         if pred.ndim == target.ndim:
             if len(pred.flatten()) != len(target.flatten()):
-                raise RuntimeError(f"when pred have same dimensions with target, they should have same element numbers."
-                                   f" while target have element numbers:{len(pred.flatten())}, "
-                                   f"pred have element numbers: {len(target.flatten())}")
+                raise RuntimeError(
+                    'when pred have same dimensions with target, they should '
+                    'have same element numbers. while target have element '
+                    f'numbers:{len(pred.flatten())}, pred have element '
+                    f'numbers: {len(target.flatten())}')
 
         elif pred.ndim == target.ndim + 1:
             pred = pred.argmax(axis=-1)
             if seq_len is None and target.ndim > 1:
-                logger.warning("You are not passing `seq_len` to exclude pad when calculate accuracy.")
+                logger.warning(
+                    'You are not passing `seq_len` to exclude pad when '
+                    'calculate accuracy.')
         else:
-            raise RuntimeError(f"when pred have "
-                               f"size:{pred.shape}, target should have size: {pred.shape} or "
-                               f"{pred.shape[:-1]}, got {target.shape}.")
+            raise RuntimeError(
+                f'when pred have '
+                f'size:{pred.shape}, target should have size: {pred.shape} or '
+                f'{pred.shape[:-1]}, got {target.shape}.')
 
-        target_idxes = set(target.reshape(-1).tolist()+pred.reshape(-1).tolist())
+        target_idxes = set(
+            target.reshape(-1).tolist() + pred.reshape(-1).tolist())
         for target_idx in target_idxes:
-            self._tp[target_idx] += ((pred == target_idx) * (target == target_idx) * masks).sum().item()
-            self._fp[target_idx] += ((pred == target_idx) * (target != target_idx) * masks).sum().item()
-            self._fn[target_idx] += ((pred != target_idx) * (target == target_idx) * masks).sum().item()
+            self._tp[target_idx] += ((pred == target_idx) *
+                                     (target == target_idx) *
+                                     masks).sum().item()
+            self._fp[target_idx] += ((pred == target_idx) *
+                                     (target != target_idx) *
+                                     masks).sum().item()
+            self._fn[target_idx] += ((pred != target_idx) *
+                                     (target == target_idx) *
+                                     masks).sum().item()

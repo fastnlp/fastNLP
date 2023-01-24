@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2020 The TensorFlow Datasets Authors and the HuggingFace Datasets Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +17,6 @@
 
 import datasets
 from datasets.tasks import TextClassification
-
 
 _DESCRIPTION = """\
 Large Movie Review Dataset.
@@ -42,7 +40,7 @@ _CITATION = """\
 }
 """
 
-_DOWNLOAD_URL = "http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
+_DOWNLOAD_URL = 'http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz'
 
 
 class IMDBReviewsConfig(datasets.BuilderConfig):
@@ -53,7 +51,8 @@ class IMDBReviewsConfig(datasets.BuilderConfig):
         Args:
           **kwargs: keyword arguments forwarded to super.
         """
-        super(IMDBReviewsConfig, self).__init__(version=datasets.Version("1.0.0", ""), **kwargs)
+        super(IMDBReviewsConfig, self).__init__(
+            version=datasets.Version('1.0.0', ''), **kwargs)
 
 
 class Imdb(datasets.GeneratorBasedBuilder):
@@ -61,35 +60,50 @@ class Imdb(datasets.GeneratorBasedBuilder):
 
     BUILDER_CONFIGS = [
         IMDBReviewsConfig(
-            name="plain_text",
-            description="Plain text",
+            name='plain_text',
+            description='Plain text',
         )
     ]
 
     def _info(self):
         return datasets.DatasetInfo(
             description=_DESCRIPTION,
-            features=datasets.Features(
-                {"text": datasets.Value("string"), "label": datasets.features.ClassLabel(names=["neg", "pos"])}
-            ),
+            features=datasets.Features({
+                'text':
+                datasets.Value('string'),
+                'label':
+                datasets.features.ClassLabel(names=['neg', 'pos'])
+            }),
             supervised_keys=None,
-            homepage="http://ai.stanford.edu/~amaas/data/sentiment/",
+            homepage='http://ai.stanford.edu/~amaas/data/sentiment/',
             citation=_CITATION,
-            task_templates=[TextClassification(text_column="text", label_column="label")],
+            task_templates=[
+                TextClassification(text_column='text', label_column='label')
+            ],
         )
 
     def _split_generators(self, dl_manager):
         archive = dl_manager.download(_DOWNLOAD_URL)
         return [
             datasets.SplitGenerator(
-                name=datasets.Split.TRAIN, gen_kwargs={"files": dl_manager.iter_archive(archive), "split": "train"}
-            ),
+                name=datasets.Split.TRAIN,
+                gen_kwargs={
+                    'files': dl_manager.iter_archive(archive),
+                    'split': 'train'
+                }),
             datasets.SplitGenerator(
-                name=datasets.Split.TEST, gen_kwargs={"files": dl_manager.iter_archive(archive), "split": "test"}
-            ),
+                name=datasets.Split.TEST,
+                gen_kwargs={
+                    'files': dl_manager.iter_archive(archive),
+                    'split': 'test'
+                }),
             datasets.SplitGenerator(
-                name=datasets.Split("unsupervised"),
-                gen_kwargs={"files": dl_manager.iter_archive(archive), "split": "train", "labeled": False},
+                name=datasets.Split('unsupervised'),
+                gen_kwargs={
+                    'files': dl_manager.iter_archive(archive),
+                    'split': 'train',
+                    'labeled': False
+                },
             ),
         ]
 
@@ -97,14 +111,20 @@ class Imdb(datasets.GeneratorBasedBuilder):
         """Generate aclImdb examples."""
         # For labeled examples, extract the label from the path.
         if labeled:
-            label_mapping = {"pos": 1, "neg": 0}
+            label_mapping = {'pos': 1, 'neg': 0}
             for path, f in files:
-                if path.startswith(f"aclImdb/{split}"):
-                    label = label_mapping.get(path.split("/")[2])
+                if path.startswith(f'aclImdb/{split}'):
+                    label = label_mapping.get(path.split('/')[2])
                     if label is not None:
-                        yield path, {"text": f.read().decode("utf-8"), "label": label}
+                        yield path, {
+                            'text': f.read().decode('utf-8'),
+                            'label': label
+                        }
         else:
             for path, f in files:
-                if path.startswith(f"aclImdb/{split}"):
-                    if path.split("/")[2] == "unsup":
-                        yield path, {"text": f.read().decode("utf-8"), "label": -1}
+                if path.startswith(f'aclImdb/{split}'):
+                    if path.split('/')[2] == 'unsup':
+                        yield path, {
+                            'text': f.read().decode('utf-8'),
+                            'label': -1
+                        }

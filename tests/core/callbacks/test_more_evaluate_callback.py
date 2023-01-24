@@ -1,32 +1,30 @@
-"""
-测试 more_evaluate_callback
-（1）能不能正确 evaluate ;
- (2) 能不能保存 topk 并load进来进行训练
+"""测试 more_evaluate_callback.
 
+（1）能不能正确 evaluate ;  (2) 能不能保存 topk 并load进来进行训练
 """
 import os
-import pytest
-from typing import Any
 from dataclasses import dataclass
-
 from pathlib import Path
+from typing import Any
 
-from fastNLP.core.controllers.trainer import Trainer
-from fastNLP.envs import FASTNLP_LAUNCH_TIME, FASTNLP_DISTRIBUTED_CHECK
+import pytest
 
-from tests.helpers.utils import magic_argv_env_context
-from fastNLP.envs.distributed import rank_zero_rm
-from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
-from tests.helpers.datasets.torch_data import TorchArgMaxDataset
-from fastNLP.core.metrics import Metric
 from fastNLP.core.callbacks import MoreEvaluateCallback
+from fastNLP.core.controllers.trainer import Trainer
+from fastNLP.core.metrics import Metric
+from fastNLP.envs import FASTNLP_LAUNCH_TIME
+from fastNLP.envs.distributed import rank_zero_rm
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from tests.helpers.datasets.torch_data import TorchArgMaxDataset
+from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
+from tests.helpers.utils import magic_argv_env_context, skip_no_cuda
 
 if _NEED_IMPORT_TORCH:
-    from torch.utils.data import DataLoader
-    from torch.optim import SGD
     import torch.distributed as dist
+    from torch.optim import SGD
+    from torch.utils.data import DataLoader
     from torchmetrics import Accuracy
+
 
 @dataclass
 class ArgMaxDatasetConfig:
@@ -37,7 +35,6 @@ class ArgMaxDatasetConfig:
 
     batch_size: int = 4
     shuffle: bool = True
-
 
 
 @dataclass
@@ -52,30 +49,29 @@ class TrainerParameters:
     more_metrics: Any = None
 
 
-@pytest.fixture(scope="module", params=[0], autouse=True)
+@pytest.fixture(scope='module', params=[0], autouse=True)
 def model_and_optimizers(request):
     trainer_params = TrainerParameters()
 
     trainer_params.model = TorchNormalModel_Classification_1(
         num_labels=ArgMaxDatasetConfig.num_labels,
-        feature_dimension=ArgMaxDatasetConfig.feature_dimension
-    )
-    trainer_params.optimizers = SGD(trainer_params.model.parameters(), lr=0.001)
+        feature_dimension=ArgMaxDatasetConfig.feature_dimension)
+    trainer_params.optimizers = SGD(
+        trainer_params.model.parameters(), lr=0.001)
     dataset = TorchArgMaxDataset(
         feature_dimension=ArgMaxDatasetConfig.feature_dimension,
         data_num=ArgMaxDatasetConfig.data_num,
-        seed=ArgMaxDatasetConfig.seed
-    )
+        seed=ArgMaxDatasetConfig.seed)
     _dataloader = DataLoader(
         dataset=dataset,
         batch_size=ArgMaxDatasetConfig.batch_size,
-        shuffle=True
-    )
+        shuffle=True)
 
     class LossMetric(Metric):
+
         def __init__(self):
             super().__init__()
-            self.register_element('loss')
+            self.register_element('loss', value=0)
 
         def update(self, loss):
             self.loss += loss.item()
@@ -87,41 +83,58 @@ def model_and_optimizers(request):
     trainer_params.evaluate_dataloaders = _dataloader
     trainer_params.metrics = {'loss': LossMetric()}
 
-    trainer_params.more_metrics = {"acc": Accuracy()}
+    trainer_params.more_metrics = {
+        'acc':
+        Accuracy(
+            task='multiclass',
+            num_classes=ArgMaxDatasetConfig.feature_dimension)
+    }
 
     return trainer_params
 
 
 @pytest.mark.torch
 # @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
-@pytest.mark.parametrize("driver,device", [("torch", "cpu")])
+@pytest.mark.parametrize('driver,device', [('torch', 'cpu')])
 @magic_argv_env_context
 def test_model_more_evaluate_callback_1(
-        model_and_optimizers: TrainerParameters,
-        driver,
-        device
-):
+        model_and_optimizers: TrainerParameters, driver, device):
+    skip_no_cuda(device)
     for only_state_dict in [True, False]:
         for version in [0, 1]:
             try:
-                path = Path.cwd().joinpath(f"test_model_checkpoint")
+                path = Path.cwd().joinpath('test_model_checkpoint')
                 path.mkdir(exist_ok=True, parents=True)
 
                 if version == 0:
                     callbacks = [
-                        MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
-                                             metrics=model_and_optimizers.more_metrics,
-                                             evaluate_every=-1,
-                                             folder=path, topk=-1, progress_bar=None,
-                                             topk_monitor='acc', only_state_dict=only_state_dict, save_object='model')
+                        MoreEvaluateCallback(
+                            dataloaders=model_and_optimizers.
+                            evaluate_dataloaders,
+                            metrics=model_and_optimizers.more_metrics,
+                            evaluate_every=-1,
+                            folder=path,
+                            topk=-1,
+                            progress_bar=None,
+                            topk_monitor='acc',
+                            only_state_dict=only_state_dict,
+                            save_object='model')
                     ]
                 elif version == 1:
                     callbacks = [
-                        MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
-                                             metrics=model_and_optimizers.more_metrics,
-                                             evaluate_every=None, watch_monitor='loss', watch_monitor_larger_better=False,
-                                             folder=path, topk=1, topk_monitor='acc', only_state_dict=only_state_dict,
-                                             save_object='model', progress_bar=None)
+                        MoreEvaluateCallback(
+                            dataloaders=model_and_optimizers.
+                            evaluate_dataloaders,
+                            metrics=model_and_optimizers.more_metrics,
+                            evaluate_every=None,
+                            watch_monitor='loss',
+                            watch_monitor_larger_better=False,
+                            folder=path,
+                            topk=1,
+                            topk_monitor='acc',
+                            only_state_dict=only_state_dict,
+                            save_object='model',
+                            progress_bar=None)
                     ]
                 n_epochs = 3
                 trainer = Trainer(
@@ -130,19 +143,23 @@ def test_model_more_evaluate_callback_1(
                     device=device,
                     optimizers=model_and_optimizers.optimizers,
                     train_dataloader=model_and_optimizers.train_dataloader,
-                    evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+                    evaluate_dataloaders=model_and_optimizers.
+                    evaluate_dataloaders,
                     input_mapping=model_and_optimizers.input_mapping,
                     output_mapping=model_and_optimizers.output_mapping,
                     metrics=model_and_optimizers.metrics,
                     n_epochs=n_epochs,
                     callbacks=callbacks,
-                    output_from_new_proc="all",
-                    evaluate_fn='train_step'
-                )
+                    output_from_new_proc='all',
+                    evaluate_fn='train_step')
 
                 trainer.run()
 
-                all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
+                all_saved_model_paths = {
+                    w.name: w
+                    for w in path.joinpath(
+                        os.environ[FASTNLP_LAUNCH_TIME]).iterdir()
+                }
                 # 检查生成保存模型文件的数量是不是正确的；
                 if version == 0:
                     assert len(all_saved_model_paths) == n_epochs
@@ -156,15 +173,16 @@ def test_model_more_evaluate_callback_1(
                         device=device,
                         optimizers=model_and_optimizers.optimizers,
                         train_dataloader=model_and_optimizers.train_dataloader,
-                        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+                        evaluate_dataloaders=model_and_optimizers.
+                        evaluate_dataloaders,
                         input_mapping=model_and_optimizers.input_mapping,
                         output_mapping=model_and_optimizers.output_mapping,
                         metrics=model_and_optimizers.metrics,
                         n_epochs=2,
-                        output_from_new_proc="all",
-                        evaluate_fn='train_step'
-                    )
-                    folder = path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).joinpath(folder)
+                        output_from_new_proc='all',
+                        evaluate_fn='train_step')
+                    folder = path.joinpath(
+                        os.environ[FASTNLP_LAUNCH_TIME]).joinpath(folder)
                     trainer.load_model(folder, only_state_dict=only_state_dict)
 
                     trainer.run()
@@ -179,34 +197,44 @@ def test_model_more_evaluate_callback_1(
 
 @pytest.mark.torch
 # @pytest.mark.parametrize("driver,device", [("torch", "cpu"), ("torch", [0, 1])])  # ("torch", "cpu"), ("torch", [0, 1]), ("torch", 1)
-@pytest.mark.parametrize("driver,device", [("torch", "cpu")])
+@pytest.mark.parametrize('driver,device', [('torch', 'cpu')])
 @magic_argv_env_context
-def test_trainer_checkpoint_callback_1(
-        model_and_optimizers: TrainerParameters,
-        driver,
-        device
-):
+def test_trainer_checkpoint_callback_1(model_and_optimizers: TrainerParameters,
+                                       driver, device):
+    skip_no_cuda(device)
     for version in [0, 1]:
         for only_state_dict in [True, False]:
             try:
-                path = Path.cwd().joinpath(f"test_model_checkpoint")
+                path = Path.cwd().joinpath('test_model_checkpoint')
                 path.mkdir(exist_ok=True, parents=True)
 
                 if version == 0:
                     callbacks = [
-                        MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
-                                             metrics=model_and_optimizers.more_metrics,
-                                             evaluate_every=-1,
-                                             folder=path, topk=-1,
-                                             topk_monitor='acc', only_state_dict=only_state_dict, save_object='trainer')
+                        MoreEvaluateCallback(
+                            dataloaders=model_and_optimizers.
+                            evaluate_dataloaders,
+                            metrics=model_and_optimizers.more_metrics,
+                            evaluate_every=-1,
+                            folder=path,
+                            topk=-1,
+                            topk_monitor='acc',
+                            only_state_dict=only_state_dict,
+                            save_object='trainer')
                     ]
                 elif version == 1:
                     callbacks = [
-                        MoreEvaluateCallback(dataloaders=model_and_optimizers.evaluate_dataloaders,
-                                             metrics=model_and_optimizers.more_metrics,
-                                             evaluate_every=None, watch_monitor='loss', watch_monitor_larger_better=False,
-                                             folder=path, topk=1, topk_monitor='acc', only_state_dict=only_state_dict,
-                                             save_object='trainer')
+                        MoreEvaluateCallback(
+                            dataloaders=model_and_optimizers.
+                            evaluate_dataloaders,
+                            metrics=model_and_optimizers.more_metrics,
+                            evaluate_every=None,
+                            watch_monitor='loss',
+                            watch_monitor_larger_better=False,
+                            folder=path,
+                            topk=1,
+                            topk_monitor='acc',
+                            only_state_dict=only_state_dict,
+                            save_object='trainer')
                     ]
                 n_epochs = 2
                 trainer = Trainer(
@@ -215,19 +243,23 @@ def test_trainer_checkpoint_callback_1(
                     device=device,
                     optimizers=model_and_optimizers.optimizers,
                     train_dataloader=model_and_optimizers.train_dataloader,
-                    evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+                    evaluate_dataloaders=model_and_optimizers.
+                    evaluate_dataloaders,
                     input_mapping=model_and_optimizers.input_mapping,
                     output_mapping=model_and_optimizers.output_mapping,
                     metrics=model_and_optimizers.metrics,
                     n_epochs=n_epochs,
                     callbacks=callbacks,
-                    output_from_new_proc="all",
-                    evaluate_fn='train_step'
-                )
+                    output_from_new_proc='all',
+                    evaluate_fn='train_step')
 
                 trainer.run()
 
-                all_saved_model_paths = {w.name: w for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()}
+                all_saved_model_paths = {
+                    w.name: w
+                    for w in path.joinpath(
+                        os.environ[FASTNLP_LAUNCH_TIME]).iterdir()
+                }
                 # 检查生成保存模型文件的数量是不是正确的；
                 if version == 0:
                     assert len(all_saved_model_paths) == n_epochs
@@ -241,16 +273,18 @@ def test_trainer_checkpoint_callback_1(
                         device=device,
                         optimizers=model_and_optimizers.optimizers,
                         train_dataloader=model_and_optimizers.train_dataloader,
-                        evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+                        evaluate_dataloaders=model_and_optimizers.
+                        evaluate_dataloaders,
                         input_mapping=model_and_optimizers.input_mapping,
                         output_mapping=model_and_optimizers.output_mapping,
                         metrics=model_and_optimizers.metrics,
                         n_epochs=2,
-                        output_from_new_proc="all",
-                        evaluate_fn='train_step'
-                    )
-                    folder = path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).joinpath(folder)
-                    trainer.load_checkpoint(folder, only_state_dict=only_state_dict)
+                        output_from_new_proc='all',
+                        evaluate_fn='train_step')
+                    folder = path.joinpath(
+                        os.environ[FASTNLP_LAUNCH_TIME]).joinpath(folder)
+                    trainer.load_checkpoint(
+                        folder, only_state_dict=only_state_dict)
 
                     trainer.run()
                     trainer.driver.barrier()

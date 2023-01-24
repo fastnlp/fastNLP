@@ -1,7 +1,9 @@
+# isort: skip_file
+
 __all__ = [
-    "Metric",
-    "Accuracy",
-    "TransformersAccuracy",
+    'Metric',
+    'Accuracy',
+    'TransformersAccuracy',
     'SpanFPreRecMetric',
     'ClassifyFPreRecMetric',
     'BLEU',

@@ -1,13 +1,11 @@
-__all__ = [
-    'TrainBatchLoop'
-]
+from typing import Callable, Optional
 
-from typing import Optional, Callable
-
-from .loop import Loop
 from fastNLP.core.log import logger
 from fastNLP.core.utils import match_and_substitute_params
 from fastNLP.core.utils.exceptions import EarlyStopException
+from .loop import Loop
+
+__all__ = ['TrainBatchLoop']
 
 
 class TrainBatchLoop(Loop):
@@ -19,9 +17,9 @@ class TrainBatchLoop(Loop):
 
     def __init__(self, batch_step_fn: Optional[Callable] = None):
         if batch_step_fn is not None:
-            self.batch_step_fn = batch_step_fn
+            self.batch_step_fn = batch_step_fn  # type: ignore
         else:
-            self.batch_step_fn = TrainBatchLoop.batch_step_fn
+            self.batch_step_fn = TrainBatchLoop.batch_step_fn  # type: ignore
 
     def run(self, trainer, dataloader):
         r"""
@@ -29,7 +27,8 @@ class TrainBatchLoop(Loop):
 
         .. note::
 
-            您不需要自己主动地调用该方法，``Trainer`` 会负责调用该方法来完成训练过程；
+            您不需要自己主动地调用该方法，``Trainer`` 会负责调用该方法来完成训练过
+            程；
 
         :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
         :param dataloader: 当前训练所使用的 ``dataloader``；
@@ -37,7 +36,7 @@ class TrainBatchLoop(Loop):
         get_batch_indices = dataloader.get_batch_indices if callable(getattr(dataloader, 'get_batch_indices', None))\
             else lambda *args, **kwargs: None
         dataloader = iter(dataloader)
-        while trainer.batch_idx_in_epoch<=trainer.num_batches_per_epoch:
+        while trainer.batch_idx_in_epoch <= trainer.num_batches_per_epoch:
             try:
                 trainer.on_fetch_data_begin()
                 batch = next(dataloader)
@@ -49,11 +48,13 @@ class TrainBatchLoop(Loop):
             trainer.on_fetch_data_end()
 
             try:
-                batch = match_and_substitute_params(trainer.input_mapping, batch)
+                batch = match_and_substitute_params(trainer.input_mapping,
+                                                    batch)
                 batch = trainer.move_data_to_device(batch)
 
                 trainer.on_train_batch_begin(batch, indices)
-                with trainer.get_no_sync_context():  # 在多卡的时候可能需要关闭 sync
+                with trainer.get_no_sync_context():
+                    # 在多卡的时候可能需要关闭 sync
                     self.batch_step_fn(trainer, batch)
                 trainer.global_forward_batches += 1
                 trainer.batch_idx_in_epoch += 1
@@ -61,8 +62,10 @@ class TrainBatchLoop(Loop):
                 trainer.check_batch_step_fn()
                 trainer.on_train_batch_end()
             except BaseException as e:
-                if indices is not None and not isinstance(e, (EarlyStopException, KeyboardInterrupt)):
-                    logger.error(f"Exception happens when training on samples: {indices}")
+                if indices is not None and not isinstance(
+                        e, (EarlyStopException, KeyboardInterrupt)):
+                    logger.error('Exception happens when training on samples: '
+                                 f'{indices}')
                 raise e
             trainer.step_evaluate()
         trainer.driver.barrier()
@@ -82,7 +85,3 @@ class TrainBatchLoop(Loop):
         trainer.backward(outputs)
         trainer.step()
         trainer.zero_grad()
-
-
-
-

@@ -1,31 +1,27 @@
-"""
-这个文件测试用户自己初始化分布式环境后使用 paddle 的情况:
+"""这个文件测试用户自己初始化分布式环境后使用 paddle 的情况:
 
     >>> # 测试用 python -m paddle.distributed.launch 启动
     >>> FASTNLP_BACKEND=paddle python -m paddle.distributed.launch --gpus=0,2,3 _test_trainer_fleet_outside.py
     >>> # 测试在限制 GPU 的情况下用 python -m paddle.distributed.launch 启动
     >>> CUDA_VISIBLE_DEVICES=0,2,3 FASTNLP_BACKEND=paddle python -m paddle.distributed.launch --gpus=0,2,3 _test_trainer_fleet_outside.py
-
 """
-import os
 import sys
-sys.path.append("../../../")
+
+sys.path.append('../../../')
 
 from dataclasses import dataclass
 
+import paddle.distributed.fleet as fleet
+from paddle.io import DataLoader
+from paddle.optimizer import Adam
+
+from fastNLP.core.callbacks.progress_callback import RichCallback
 from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.core.metrics.accuracy import Accuracy
-from fastNLP.core.callbacks.progress_callback import RichCallback
-from fastNLP.core.callbacks import Callback
-
-import paddle
-from paddle.optimizer import Adam
-from paddle.io import DataLoader
-import paddle.distributed.fleet as fleet
-
-from tests.helpers.models.paddle_model import PaddleNormalModel_Classification_2
 from tests.helpers.datasets.paddle_data import PaddleArgMaxDataset
-from tests.helpers.callbacks.helper_callbacks import RecordMetricCallback
+from tests.helpers.models.paddle_model import \
+    PaddleNormalModel_Classification_2
+
 
 @dataclass
 class MNISTTrainFleetConfig:
@@ -36,12 +32,13 @@ class MNISTTrainFleetConfig:
     shuffle: bool = True
     validate_every = -1
 
+
 def test_trainer_fleet(
-        driver,
-        device,
-        callbacks,
-        n_epochs,
-):    
+    driver,
+    device,
+    callbacks,
+    n_epochs,
+):
     fleet.init(is_collective=True)
 
     model = PaddleNormalModel_Classification_2(
@@ -54,19 +51,19 @@ def test_trainer_fleet(
     optimizers = fleet.distributed_optimizer(optimizers)
 
     train_dataloader = DataLoader(
-        dataset=PaddleArgMaxDataset(20, MNISTTrainFleetConfig.feature_dimension),
+        dataset=PaddleArgMaxDataset(20,
+                                    MNISTTrainFleetConfig.feature_dimension),
         batch_size=MNISTTrainFleetConfig.batch_size,
-        shuffle=True
-    )
+        shuffle=True)
     val_dataloader = DataLoader(
-        dataset=PaddleArgMaxDataset(12, MNISTTrainFleetConfig.feature_dimension),
+        dataset=PaddleArgMaxDataset(12,
+                                    MNISTTrainFleetConfig.feature_dimension),
         batch_size=MNISTTrainFleetConfig.batch_size,
-        shuffle=True
-    )
+        shuffle=True)
     train_dataloader = train_dataloader
     validate_dataloaders = val_dataloader
     validate_every = MNISTTrainFleetConfig.validate_every
-    metrics = {"acc": Accuracy()}
+    metrics = {'acc': Accuracy()}
     trainer = Trainer(
         model=model,
         driver=driver,
@@ -78,18 +75,18 @@ def test_trainer_fleet(
         input_mapping=None,
         output_mapping=None,
         metrics=metrics,
-
         n_epochs=n_epochs,
         callbacks=callbacks,
         # output_from_new_proc="logs",
     )
     trainer.run()
 
-if __name__ == "__main__":
-    driver = "paddle"
-    device = [0,1,3]
+
+if __name__ == '__main__':
+    driver = 'paddle'
+    device = [0, 1, 3]
     callbacks = [
-        # RecordMetricCallback(monitor="acc#acc", metric_threshold=0.0, larger_better=True), 
+        # RecordMetricCallback(monitor="acc#acc", metric_threshold=0.0, larger_better=True),
         RichCallback(5),
     ]
     test_trainer_fleet(

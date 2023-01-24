@@ -1,39 +1,41 @@
-__all__ = [
-    'MRPmiGraphPipe',
-    'R8PmiGraphPipe',
-    'R52PmiGraphPipe',
-    'OhsumedPmiGraphPipe',
-    'NG20PmiGraphPipe'
-]
-try:
-    import networkx as nx
-    from sklearn.feature_extraction.text import CountVectorizer
-    from sklearn.feature_extraction.text import TfidfTransformer
-    from sklearn.pipeline import Pipeline
-except:
-    pass
-from collections import defaultdict
 import itertools
 import math
+from collections import defaultdict
+
 import numpy as np
 
-from ..data_bundle import DataBundle
-# from ...core.const import Const
-from ..loader.classification import MRLoader, OhsumedLoader, R52Loader, R8Loader, NG20Loader
+try:
+    import networkx as nx
+    from sklearn.feature_extraction.text import (CountVectorizer,
+                                                 TfidfTransformer)
+    from sklearn.pipeline import Pipeline
+except Exception:
+    pass
+
 from fastNLP.core.utils import f_rich_progress
+from ..data_bundle import DataBundle
+from ..loader.classification import (MRLoader, NG20Loader, OhsumedLoader,
+                                     R8Loader, R52Loader)
+
+__all__ = [
+    'MRPmiGraphPipe', 'R8PmiGraphPipe', 'R52PmiGraphPipe',
+    'OhsumedPmiGraphPipe', 'NG20PmiGraphPipe'
+]
 
 
 def _get_windows(content_lst: list, window_size: int):
     r"""
-        滑动窗口处理文本，获取词频和共现词语的词频
-        :param content_lst:
-        :param window_size:
-        :return: 词频，共现词频，窗口化后文本段的数量
+    滑动窗口处理文本，获取词频和共现词语的词频
+
+    :param content_lst:
+    :param window_size:
+    :return: 词频，共现词频，窗口化后文本段的数量
     """
-    word_window_freq = defaultdict(int)  # w(i)  单词在窗口单位内出现的次数
-    word_pair_count = defaultdict(int)  # w(i, j)
+    word_window_freq: dict = defaultdict(int)  # w(i)  单词在窗口单位内出现的次数
+    word_pair_count: dict = defaultdict(int)  # w(i, j)
     windows_len = 0
-    task_id = f_rich_progress.add_task(description="Split by window", total=len(content_lst))
+    task_id = f_rich_progress.add_task(
+        description='Split by window', total=len(content_lst))
     for words in content_lst:
         windows = list()
 
@@ -45,7 +47,7 @@ def _get_windows(content_lst: list, window_size: int):
             windows.append(words)
         else:
             for j in range(length - window_size + 1):
-                window = words[j: j + window_size]
+                window = words[j:j + window_size]
                 windows.append(list(set(window)))
 
         for window in windows:
@@ -64,11 +66,12 @@ def _get_windows(content_lst: list, window_size: int):
 
 def _cal_pmi(W_ij, W, word_freq_i, word_freq_j):
     r"""
-        params: w_ij:为词语i,j的共现词频
-                w:文本数量
-                word_freq_i: 词语i的词频
-                word_freq_j: 词语j的词频
-        return: 词语i，j的tfidf值
+
+    :param w_ij:为词语i,j的共现词频
+    :param w:文本数量
+    :param word_freq_i: 词语i的词频
+    :param word_freq_j: 词语j的词频
+    :return: 词语i，j的 tfidf 值
     """
     p_i = word_freq_i / W
     p_j = word_freq_j / W
@@ -80,14 +83,16 @@ def _cal_pmi(W_ij, W, word_freq_i, word_freq_j):
 
 def _count_pmi(windows_len, word_pair_count, word_window_freq, threshold):
     r"""
-        params: windows_len: 文本段数量
-                word_pair_count: 词共现频率字典
-                word_window_freq: 词频率字典
-                threshold: 阈值
-        return 词语pmi的list列表,其中元素为[word1, word2, pmi]
+
+    :param windows_len: 文本段数量
+    :param word_pair_count: 词共现频率字典
+    :param word_window_freq: 词频率字典
+    :param threshold: 阈值
+    :return: 词语 pmi 的 list 列表,其中元素为 [word1, word2, pmi]
     """
     word_pmi_lst = list()
-    task_id = f_rich_progress.add_task(description="Calculate pmi between words", total=len(word_pair_count))
+    task_id = f_rich_progress.add_task(
+        description='Calculate pmi between words', total=len(word_pair_count))
     for word_pair, W_i_j in word_pair_count.items():
         word_freq_1 = word_window_freq[word_pair[0]]
         word_freq_2 = word_window_freq[word_pair[1]]
@@ -103,6 +108,7 @@ def _count_pmi(windows_len, word_pair_count, word_window_freq, threshold):
 
 
 class GraphBuilderBase:
+
     def __init__(self, graph_type='pmi', widow_size=10, threshold=0.):
         self.graph = nx.Graph()
         self.word2id = dict()
@@ -117,21 +123,30 @@ class GraphBuilderBase:
 
     def _get_doc_edge(self, data_bundle: DataBundle):
         r"""
-            对输入的DataBundle进行处理，然后生成文档-单词的tfidf值
-            ：param: data_bundle中的文本若为英文，形式为[ 'This is the first document.'],若为中文则为['他 喜欢 吃 苹果']
-            : return 返回带有具有tfidf边文档-单词稀疏矩阵
+        对输入的 DataBundle 进行处理，然后生成文档-单词的tfidf值。
+
+        :param data_bundle: 输入的 data_bundle。其中的文本若为英文，形式为
+            ['This is the first document.']，若为中文则为['他 喜欢 吃 苹果']
+        :return: 返回带有具有 tfidf 边文档-单词稀疏矩阵
         """
-        tr_doc = list(data_bundle.get_dataset("train").get_field('raw_words'))
-        val_doc = list(data_bundle.get_dataset("dev").get_field('raw_words'))
-        te_doc = list(data_bundle.get_dataset("test").get_field('raw_words'))
+        tr_doc = list(data_bundle.get_dataset('train').get_field('raw_words'))
+        val_doc = list(data_bundle.get_dataset('dev').get_field('raw_words'))
+        te_doc = list(data_bundle.get_dataset('test').get_field('raw_words'))
         doc = tr_doc + val_doc + te_doc
         self.doc = doc
         self.tr_doc_index = [ind for ind in range(len(tr_doc))]
         self.dev_doc_index = [ind + len(tr_doc) for ind in range(len(val_doc))]
-        self.te_doc_index = [ind + len(tr_doc) + len(val_doc) for ind in range(len(te_doc))]
-        text_tfidf = Pipeline([('count', CountVectorizer(token_pattern=r'\S+', min_df=1, max_df=1.0)),
-                               ('tfidf',
-                                TfidfTransformer(norm=None, use_idf=True, smooth_idf=False, sublinear_tf=False))])
+        self.te_doc_index = [
+            ind + len(tr_doc) + len(val_doc) for ind in range(len(te_doc))
+        ]
+        text_tfidf = Pipeline([
+            ('count',
+             CountVectorizer(token_pattern=r'\S+', min_df=1, max_df=1.0)),
+            ('tfidf',
+             TfidfTransformer(
+                 norm=None, use_idf=True, smooth_idf=False,
+                 sublinear_tf=False))
+        ])
 
         tfidf_vec = text_tfidf.fit_transform(doc)
         self.doc_node_num = tfidf_vec.shape[0]
@@ -140,12 +155,15 @@ class GraphBuilderBase:
             self.word2id[word] = ind
         for ind, row in enumerate(tfidf_vec):
             for col_index, value in zip(row.indices, row.data):
-                self.graph.add_edge(ind, self.doc_node_num + col_index, weight=value)
+                self.graph.add_edge(
+                    ind, self.doc_node_num + col_index, weight=value)
         return nx.to_scipy_sparse_matrix(self.graph)
 
     def _get_word_edge(self):
-        word_window_freq, word_pair_count, windows_len = _get_windows(self.doc, self.window_size)
-        pmi_edge_lst = _count_pmi(windows_len, word_pair_count, word_window_freq, self.threshold)
+        word_window_freq, word_pair_count, windows_len = _get_windows(
+            self.doc, self.window_size)
+        pmi_edge_lst = _count_pmi(windows_len, word_pair_count,
+                                  word_window_freq, self.threshold)
         for edge_item in pmi_edge_lst:
             word_indx1 = self.doc_node_num + self.word2id[edge_item[0]]
             word_indx2 = self.doc_node_num + self.word2id[edge_item[1]]
@@ -155,188 +173,229 @@ class GraphBuilderBase:
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
-            对输入的DataBundle进行处理，然后返回该scipy_sparse_matrix类型的邻接矩阵。
+        对输入的 DataBundle 进行处理，然后返回该 scipy_sparse_matrix 类型的邻接矩
+        阵。
 
-            :param ~fastNLP.DataBundle data_bundle: 需要处理的DataBundle对象
-            :return:
+        :param data_bundle: 需要处理的 DataBundle 对象
+        :return:
         """
         raise NotImplementedError
 
     def build_graph_from_file(self, path: str):
         r"""
-            传入文件路径，生成处理好的scipy_sparse_matrix对象。paths支持的路径形式可以参考 ：:meth:`fastNLP.io.Loader.load`
+        传入文件路径，生成处理好的 scipy_sparse_matrix 对象。paths 支持的路径形式可
+        以参考 :meth:`fastNLP.io.Loader.load`
 
-            :param path:
-            :return: scipy_sparse_matrix
+        :param path:
+        :return: scipy_sparse_matrix
         """
         raise NotImplementedError
 
 
 class MRPmiGraphPipe(GraphBuilderBase):
-    """
-    构建 **MR** 数据集的 **Graph** 。
+    """构建 **MR** 数据集的 **Graph**。
 
-    :param graph_type: 
+    :param graph_type:
     :param widow_size:
     :param threshold:
     """
+
     def __init__(self, graph_type='pmi', widow_size=10, threshold=0.):
-        super().__init__(graph_type=graph_type, widow_size=widow_size, threshold=threshold)
+        super().__init__(
+            graph_type=graph_type, widow_size=widow_size, threshold=threshold)
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
+
         :param data_bundle: 需要处理的 :class:`~fastNLP.io.DataBundle` 对象。
-        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中
+            的 index 。
         """
         self._get_doc_edge(data_bundle)
         self._get_word_edge()
-        return nx.to_scipy_sparse_matrix(self.graph,
-                                         nodelist=list(range(self.graph.number_of_nodes())),
-                                         weight='weight', dtype=np.float32, format='csr'), (
-               self.tr_doc_index, self.dev_doc_index, self.te_doc_index)
+        return nx.to_scipy_sparse_matrix(
+            self.graph,
+            nodelist=list(range(self.graph.number_of_nodes())),
+            weight='weight',
+            dtype=np.float32,
+            format='csr'), (self.tr_doc_index, self.dev_doc_index,
+                            self.te_doc_index)
 
     def build_graph_from_file(self, path: str):
         r"""
-        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
-    
+        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的
+        路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+
         :param path: 数据集的路径。
-        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中
+            的 index 。
         """
         data_bundle = MRLoader().load(path)
         return self.build_graph(data_bundle)
 
 
 class R8PmiGraphPipe(GraphBuilderBase):
-    """
-    构建 **R8** 数据集的 **Graph** 。
+    """构建 **R8** 数据集的 **Graph**。
 
-    :param graph_type: 
+    :param graph_type:
     :param widow_size:
     :param threshold:
     """
+
     def __init__(self, graph_type='pmi', widow_size=10, threshold=0.):
-        super().__init__(graph_type=graph_type, widow_size=widow_size, threshold=threshold)
+        super().__init__(
+            graph_type=graph_type, widow_size=widow_size, threshold=threshold)
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
+
         :param data_bundle: 需要处理的 :class:`~fastNLP.io.DataBundle` 对象。
-        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中
+            的 index 。
         """
         self._get_doc_edge(data_bundle)
         self._get_word_edge()
-        return nx.to_scipy_sparse_matrix(self.graph,
-                                         nodelist=list(range(self.graph.number_of_nodes())),
-                                         weight='weight', dtype=np.float32, format='csr'), (
-               self.tr_doc_index, self.dev_doc_index, self.te_doc_index)
+        return nx.to_scipy_sparse_matrix(
+            self.graph,
+            nodelist=list(range(self.graph.number_of_nodes())),
+            weight='weight',
+            dtype=np.float32,
+            format='csr'), (self.tr_doc_index, self.dev_doc_index,
+                            self.te_doc_index)
 
     def build_graph_from_file(self, path: str):
         r"""
-        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的
+        路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param path: 数据集的路径。
-        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中
+            的 index 。
         """
         data_bundle = R8Loader().load(path)
         return self.build_graph(data_bundle)
 
 
 class R52PmiGraphPipe(GraphBuilderBase):
-    """
-    构建 **R52** 数据集的 **Graph** 。
+    """构建 **R52** 数据集的 **Graph**。
 
-    :param graph_type: 
+    :param graph_type:
     :param widow_size:
     :param threshold:
     """
+
     def __init__(self, graph_type='pmi', widow_size=10, threshold=0.):
-        super().__init__(graph_type=graph_type, widow_size=widow_size, threshold=threshold)
+        super().__init__(
+            graph_type=graph_type, widow_size=widow_size, threshold=threshold)
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
         :param data_bundle: 需要处理的 :class:`~fastNLP.io.DataBundle` 对象。
-        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中
+            的 index 。
         """
         self._get_doc_edge(data_bundle)
         self._get_word_edge()
-        return nx.to_scipy_sparse_matrix(self.graph,
-                                         nodelist=list(range(self.graph.number_of_nodes())),
-                                         weight='weight', dtype=np.float32, format='csr'), (
-               self.tr_doc_index, self.dev_doc_index, self.te_doc_index)
+        return nx.to_scipy_sparse_matrix(
+            self.graph,
+            nodelist=list(range(self.graph.number_of_nodes())),
+            weight='weight',
+            dtype=np.float32,
+            format='csr'), (self.tr_doc_index, self.dev_doc_index,
+                            self.te_doc_index)
 
     def build_graph_from_file(self, path: str):
         r"""
-        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的
+        路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param path: 数据集的路径。
-        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中
+            的 index 。
         """
         data_bundle = R52Loader().load(path)
         return self.build_graph(data_bundle)
 
 
 class OhsumedPmiGraphPipe(GraphBuilderBase):
-    """
-    构建 **Ohsuned** 数据集的 **Graph** 。
+    """构建 **Ohsuned** 数据集的 **Graph**。
 
-    :param graph_type: 
+    :param graph_type:
     :param widow_size:
     :param threshold:
     """
+
     def __init__(self, graph_type='pmi', widow_size=10, threshold=0.):
-        super().__init__(graph_type=graph_type, widow_size=widow_size, threshold=threshold)
+        super().__init__(
+            graph_type=graph_type, widow_size=widow_size, threshold=threshold)
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
+
         :param data_bundle: 需要处理的 :class:`~fastNLP.io.DataBundle` 对象。
-        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中
+            的 index 。
         """
         self._get_doc_edge(data_bundle)
         self._get_word_edge()
-        return nx.to_scipy_sparse_matrix(self.graph,
-                                         nodelist=list(range(self.graph.number_of_nodes())),
-                                         weight='weight', dtype=np.float32, format='csr'), (
-               self.tr_doc_index, self.dev_doc_index, self.te_doc_index)
+        return nx.to_scipy_sparse_matrix(
+            self.graph,
+            nodelist=list(range(self.graph.number_of_nodes())),
+            weight='weight',
+            dtype=np.float32,
+            format='csr'), (self.tr_doc_index, self.dev_doc_index,
+                            self.te_doc_index)
 
     def build_graph_from_file(self, path: str):
         r"""
-        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
-        
+        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的
+        路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+
         :param path: 数据集的路径。
-        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中
+            的 index 。
         """
         data_bundle = OhsumedLoader().load(path)
         return self.build_graph(data_bundle)
 
 
 class NG20PmiGraphPipe(GraphBuilderBase):
-    """
-    构建 **NG20** 数据集的 **Graph** 。
+    """构建 **NG20** 数据集的 **Graph**。
 
-    :param graph_type: 
+    :param graph_type:
     :param widow_size:
     :param threshold:
     """
+
     def __init__(self, graph_type='pmi', widow_size=10, threshold=0.):
-        super().__init__(graph_type=graph_type, widow_size=widow_size, threshold=threshold)
+        super().__init__(
+            graph_type=graph_type, widow_size=widow_size, threshold=threshold)
 
     def build_graph(self, data_bundle: DataBundle):
         r"""
+
         :param data_bundle: 需要处理的 :class:`~fastNLP.io.DataBundle` 对象。
-        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中
+            的 index 。
         """
         self._get_doc_edge(data_bundle)
         self._get_word_edge()
-        return nx.to_scipy_sparse_matrix(self.graph,
-                                         nodelist=list(range(self.graph.number_of_nodes())),
-                                         weight='weight', dtype=np.float32, format='csr'), (
-                   self.tr_doc_index, self.dev_doc_index, self.te_doc_index)
+        return nx.to_scipy_sparse_matrix(
+            self.graph,
+            nodelist=list(range(self.graph.number_of_nodes())),
+            weight='weight',
+            dtype=np.float32,
+            format='csr'), (self.tr_doc_index, self.dev_doc_index,
+                            self.te_doc_index)
 
     def build_graph_from_file(self, path: str):
         r"""
-        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        传入文件路径，生成处理好的 ``scipy_sparse_matrix`` 对象。``paths`` 支持的
+        路径形式可以参考 :meth:`fastNLP.io.Loader.load`
 
         :param path: 数据集的路径。
-        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中的 index 。
+        :return: 返回 ``csr`` 类型的稀疏矩阵图；包含训练集，验证集，测试集，在图中
+            的 index 。
         """
         data_bundle = NG20Loader().load(path)
         return self.build_graph(data_bundle)

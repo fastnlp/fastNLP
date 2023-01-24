@@ -1,11 +1,11 @@
-import io
-import pickle
 import os
+import pickle
 from typing import Any, List
 
 from fastNLP.core.utils import apply_to_collection, get_oneflow_device
-from fastNLP.envs.imports import _NEED_IMPORT_ONEFLOW
 from fastNLP.envs.env import FASTNLP_NO_SYNC
+from fastNLP.envs.imports import _NEED_IMPORT_ONEFLOW
+
 if _NEED_IMPORT_ONEFLOW:
     import oneflow
     import oneflow.comm as comm
@@ -13,26 +13,22 @@ if _NEED_IMPORT_ONEFLOW:
 
 PROTOCOL_VERSION = 1
 
-__all__ = []
+__all__ = []  # type: ignore
+
 
 def _validate_output_list_for_rank(my_rank, dst, gather_list):
     if dst == my_rank:
         if not gather_list:
             raise ValueError(
-                "Argument ``gather_list`` must be specified on destination rank."
-            )
+                'Argument ``gather_list`` must be specified on destination '
+                'rank.')
     elif gather_list:
-        raise ValueError(
-            "Argument ``gather_list`` must NOT be specified "
-            "on non-destination ranks."
-        )
+        raise ValueError('Argument ``gather_list`` must NOT be specified '
+                         'on non-destination ranks.')
 
-    obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
-    pickled_bytes = pickle.dumps(obj)
 
 def fastnlp_oneflow_gather_object(obj, dst=0):
-    """
-    从其它 rank gather 东西到 dst rank 。
+    """从其它 rank gather 东西到 dst rank 。
 
     Example::
         >>> # Assumes world_size of 3.
@@ -63,15 +59,18 @@ def fastnlp_oneflow_gather_object(obj, dst=0):
     my_rank = dist_env.get_rank()
     _validate_output_list_for_rank(my_rank, dst, object_gather_list)
     # 防止 unpickle 的时候出现在了发送的 gpu 上。
-    obj = apply_to_collection(obj, oneflow.Tensor, _to_device, device=oneflow.device("cpu"))
+    obj = apply_to_collection(
+        obj, oneflow.Tensor, _to_device, device=oneflow.device('cpu'))
     input_tensor, local_size = _object_to_tensor(obj)
-    current_device = oneflow.device("cuda")
+    current_device = oneflow.device('cuda')
     input_tensor = input_tensor.to(current_device)
     local_size = local_size.to(current_device)
-    # Gather all local sizes. This is so that we can find the max size, and index
-    # until the correct size when deserializing the tensors.
+    # Gather all local sizes. This is so that we can find the
+    # max size, and index until the correct size when deserializing the
+    # tensors.
     group_size = dist_env.get_world_size()
-    object_sizes_tensor = oneflow.zeros(group_size, dtype=oneflow.long, device=current_device)
+    object_sizes_tensor = oneflow.zeros(
+        group_size, dtype=oneflow.long, device=current_device)
     object_size_list = [
         object_sizes_tensor[i].unsqueeze(dim=0) for i in range(group_size)
     ]
@@ -79,18 +78,21 @@ def fastnlp_oneflow_gather_object(obj, dst=0):
     # gather, since each rank needs to broadcast a tensor of the same (maximal)
     # size.
     comm.all_gather(object_size_list, local_size)
-    max_object_size = int(max(object_size_list).item())  # type: ignore[type-var]
+    max_object_size = int(
+        max(object_size_list).item())  # type: ignore[type-var]
     # Resize tensor to max size across all ranks.
     input_tensor = input_tensor.reshape(max_object_size)
-    # Avoid populating output tensors if the result won't be gathered on this rank.
+    # Avoid populating output tensors if the result won't be
+    # gathered on this rank.
     if my_rank == dst:
         coalesced_output_tensor = oneflow.empty(
-            max_object_size * group_size, dtype=oneflow.uint8, device=current_device
-        )
+            max_object_size * group_size,
+            dtype=oneflow.uint8,
+            device=current_device)
         # Output tensors are nonoverlapping views of coalesced_output_tensor
         output_tensors = [
-            coalesced_output_tensor[max_object_size * i : max_object_size * (i + 1)]
-            for i in range(group_size)
+            coalesced_output_tensor[max_object_size * i:max_object_size *
+                                    (i + 1)] for i in range(group_size)
         ]
     # All ranks call gather with equal-sized tensors.
     comm.gather(
@@ -107,8 +109,7 @@ def fastnlp_oneflow_gather_object(obj, dst=0):
 
 
 def _object_to_tensor(obj, device=None):
-    f = io.BytesIO()
-    obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
+    obj = {'protocol_version': PROTOCOL_VERSION, 'data': obj}
     pickled_bytes = pickle.dumps(obj)
 
     byte_tensor = oneflow.ByteTensor(list(pickled_bytes))
@@ -118,11 +119,13 @@ def _object_to_tensor(obj, device=None):
         local_size = local_size.to(device)
     return byte_tensor, local_size
 
+
 def _tensor_to_object(tensor, tensor_size):
     buf = tensor.detach().cpu().numpy().tobytes()[:tensor_size]
     res = pickle.loads(buf)
-    assert res["protocol_version"] == PROTOCOL_VERSION
-    return res["data"]
+    assert res['protocol_version'] == PROTOCOL_VERSION
+    return res['data']
+
 
 def send_recv_object(obj, src, cur_rank, device):
     r"""
@@ -172,9 +175,9 @@ def _to_device(tensor, device):
     return tensor.contiguous().to(device)
 
 
-def fastnlp_oneflow_all_gather(obj: Any, device=None) ->List:
-    """
-    实现任何类型的数据都使用该接口可以进行 all_gather 操作。对于非 tensor 类型的数据，通过 pickle 序列化再反序列化的方式进行传输。
+def fastnlp_oneflow_all_gather(obj: Any, device=None) -> List:
+    r"""实现任何类型的数据都使用该接口可以进行 all_gather 操作。对于非 tensor 类型的
+    数据，通过 pickle 序列化再反序列化的方式进行传输。
 
     example::
 
@@ -188,29 +191,32 @@ def fastnlp_oneflow_all_gather(obj: Any, device=None) ->List:
                 {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
             ]
 
-    :param obj: 任意结构的数据，如果为 tensor ，需要保证每个显卡上的 tensor 的形状是一样的。如果传入的是非 tensor 对象都将直接进行
-        序列化之后进行传输。
+    :param obj: 任意结构的数据，如果为 tensor ，需要保证每个显卡上的 tensor 的形状
+        是一样的。如果传入的是非 tensor 对象都将直接进行序列化之后进行传输。
     :param device: 当前该参数无意义。
     :param group:
-    :return: 返回的结果是 [obj0, obj1, ...]，其中 obj_i 即为第 i 个 rank 上的 obj 。
+    :return: 返回的结果是 [obj0, obj1, ...]，其中 obj_i 即为第 i 个 rank 上的
+        obj 。
     """
-    if int(os.environ.get(FASTNLP_NO_SYNC, "0")) == 2:
+    if int(os.environ.get(FASTNLP_NO_SYNC, '0')) == 2:
         return [obj]
 
     if isinstance(obj, oneflow.Tensor):
-        objs = [oneflow.zeros_like(obj) for _ in range(dist_env.get_world_size())]
+        objs = [
+            oneflow.zeros_like(obj) for _ in range(dist_env.get_world_size())
+        ]
         comm.all_gather(objs, obj)
     else:
         objs = [None for _ in range(dist_env.get_world_size())]
         # 防止 unpickle 的时候弄到发送的 gpu 上了
-        obj = apply_to_collection(obj, oneflow.Tensor, _to_device, device=oneflow.device("cpu"))
+        obj = apply_to_collection(
+            obj, oneflow.Tensor, _to_device, device=oneflow.device('cpu'))
         all_gather_object(objs, obj)
     return objs
 
 
 def fastnlp_oneflow_broadcast_object(obj, src, device=None):
-    """
-    将 src 上的 obj 对象广播到其它 rank 上。
+    """将 src 上的 obj 对象广播到其它 rank 上。
 
     :param obj: 需要发送的对象
     :param src: 从哪里发出。
@@ -218,7 +224,7 @@ def fastnlp_oneflow_broadcast_object(obj, src, device=None):
     :param group: 属于哪个通信 group
     :return:
     """
-    if int(os.environ.get(FASTNLP_NO_SYNC, "0")) == 2:
+    if int(os.environ.get(FASTNLP_NO_SYNC, '0')) == 2:
         if src == dist_env.get_rank():
             return obj
         else:
@@ -226,8 +232,10 @@ def fastnlp_oneflow_broadcast_object(obj, src, device=None):
 
     cur_rank = dist_env.get_rank()
     if cur_rank == src:
-        # 如果有 tensor 全部移动到 cpu 上，方便 pickle , 不然 unpickle 的时候可能会 pickle 到发送过来的卡那里
-        obj = apply_to_collection(obj, oneflow.Tensor, _to_device, device=oneflow.device("cpu"))
+        # 如果有 tensor 全部移动到 cpu 上，方便 pickle , 不然 unpickle 的时候可能
+        # 会 pickle 到发送过来的卡那里
+        obj = apply_to_collection(
+            obj, oneflow.Tensor, _to_device, device=oneflow.device('cpu'))
     if device is None:
         device = oneflow.cuda.current_device()
     device = get_oneflow_device(device)
@@ -242,11 +250,11 @@ def fastnlp_oneflow_broadcast_object(obj, src, device=None):
         tensor = oneflow.empty(
             size.int().item(),  # type: ignore[arg-type]
             dtype=oneflow.uint8,
-            device=device
-        )
+            device=device)
     comm.broadcast(tensor, src=src)
 
     return _tensor_to_object(tensor, tensor_size=size.item())
+
 
 def all_gather_object(object_list, obj):
     """
@@ -265,40 +273,42 @@ def all_gather_object(object_list, obj):
     :param group:
     :return:
     """
-    if int(os.environ.get(FASTNLP_NO_SYNC, "0")) == 2:
+    if int(os.environ.get(FASTNLP_NO_SYNC, '0')) == 2:
         return [obj]
-    
+
     current_device = get_oneflow_device(oneflow.cuda.current_device())
 
     input_tensor, local_size = _object_to_tensor(obj, device=current_device)
 
-    # Gather all local sizes. This is so that we can find the max size, and index
-    # until the correct size when deserializing the tensors.
+    # Gather all local sizes. This is so that we can find the
+    # max size, and index until the correct size when deserializing the
+    # tensors.
     group_size = dist_env.get_world_size()
     object_sizes_tensor = oneflow.zeros(
-        group_size, dtype=oneflow.long, device=current_device
-    )
+        group_size, dtype=oneflow.long, device=current_device)
     object_size_list = [
         object_sizes_tensor[i].unsqueeze(dim=0) for i in range(group_size)
     ]
     # Allgather tensor sizes
     comm.all_gather(object_size_list, local_size)
-    max_object_size = int(max(object_size_list).item())  # type: ignore[type-var]
+    max_object_size = int(
+        max(object_size_list).item())  # type: ignore[type-var]
     # Resize tensor to max size across all ranks.
     input_tensor = input_tensor.reshape(max_object_size)
     coalesced_output_tensor = oneflow.empty(
-        max_object_size * group_size, dtype=oneflow.uint8, device=current_device
-    )
+        max_object_size * group_size,
+        dtype=oneflow.uint8,
+        device=current_device)
     # Output tensors are nonoverlapping views of coalesced_output_tensor
     output_tensors = [
-        coalesced_output_tensor[max_object_size * i : max_object_size * (i + 1)]
+        coalesced_output_tensor[max_object_size * i:max_object_size * (i + 1)]
         for i in range(group_size)
     ]
     comm.all_gather(output_tensors, input_tensor)
     # Deserialize outputs back to object.
     for i, tensor in enumerate(output_tensors):
         tensor = tensor.type(oneflow.uint8)
-        if tensor.device != oneflow.device("cpu"):
+        if tensor.device != oneflow.device('cpu'):
             tensor = tensor.cpu()
         tensor_size = object_size_list[i]
         object_list[i] = _tensor_to_object(tensor, tensor_size)

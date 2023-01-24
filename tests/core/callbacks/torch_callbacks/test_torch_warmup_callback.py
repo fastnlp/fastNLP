@@ -1,13 +1,14 @@
-import pytest
 import numpy as np
+import pytest
 
-from fastNLP.core.callbacks import TorchWarmupCallback, Callback
 from fastNLP import Trainer
-
-from tests.helpers.callbacks.prepare_trainer_args_for_torch_test import get_trainer_args
+from fastNLP.core.callbacks import Callback, TorchWarmupCallback
+from tests.helpers.callbacks.prepare_trainer_args_for_torch_test import \
+    get_trainer_args
 
 
 class RecordLrCallback(Callback):
+
     def __init__(self):
         self.lrs = []
 
@@ -32,4 +33,4 @@ def test_torch_warmup_callback(warmup, schedule, accumulation_steps):
     elif schedule == 'constant':
         assert np.allclose(0.1, kwargs['optimizers'].param_groups[0]['lr'])
 
-    assert len(r_callback.lrs)<=trainer.n_batches//accumulation_steps+1
+    assert len(r_callback.lrs) <= trainer.n_batches // accumulation_steps + 1

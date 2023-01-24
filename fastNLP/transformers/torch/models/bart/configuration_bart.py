@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2021 The Fairseq Authors and The HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,17 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" BART model configuration """
-from fastNLP.transformers.torch.configuration_utils import PretrainedConfig
+"""BART model configuration."""
 from fastNLP.core.log import logger
+from fastNLP.transformers.torch.configuration_utils import PretrainedConfig
 
 __all__ = [
-    "BartConfig",
-    "BART_PRETRAINED_CONFIG_ARCHIVE_MAP",
+    'BartConfig',
+    'BART_PRETRAINED_CONFIG_ARCHIVE_MAP',
 ]
 
 BART_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "facebook/bart-large": "https://huggingface.co/facebook/bart-large/resolve/main/config.json",
+    'facebook/bart-large':
+    'https://huggingface.co/facebook/bart-large/resolve/main/config.json',
     # See all BART models at https://huggingface.co/models?filter=bart
 }
 
@@ -102,40 +102,41 @@ class BartConfig(PretrainedConfig):
         >>> # Accessing the model configuration
         >>> configuration = model.config
     """
-    model_type = "bart"
-    keys_to_ignore_at_inference = ["past_key_values"]
-    attribute_map = {"num_attention_heads": "encoder_attention_heads", "hidden_size": "d_model"}
+    model_type = 'bart'
+    keys_to_ignore_at_inference = ['past_key_values']
+    attribute_map = {
+        'num_attention_heads': 'encoder_attention_heads',
+        'hidden_size': 'd_model'
+    }
 
-    def __init__(
-        self,
-        vocab_size=50265,
-        max_position_embeddings=1024,
-        encoder_layers=12,
-        encoder_ffn_dim=4096,
-        encoder_attention_heads=16,
-        decoder_layers=12,
-        decoder_ffn_dim=4096,
-        decoder_attention_heads=16,
-        encoder_layerdrop=0.0,
-        decoder_layerdrop=0.0,
-        activation_function="gelu",
-        d_model=1024,
-        dropout=0.1,
-        attention_dropout=0.0,
-        activation_dropout=0.0,
-        init_std=0.02,
-        classifier_dropout=0.0,
-        scale_embedding=False,
-        use_cache=True,
-        num_labels=3,
-        pad_token_id=1,
-        bos_token_id=0,
-        eos_token_id=2,
-        is_encoder_decoder=True,
-        decoder_start_token_id=2,
-        forced_eos_token_id=2,
-        **kwargs
-    ):
+    def __init__(self,
+                 vocab_size=50265,
+                 max_position_embeddings=1024,
+                 encoder_layers=12,
+                 encoder_ffn_dim=4096,
+                 encoder_attention_heads=16,
+                 decoder_layers=12,
+                 decoder_ffn_dim=4096,
+                 decoder_attention_heads=16,
+                 encoder_layerdrop=0.0,
+                 decoder_layerdrop=0.0,
+                 activation_function='gelu',
+                 d_model=1024,
+                 dropout=0.1,
+                 attention_dropout=0.0,
+                 activation_dropout=0.0,
+                 init_std=0.02,
+                 classifier_dropout=0.0,
+                 scale_embedding=False,
+                 use_cache=True,
+                 num_labels=3,
+                 pad_token_id=1,
+                 bos_token_id=0,
+                 eos_token_id=2,
+                 is_encoder_decoder=True,
+                 decoder_start_token_id=2,
+                 forced_eos_token_id=2,
+                 **kwargs):
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.d_model = d_model
@@ -169,9 +170,10 @@ class BartConfig(PretrainedConfig):
         )
 
         # ensure backward compatibility for BART CNN models
-        if self.forced_bos_token_id is None and kwargs.get("force_bos_token_to_be_generated", False):
+        if self.forced_bos_token_id is None and kwargs.get(
+                'force_bos_token_to_be_generated', False):
             self.forced_bos_token_id = self.bos_token_id
             logger.rank_zero_warning(
-                f"Please make sure the config includes `forced_bos_token_id={self.bos_token_id}` in future versions."
-                "The config can simply be saved and uploaded again to be fixed."
+                f'Please make sure the config includes `forced_bos_token_id={self.bos_token_id}` in future versions.'
+                'The config can simply be saved and uploaded again to be fixed.'
             )

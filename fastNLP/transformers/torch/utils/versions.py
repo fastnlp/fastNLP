@@ -11,9 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Utilities for working with package versions
-"""
+"""Utilities for working with package versions."""
 
 import operator
 import re
@@ -22,38 +20,36 @@ from typing import Optional
 
 from packaging import version
 
-
 # The package importlib_metadata is in a different place, depending on the python version.
 if sys.version_info < (3, 8):
     import importlib_metadata
 else:
     import importlib.metadata as importlib_metadata
 
-
 ops = {
-    "<": operator.lt,
-    "<=": operator.le,
-    "==": operator.eq,
-    "!=": operator.ne,
-    ">=": operator.ge,
-    ">": operator.gt,
+    '<': operator.lt,
+    '<=': operator.le,
+    '==': operator.eq,
+    '!=': operator.ne,
+    '>=': operator.ge,
+    '>': operator.gt,
 }
 
 
 def _compare_versions(op, got_ver, want_ver, requirement, pkg, hint):
     if got_ver is None:
-        raise ValueError("got_ver is None")
+        raise ValueError('got_ver is None')
     if want_ver is None:
-        raise ValueError("want_ver is None")
+        raise ValueError('want_ver is None')
     if not ops[op](version.parse(got_ver), version.parse(want_ver)):
         raise ImportError(
-            f"{requirement} is required for a normal functioning of this module, but found {pkg}=={got_ver}.{hint}"
+            f'{requirement} is required for a normal functioning of this module, but found {pkg}=={got_ver}.{hint}'
         )
 
 
 def require_version(requirement: str, hint: Optional[str] = None) -> None:
-    """
-    Perform a runtime check of the dependency versions, using the exact same syntax used by pip.
+    """Perform a runtime check of the dependency versions, using the exact same
+    syntax used by pip.
 
     The installed module version comes from the `site-packages` dir via `importlib_metadata`.
 
@@ -65,37 +61,39 @@ def require_version(requirement: str, hint: Optional[str] = None) -> None:
 
        require_version("pandas>1.1.2")
        require_version("numpy>1.18.5", "this is important to have for whatever reason")
-
     """
 
-    hint = f"\n{hint}" if hint is not None else ""
+    hint = f'\n{hint}' if hint is not None else ''
 
     # non-versioned check
-    if re.match(r"^[\w_\-\d]+$", requirement):
+    if re.match(r'^[\w_\-\d]+$', requirement):
         pkg, op, want_ver = requirement, None, None
     else:
-        match = re.findall(r"^([^!=<>\s]+)([\s!=<>]{1,2}.+)", requirement)
+        match = re.findall(r'^([^!=<>\s]+)([\s!=<>]{1,2}.+)', requirement)
         if not match:
             raise ValueError(
-                f"requirement needs to be in the pip package format, .e.g., package_a==1.23, or package_b>=1.23, but got {requirement}"
+                f'requirement needs to be in the pip package format, .e.g., package_a==1.23, or package_b>=1.23, but got {requirement}'
             )
         pkg, want_full = match[0]
-        want_range = want_full.split(",")  # there could be multiple requirements
+        want_range = want_full.split(
+            ',')  # there could be multiple requirements
         wanted = {}
         for w in want_range:
-            match = re.findall(r"^([\s!=<>]{1,2})(.+)", w)
+            match = re.findall(r'^([\s!=<>]{1,2})(.+)', w)
             if not match:
                 raise ValueError(
-                    f"requirement needs to be in the pip package format, .e.g., package_a==1.23, or package_b>=1.23, but got {requirement}"
+                    f'requirement needs to be in the pip package format, .e.g., package_a==1.23, or package_b>=1.23, but got {requirement}'
                 )
             op, want_ver = match[0]
             wanted[op] = want_ver
             if op not in ops:
-                raise ValueError(f"{requirement}: need one of {list(ops.keys())}, but got {op}")
+                raise ValueError(
+                    f'{requirement}: need one of {list(ops.keys())}, but got {op}'
+                )
 
     # special case
-    if pkg == "python":
-        got_ver = ".".join([str(x) for x in sys.version_info[:3]])
+    if pkg == 'python':
+        got_ver = '.'.join([str(x) for x in sys.version_info[:3]])
         for op, want_ver in wanted.items():
             _compare_versions(op, got_ver, want_ver, requirement, pkg, hint)
         return
@@ -115,6 +113,6 @@ def require_version(requirement: str, hint: Optional[str] = None) -> None:
 
 
 def require_version_core(requirement):
-    """require_version wrapper which emits a core-specific hint on failure"""
+    """require_version wrapper which emits a core-specific hint on failure."""
     hint = "Try: pip install transformers -U or pip install -e '.[dev]' if you're working with git master"
     return require_version(requirement, hint)

@@ -1,10 +1,12 @@
 import os
-from typing import Any, Union, Optional
-from fastNLP.envs.env import FASTNLP_DISTRIBUTED_CHECK
+from typing import Any, Optional, Union
+
 from fastNLP.envs.imports import _NEED_IMPORT_ONEFLOW
 
 if _NEED_IMPORT_ONEFLOW:
     import oneflow
+
+from .utils import apply_to_collection
 
 __all__ = [
     'get_oneflow_device',
@@ -13,11 +15,9 @@ __all__ = [
     'is_in_oneflow_dist',
 ]
 
-from .utils import apply_to_collection
 
 def get_oneflow_device(device):
-    """
-    构造一个 :class:`oneflow.device` 实例并返回。
+    """构造一个 :class:`oneflow.device` 实例并返回。
 
     :param device: 字符串或 gpu 编号
     :return: :class:`oneflow.device`
@@ -25,12 +25,15 @@ def get_oneflow_device(device):
     if isinstance(device, oneflow.device):
         return device
     if isinstance(device, int):
-        return oneflow.device("cuda", device)
+        return oneflow.device('cuda', device)
     if isinstance(device, str):
         return oneflow.device(device)
-    raise RuntimeError(f"Cannot get `oneflow.device` from {device}.")
+    raise RuntimeError(f'Cannot get `oneflow.device` from {device}.')
 
-def oneflow_move_data_to_device(batch: Any, device: Optional[Union[str, "oneflow.device"]] = None) -> Any:
+
+def oneflow_move_data_to_device(
+        batch: Any,
+        device: Optional[Union[str, 'oneflow.device']] = None) -> Any:
     r"""
     在 **oneflow** 中将数据集合 ``batch`` 传输到给定设备。
 
@@ -45,14 +48,13 @@ def oneflow_move_data_to_device(batch: Any, device: Optional[Union[str, "oneflow
         data_output = data.to(device)
         if data_output is not None:
             return data_output
-        # user wrongly implemented the `TransferableDataType` and forgot to return `self`.
         return data
 
     return apply_to_collection(batch, dtype=oneflow.Tensor, function=batch_to)
 
+
 def is_oneflow_module(model) -> bool:
-    """
-    判断传入的 ``model`` 是否是 :class:`oneflow.nn.Module` 类型。
+    """判断传入的 ``model`` 是否是 :class:`oneflow.nn.Module` 类型。
 
     :param model:
     :return: 当前模型是否为 ``oneflow`` 的模型
@@ -62,8 +64,7 @@ def is_oneflow_module(model) -> bool:
     except BaseException:
         return False
 
+
 def is_in_oneflow_dist() -> bool:
-    """
-    判断是否处于 **oneflow** 分布式的进程下。
-    """
-    return "GLOG_log_dir" in os.environ
+    """判断是否处于 **oneflow** 分布式的进程下。"""
+    return 'GLOG_log_dir' in os.environ

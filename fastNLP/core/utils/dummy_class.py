@@ -1,6 +1,8 @@
-__all__ = []
+__all__ = []  # type: ignore
+
 
 class DummyClass:
+
     def __init__(self, *args, **kwargs):
         pass
 

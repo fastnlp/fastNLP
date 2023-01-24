@@ -1,71 +1,75 @@
-import os
-
-from typing import Any, Dict, Optional
-from enum import IntEnum
 import contextlib
-import random
-import numpy as np
 import inspect
+import os
+import random
+from enum import IntEnum
+from typing import Dict, Optional
 
-from fastNLP.envs.imports import _NEED_IMPORT_ONEFLOW
-from fastNLP.envs.utils import get_global_seed
-from fastNLP.envs import (
-    get_global_rank,
-    FASTNLP_BACKEND_LAUNCH,
-    FASTNLP_GLOBAL_SEED,
-)
+import numpy as np
+
+from fastNLP.core.log import logger
 from fastNLP.core.samplers import ReproducibleBatchSampler
 from fastNLP.core.utils import auto_param_call
-from fastNLP.core.log import logger
+from fastNLP.envs import (FASTNLP_BACKEND_LAUNCH, FASTNLP_GLOBAL_SEED,
+                          get_global_rank)
+from fastNLP.envs.imports import _NEED_IMPORT_ONEFLOW
+from fastNLP.envs.utils import get_global_seed
 
 if _NEED_IMPORT_ONEFLOW:
     import oneflow
     from oneflow.nn import Module
+    from oneflow.utils.data import BatchSampler as oneflowBatchSampler
     from oneflow.utils.data import DataLoader
     from oneflow.utils.data import RandomSampler as oneflowRandomSampler
-    from oneflow.utils.data import SequentialSampler as oneflowSequentialSampler
-    from oneflow.utils.data import BatchSampler as oneflowBatchSampler
+    from oneflow.utils.data import \
+        SequentialSampler as oneflowSequentialSampler
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Module
-
 
 __all__ = [
     'oneflow_seed_everything',
 ]
 
-def oneflow_seed_everything(seed: int = None, add_global_rank_to_seed: bool = True) -> int:
+
+def oneflow_seed_everything(seed: Optional[int] = None,
+                            add_global_rank_to_seed: bool = True) -> int:
     r"""
     为 **oneflow**、**numpy**、**python.random** 伪随机数生成器设置种子。
 
-    :param seed: 全局随机状态的整数值种子。如果为 ``None`` 则会根据时间戳生成一个种子。
-    :param add_global_rank_to_seed: 在分布式训练中，是否在不同 **rank** 中使用不同的随机数。
-        当设置为 ``True`` 时，**fastNLP** 会将种子加上当前的 ``global_rank``。
+    :param seed: 全局随机状态的整数值种子。如果为 ``None`` 则会根据时间戳生成一个种
+        子。
+    :param add_global_rank_to_seed: 在分布式训练中，是否在不同 **rank** 中使用不同
+        的随机数。当设置为 ``True`` 时，**fastNLP** 会在每个 rank 上将种子加上当前
+        的 ``global_rank``。
     """
     max_seed_value = np.iinfo(np.uint32).max
     min_seed_value = np.iinfo(np.uint32).min
 
     if seed is None:
-        if os.getenv(FASTNLP_BACKEND_LAUNCH) == "1":
-            seed = 42
+        if os.getenv(FASTNLP_BACKEND_LAUNCH) == '1':
+            fnlp_seed = 42
         else:
-            seed = get_global_seed()
-        logger.info(f"'FASTNLP_GLOBAL_SEED' is set to {seed} automatically.")
-    if not isinstance(seed, int):
-        seed = int(seed)
+            fnlp_seed = get_global_seed()
+        logger.info(
+            f"'FASTNLP_GLOBAL_SEED' is set to {fnlp_seed} automatically.")
+    else:
+        fnlp_seed = int(seed)
 
-    if not (min_seed_value <= seed <= max_seed_value):
-        logger.rank_zero_warning("Your seed value is too big or too small for numpy, we will choose a random seed for you.")
-        seed %= max_seed_value
+    if not (min_seed_value <= fnlp_seed <= max_seed_value):
+        logger.rank_zero_warning(
+            'Your seed value is too big or too small for numpy, we will '
+            'choose a random seed for you.')
+        fnlp_seed %= max_seed_value
 
-    os.environ[FASTNLP_GLOBAL_SEED] = f"{seed}"
+    os.environ[FASTNLP_GLOBAL_SEED] = f'{fnlp_seed}'
     if add_global_rank_to_seed:
-        seed += get_global_rank()
+        fnlp_seed += get_global_rank()
 
-    random.seed(seed)
-    np.random.seed(seed)
-    oneflow.manual_seed(seed)
-    oneflow.cuda.manual_seed_all(seed)
-    return seed
+    random.seed(fnlp_seed)
+    np.random.seed(fnlp_seed)
+    oneflow.manual_seed(fnlp_seed)
+    oneflow.cuda.manual_seed_all(fnlp_seed)
+    return fnlp_seed
 
 
 class ForwardState(IntEnum):
@@ -76,14 +80,16 @@ class ForwardState(IntEnum):
 
 
 class _DDPWrappingModel(Module):
-    """
-    该函数用于 DDP 训练时处理用户自己定制的 train_step 等函数；
-    之所以要使用这一额外的包裹模型，是因为在使用 DDP 时，必须使用 DistributedDataParallel 的 forward 函数才能实现正常的运行；
-    另一方面，我们要求用户在使用我们的框架时，需要针对不用的模式实现不同的处理函数，例如 'train_step', 'evaluate_step' 等；
-    然而，当使用 DistributedDataParallel 包裹 model 后，模型看不见其除了 forward 之外的方法；并且当我们尝试在训练过程中主动提取
-    `model = model.module`，这同样会导致错误，会使得每一个gpu上的模型参数不同；
+    """该函数用于 DDP 训练时处理用户自己定制的 train_step 等函数；之所以要使用这一额外 的包裹模型，是因为在使用 DDP 时，必须使用
+    DistributedDataParallel 的 forward 函数才能实现正常的运行；
 
-    因此出于以上考虑，我们实现了这一函数；
+    另一方面，我们要求用户在使用我们的框架时，需要针对不用的模式实现不同的处理函数，例
+    如 'train_step', 'evaluate_step' 等；然而，当使用 DistributedDataParallel 包
+    裹 model 后，模型看不见其除了 forward 之外的方法；并且当我们尝试在训练过程中主动
+    提取 `model = model.module`，这同样会导致错误，会使得每一个gpu上的模型参数不
+    同；因此出于以上考虑，我们实现了这一函数；
+
+
     对于更详细的解释，可以参考 'pytorch_lightning' 的 ddp 的设计；
     """
 
@@ -92,12 +98,11 @@ class _DDPWrappingModel(Module):
         self.model = model
 
     def forward(self, batch, **kwargs) -> Dict:
-        """
-        pytorch lightning 实现了先 unwrapping_model 的操作，但是感觉对于我们来说没有什么必须要，先写个注释放这里，之后有需求了再看；
-        """
-        fn = kwargs.pop("fastnlp_fn")
-        signature_fn = kwargs.pop("fastnlp_signature_fn")
-        wo_auto_param_call = kwargs.pop("wo_auto_param_call")
+        r"""pytorch lightning 实现了先 unwrapping_model 的操作，但是感觉对于我们来
+        说没有什么必要，先写个注释放这里，之后有需求了再看；"""
+        fn = kwargs.pop('fastnlp_fn')
+        signature_fn = kwargs.pop('fastnlp_signature_fn')
+        wo_auto_param_call = kwargs.pop('wo_auto_param_call')
 
         if isinstance(batch, Dict) and not wo_auto_param_call:
             return auto_param_call(fn, batch, signature_fn=signature_fn)
@@ -142,100 +147,129 @@ def _build_fp16_env(dummy=False):
         GradScaler = DummyGradScaler
     else:
         if not oneflow.cuda.is_available():
-            raise RuntimeError("Oneflow is not installed in gpu version, please use device='cpu'.")
+            raise RuntimeError('Oneflow is not installed in gpu version, '
+                               "please use device='cpu'.")
         if oneflow.cuda.get_device_capability(0)[0] < 7:
             logger.rank_zero_warning(
-                "NOTE: your device does NOT support faster training with fp16, "
-                "please switch to FP32 which is likely to be faster"
-            )
+                'NOTE: your device does NOT support faster training with '
+                'fp16, please switch to FP32 which is likely to be faster')
         try:
+            # 找不到 autocast
             from oneflow.amp import GradScaler
-            from oneflow.cuda.amp import autocast, GradScaler
         except ImportError:
-            raise RuntimeError("torch version too low (less than 1.6)")
+            raise RuntimeError('torch version too low (less than 1.6)')
     return autocast, GradScaler
 
 
-def replace_sampler(dataloader: "DataLoader", sampler):
+def replace_sampler(dataloader: 'DataLoader', sampler):
     r"""
     替换 sampler （初始化一个新的 dataloader 的逻辑在于）：
 
-    用户可能继承了 dataloader，定制了自己的 dataloader 类，这也是我们为什么先 `inspect.signature(dataloader)` 而不是直接
-    `inspect.signature(DataLoader)` 的原因，因此同时注意到我们在外层重新初始化一个 dataloader 时也是使用的用户传进来的 dataloader
-    的类，而不是直接的 DataLoader；
+    用户可能继承了 dataloader，定制了自己的 dataloader 类，这也是我们为什么先
+    `inspect.signature(dataloader)` 而不是直接 `inspect.signature(DataLoader)`
+    的原因，因此同时注意到我们在外层重新初始化一个 dataloader 时也是使用的用户传进来
+    的 dataloader 的类，而不是直接的 DataLoader；
 
     如果需要定制自己的 dataloader，保证以下两点：
 
-        1. 在 __init__ 方法中加入 **kwargs，这是为了方便我们将 sampler 插入到具体的 DataLoader 的构造中；
-        2. 在 __init__ 方法中出现的参数，请务必挂为同样名字的实例属性，例如 self.one_arg_name = one_arg_name，这是因为我们只能通过属性
-        来获取实际的参数的值；
+        1. 在 __init__ 方法中加入 **kwargs，这是为了方便我们将 sampler 插入到具体
+           的 DataLoader 的构造中；
+        2. 在 __init__ 方法中出现的参数，请务必挂为同样名字的实例属性，例如 self.
+           one_arg_name = one_arg_name，这是因为我们只能通过属性来获取实际的参数的
+           值；
 
      """
 
     # 拿到实例属性；
-    instance_attrs = {k: v for k, v in vars(dataloader).items() if not k.startswith('_')}
+    instance_attrs = {
+        k: v
+        for k, v in vars(dataloader).items() if not k.startswith('_')
+    }
 
     # 'multiprocessing_context' 是 user-defined function;
     if getattr(dataloader, 'multiprocessing_context', None) is not None:
-        instance_attrs["multiprocessing_context"] = dataloader.multiprocessing_context
+        instance_attrs[
+            'multiprocessing_context'] = dataloader.multiprocessing_context
 
     # 拿到 dataloader '__init__' 函数的默认函数签名；
     init_params = dict(inspect.signature(dataloader.__init__).parameters)
 
-    # 防止用户的 DataLoader 是继承了 oneflow 的 DataLoader，然后还是使用了 **kwargs 的方式对父类传参数
-    has_variadic_kwargs = any(v.kind is v.VAR_KEYWORD for k, v in init_params.items())
+    # 防止用户的 DataLoader 是继承了 oneflow 的 DataLoader，
+    # 然后还是使用了 **kwargs 的方式对父类传参数
+    has_variadic_kwargs = any(v.kind is v.VAR_KEYWORD
+                              for k, v in init_params.items())
     if has_variadic_kwargs and isinstance(dataloader, DataLoader):
         # 防止用户写入了 super().__init__(**kwargs)
-        for key, value in dict(inspect.signature(DataLoader.__init__).parameters).items():
+        for key, value in dict(
+                inspect.signature(DataLoader.__init__).parameters).items():
             if key not in init_params and key != 'self':
                 init_params[key] = value
 
-    # 如果初始化dataloader所使用的参数不是默认值，那么我们需要将其记录下来用于重新初始化时设置；
-    non_default_params = {name for name, p in init_params.items() if
-                          name in instance_attrs and p.default != instance_attrs[name]}
+    # 如果初始化dataloader所使用的参数不是默认值，那么我们需要将其记录下来
+    # 用于重新初始化时设置；
+    non_default_params = {
+        name
+        for name, p in init_params.items()
+        if name in instance_attrs and p.default != instance_attrs[name]
+    }
     # add `dataset` as it might have been replaced with `*args`
-    non_default_params.add("dataset")
+    non_default_params.add('dataset')
 
-    reconstruct_args = {k: v for k, v in instance_attrs.items() if k in non_default_params}
+    reconstruct_args = {
+        k: v
+        for k, v in instance_attrs.items() if k in non_default_params
+    }
     if isinstance(dataloader, DataLoader):
-        reconstruct_args.update({"sampler": sampler, "shuffle": False, "batch_sampler": None})
+        reconstruct_args.update({
+            'sampler': sampler,
+            'shuffle': False,
+            'batch_sampler': None
+        })
 
-    batch_sampler = getattr(dataloader, "batch_sampler")
-    if batch_sampler is not None and isinstance(batch_sampler, ReproducibleBatchSampler):
-        raise RuntimeError("It should not be running here, please report a bug to us.")
+    batch_sampler = getattr(dataloader, 'batch_sampler')
+    if batch_sampler is not None and isinstance(batch_sampler,
+                                                ReproducibleBatchSampler):
+        raise RuntimeError(
+            'It should not be running here, please report a bug to us.')
 
     required_args = {
         p.name
         for p in init_params.values()
         if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
-           and p.default is p.empty
-           and p.name not in reconstruct_args
+        and p.default is p.empty and p.name not in reconstruct_args
     }
 
     # 在 attribute 中没有找到这些参数，导致了没有办法重新初始化
     if required_args:
-        required_args = sorted(required_args)
+        required_args = sorted(required_args)  # type: ignore
         dataloader_self_name = dataloader.__class__.__name__
         raise Exception(
-            f"Need to inject arguments {required_args} into the __init__ of `{dataloader_self_name}`. "
-            f"But they are not found in the attribute of `{dataloader_self_name}`, fastNLP cannot determine its "
-            f"value when try to reinitialize `{dataloader_self_name}`, please add `{required_args}` to be "
-            f"`{dataloader_self_name}`'s attribute."
-        )
+            f'Need to inject arguments {required_args} into the __init__ of `'
+            f'{dataloader_self_name}`. But they are not found in the '
+            f'attribute of `{dataloader_self_name}`, fastNLP cannot determine '
+            f'its value when try to reinitialize `{dataloader_self_name}`, '
+            f"please add `{required_args}` to be `{dataloader_self_name}`'s "
+            'attribute.')
 
-    # 这种错误针对的是传入的 dataloader 不是直接的 DataLoader，而是定制了 DataLoader，但是 __init__ 中没有 **kwargs；
+    # 这种错误针对的是传入的 dataloader 不是直接的 DataLoader，
+    # 而是定制了 DataLoader，但是 __init__ 中没有 **kwargs；
     if not has_variadic_kwargs:
-        # the dataloader signature does not allow keyword arguments that need to be passed
+        # the dataloader signature does not allow keyword arguments that
+        # need to be passed
         missing_kwargs = reconstruct_args.keys() - init_params.keys()
         if missing_kwargs:
-            missing_kwargs = sorted(missing_kwargs)
+            missing_kwargs = sorted(missing_kwargs)  # type: ignore
             dataloader_self_name = dataloader.__class__.__name__
             raise Exception(
-                f"The parameter:{missing_kwargs} needed to reinitialize `{dataloader_self_name}` is not found."
-            )
+                f'The parameter:{missing_kwargs} needed to reinitialize `'
+                f'{dataloader_self_name}` is not found.')
         # 如果没有kwargs，则保证一下只传入需要的参数
         if not isinstance(dataloader, DataLoader):
-            reconstruct_args = {key:value for key,value in reconstruct_args.items() if key in init_params}
+            reconstruct_args = {
+                key: value
+                for key, value in reconstruct_args.items()
+                if key in init_params
+            }
 
     return type(dataloader)(**reconstruct_args)
 
@@ -244,18 +278,27 @@ def replace_batch_sampler(dataloader, new_batch_sampler):
     r"""
     替换一个 dataloader 的 batch_sampler；
     """
-    params_keys = [k for k in dataloader.__dict__.keys() if not k.startswith("_")]
-    for k in ["batch_size", "sampler", "drop_last", "batch_sampler", "dataset_kind"]:
+    params_keys = [
+        k for k in dataloader.__dict__.keys() if not k.startswith('_')
+    ]
+    for k in [
+            'batch_size', 'sampler', 'drop_last', 'batch_sampler',
+            'dataset_kind'
+    ]:
         if k in params_keys:
             params_keys.remove(k)
     params = {k: getattr(dataloader, k) for k in params_keys}
-    params["batch_sampler"] = new_batch_sampler
+    params['batch_sampler'] = new_batch_sampler
 
     if not isinstance(dataloader, DataLoader):
         init_params = dict(inspect.signature(dataloader.__init__).parameters)
-        has_variadic_kwargs = any(v.kind is v.VAR_KEYWORD for k, v in init_params.items())
+        has_variadic_kwargs = any(v.kind is v.VAR_KEYWORD
+                                  for k, v in init_params.items())
         if not has_variadic_kwargs:
-            params = {key:value for key,value in params.items() if key in init_params}
+            params = {
+                key: value
+                for key, value in params.items() if key in init_params
+            }
 
     return type(dataloader)(**params)
 
@@ -280,23 +323,27 @@ def optimizer_state_to_device(state, device):
 
 
 def _check_dataloader_args_for_distributed(args, controller='Trainer'):
-    """
-    检查 dataloader 的 sampler 情况，如果用户替换了自己定制的 sampler ，为了防止
-    在分布式训练中出现错误会报错。
-    """
-    error_flag = (type(args.sampler) not in {oneflowRandomSampler, oneflowSequentialSampler})
+    r"""检查 dataloader 的 sampler 情况，如果用户替换了自己定制的 sampler ，为了防
+    止在分布式训练中出现错误会报错。"""
+    error_flag = (
+        type(args.sampler)
+        not in {oneflowRandomSampler, oneflowSequentialSampler})
     if controller == 'Trainer':
         mode = 'training'
         substitution = 'fastNLP.RandomSampler'
-        error_flag = (type(args.batch_sampler) != oneflowBatchSampler) or error_flag
-    else: # Evaluator
+        error_flag = (type(args.batch_sampler) !=
+                      oneflowBatchSampler) or error_flag
+    else:  # Evaluator
         mode = 'evaluation'
         substitution = 'fastNLP.UnrepeatedSequentialSampler'
     if error_flag:
-        raise TypeError(f"Using customized ``batch_sampler`` or ``sampler`` for distributed {mode} may cause "
-                        f"unpredictable problems, because fastNLP will substitute the dataloader's sampler into "
-                        f"``{substitution}``. The customized sampler should set for distributed running  "
-                        f"before initializing ``{controller}`` , and then set the "
-                        f"parameter ``use_dist_sampler`` of ``{controller}`` to ``False``."
-                        f"\n Current batch_sampler: {type(args.batch_sampler)}"
-                        f"\n Current sampler: {type(args.sampler)}")
+        raise TypeError(
+            'Using customized ``batch_sampler`` or ``sampler`` for '
+            f'distributed {mode} may cause unpredictable problems, because '
+            "fastNLP will substitute the dataloader's sampler into "
+            f'``{substitution}``. The customized sampler should be set for '
+            'distributed running before initializing ``{controller}`` , and '
+            f'then set the parameter ``use_dist_sampler`` of ``{controller}`` '
+            'to ``False``.'
+            f'\n Current batch_sampler: {type(args.batch_sampler)}'
+            f'\n Current sampler: {type(args.sampler)}')

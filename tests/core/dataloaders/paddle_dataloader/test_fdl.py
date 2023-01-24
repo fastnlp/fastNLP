@@ -1,17 +1,17 @@
-import pytest
 import numpy as np
+import pytest
 
-from fastNLP.core.dataloaders.paddle_dataloader.fdl import PaddleDataLoader, prepare_paddle_dataloader
-from fastNLP.core.dataset import DataSet
-from fastNLP.io.data_bundle import DataBundle
-from fastNLP.core.log import logger
 from fastNLP.core.collators import Collator
-
+from fastNLP.core.dataloaders.paddle_dataloader.fdl import (
+    PaddleDataLoader, prepare_paddle_dataloader)
+from fastNLP.core.dataset import DataSet
+from fastNLP.core.log import logger
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+from fastNLP.io.data_bundle import DataBundle
 
 if _NEED_IMPORT_PADDLE:
-    from paddle.io import Dataset, DataLoader
     import paddle
+    from paddle.io import DataLoader, Dataset
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as Dataset
 
@@ -20,7 +20,10 @@ class RandomDataset(Dataset):
 
     def __getitem__(self, idx):
         image = np.random.random((10, 5)).astype('float32')
-        return {'image': paddle.to_tensor(image), 'label': [[0, 1], [1, 2, 3, 4]]}
+        return {
+            'image': paddle.to_tensor(image),
+            'label': [[0, 1], [1, 2, 3, 4]]
+        }
 
     def __len__(self):
         return 10
@@ -53,7 +56,7 @@ class TestPaddle:
             PaddleDataLoader(ds, batch_size=3, collate_fn=None)
 
     def test_set_inputs_and_set_pad_val(self):
-        logger.setLevel("DEBUG")
+        logger.setLevel('DEBUG')
         ds = RandomDataset()
         fdl = PaddleDataLoader(ds, batch_size=2, drop_last=True)
         fdl.set_pad('label', -1)
@@ -72,12 +75,13 @@ class TestPaddle:
             print(batch)
 
     def test_v4(self):
-        from paddle.io import DataLoader
-        from fastNLP import Collator
-        from paddle.io import Dataset
         import paddle
+        from paddle.io import DataLoader, Dataset
+
+        from fastNLP import Collator
 
         class PaddleArgMaxDataset(Dataset):
+
             def __init__(self, num_samples, num_features):
                 self.x = paddle.randn((num_samples, num_features))
                 self.y = self.x.argmax(axis=-1)
@@ -86,7 +90,7 @@ class TestPaddle:
                 return len(self.x)
 
             def __getitem__(self, item):
-                return {"x": self.x[item], "y": self.y[item]}
+                return {'x': self.x[item], 'y': self.y[item]}
 
         ds = PaddleArgMaxDataset(100, 2)
         dl = DataLoader(ds, places=None, collate_fn=Collator(), batch_size=4)
@@ -95,11 +99,18 @@ class TestPaddle:
 
     def test_prepare_paddle_dataloader(self):
         # 测试 fastNLP 的 dataset
-        ds = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
-        dl = prepare_paddle_dataloader(ds, batch_size=8, shuffle=True, num_workers=2)
+        ds = DataSet({
+            'x': [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10,
+            'y': [1, 0, 1] * 10
+        })
+        dl = prepare_paddle_dataloader(
+            ds, batch_size=8, shuffle=True, num_workers=2)
         assert isinstance(dl, PaddleDataLoader)
 
-        ds1 = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
+        ds1 = DataSet({
+            'x': [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10,
+            'y': [1, 0, 1] * 10
+        })
         dbl = DataBundle(datasets={'train': ds, 'val': ds1})
         dl_bundle = prepare_paddle_dataloader(dbl)
         assert isinstance(dl_bundle['train'], PaddleDataLoader)
@@ -111,10 +122,14 @@ class TestPaddle:
         assert isinstance(dl_dict['val'], PaddleDataLoader)
 
         ds2 = RandomDataset()
-        dl1 = prepare_paddle_dataloader(ds2, batch_size=8, shuffle=True, num_workers=2)
+        dl1 = prepare_paddle_dataloader(
+            ds2, batch_size=8, shuffle=True, num_workers=2)
         assert isinstance(dl1, PaddleDataLoader)
 
-        ds3 = DataSet({"x": [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10, "y": [1, 0, 1] * 10})
+        ds3 = DataSet({
+            'x': [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10,
+            'y': [1, 0, 1] * 10
+        })
         dbl1 = DataBundle(datasets={'train': ds2, 'val': ds3})
         dl_bundle1 = prepare_paddle_dataloader(dbl1)
         assert isinstance(dl_bundle1['train'], PaddleDataLoader)

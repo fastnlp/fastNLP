@@ -1,17 +1,15 @@
+# isort: skip_file
+
 __all__ = [
     'BiaffineParser',
-
-    "CNNText",
-
-    "SequenceGeneratorModel",
-
-    "Seq2SeqModel",
+    'CNNText',
+    'SequenceGeneratorModel',
+    'Seq2SeqModel',
     'TransformerSeq2SeqModel',
     'LSTMSeq2SeqModel',
-
-    "SeqLabeling",
-    "AdvSeqLabel",
-    "BiLSTMCRF",
+    'SeqLabeling',
+    'AdvSeqLabel',
+    'BiLSTMCRF',
 ]
 
 from .biaffine_parser import BiaffineParser

@@ -1,38 +1,39 @@
-__all__ = [
-    "CLSBaseLoader",
-    "YelpFullLoader",
-    "YelpPolarityLoader",
-    "AGsNewsLoader",
-    "DBPediaLoader",
-    "IMDBLoader",
-    "SSTLoader",
-    "SST2Loader",
-    "ChnSentiCorpLoader",
-    "THUCNewsLoader",
-    "WeiboSenti100kLoader",
-
-    "MRLoader",
-    "R8Loader",
-    "R52Loader",
-    "OhsumedLoader",
-    "NG20Loader",
-]
-
 import glob
 import os
 import random
 import shutil
 import time
 
-from .loader import Loader
-from fastNLP.core.dataset import Instance, DataSet
+from fastNLP.core.dataset import DataSet, Instance
 from fastNLP.core.log import logger
+from .loader import Loader
+
+__all__ = [
+    'CLSBaseLoader',
+    'YelpFullLoader',
+    'YelpPolarityLoader',
+    'AGsNewsLoader',
+    'DBPediaLoader',
+    'IMDBLoader',
+    'SSTLoader',
+    'SST2Loader',
+    'ChnSentiCorpLoader',
+    'THUCNewsLoader',
+    'WeiboSenti100kLoader',
+    'MRLoader',
+    'R8Loader',
+    'R52Loader',
+    'OhsumedLoader',
+    'NG20Loader',
+]
+
 
 class CLSBaseLoader(Loader):
     r"""
     文本分类 Loader 的一个基类
 
-    原始数据中内容应该为：每一行为一个 sample ，第一个逗号之前为 **target** ，第一个逗号之后为 **文本内容** 。
+    原始数据中内容应该为：每一行为一个 sample ，第一个逗号之前为 **target**，第一个
+    逗号之后为 **文本内容**。
 
     Example::
 
@@ -85,20 +86,25 @@ class CLSBaseLoader(Loader):
         return ds
 
 
-def _split_dev(dataset_name, data_dir, dev_ratio=0.0, re_download=False, suffix='csv'):
+def _split_dev(dataset_name,
+               data_dir,
+               dev_ratio=0.0,
+               re_download=False,
+               suffix='csv'):
     if dev_ratio == 0.0:
         return data_dir
     modify_time = 0
     for filepath in glob.glob(os.path.join(data_dir, '*')):
         modify_time = os.stat(filepath).st_mtime
         break
-    if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
+    if time.time() - modify_time > 1 and re_download:
+        # 通过这种比较丑陋的方式判断一下文件是否是才下载的
         shutil.rmtree(data_dir)
         data_dir = Loader()._get_dataset_path(dataset_name=dataset_name)
 
     if not os.path.exists(os.path.join(data_dir, f'dev.{suffix}')):
         if dev_ratio > 0:
-            assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
+            assert 0 < dev_ratio < 1, 'dev_ratio should be in range (0,1).'
             try:
                 with open(os.path.join(data_dir, f'train.{suffix}'), 'r', encoding='utf-8') as f, \
                         open(os.path.join(data_dir, f'middle_file.{suffix}'), 'w', encoding='utf-8') as f1, \
@@ -109,9 +115,12 @@ def _split_dev(dataset_name, data_dir, dev_ratio=0.0, re_download=False, suffix=
                         else:
                             f1.write(line)
                 os.remove(os.path.join(data_dir, f'train.{suffix}'))
-                os.renames(os.path.join(data_dir, f'middle_file.{suffix}'), os.path.join(data_dir, f'train.{suffix}'))
+                os.renames(
+                    os.path.join(data_dir, f'middle_file.{suffix}'),
+                    os.path.join(data_dir, f'train.{suffix}'))
             finally:
-                if os.path.exists(os.path.join(data_dir, f'middle_file.{suffix}')):
+                if os.path.exists(
+                        os.path.join(data_dir, f'middle_file.{suffix}')):
                     os.remove(os.path.join(data_dir, f'middle_file.{suffix}'))
 
     return data_dir
@@ -121,9 +130,11 @@ class AGsNewsLoader(CLSBaseLoader):
     """
     **AG's News** 数据集的 **Loader**，如果您使用了这个数据集，请引用以下的文章
 
-        Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional Networks for Text Classification. Advances
-        in Neural Information Processing Systems 28 (NIPS 2015)
+        Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional
+        Networks for Text Classification. Advances in Neural Information
+        Processing Systems 28 (NIPS 2015)
     """
+
     def download(self):
         r"""
         自动下载数据集。
@@ -137,42 +148,49 @@ class DBPediaLoader(CLSBaseLoader):
     """
     **DBpedia** 数据集的 **Loader**。如果您使用了这个数据集，请引用以下的文章
 
-        Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional Networks for Text Classification. Advances
-        in Neural Information Processing Systems 28 (NIPS 2015)
+        Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional
+        Networks for Text Classification. Advances in Neural Information
+        Processing Systems 28 (NIPS 2015)
     """
+
     def download(self, dev_ratio: float = 0.0, re_download: bool = False):
         r"""
-        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv`` , ``test.csv`` , ``dev.csv`` 三个文件。
-        如果 ``dev_ratio`` 为 0，则只有 ``train.csv`` 和 ``test.csv`` 。
+        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv``，
+        ``test.csv``，``dev.csv`` 三个文件。如果 ``dev_ratio`` 为 0，则只有
+        ``train.csv`` 和 ``test.csv``。
 
-        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数据。如果为 **0** ，则不划分 dev
+        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数
+            据。如果为 **0**，则不划分 dev
         :param re_download: 是否重新下载数据，以重新切分数据。
         :return: 数据集的目录地址
         """
         dataset_name = 'dbpedia'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        data_dir = _split_dev(dataset_name=dataset_name,
-                              data_dir=data_dir,
-                              dev_ratio=dev_ratio,
-                              re_download=re_download,
-                              suffix='csv')
+        data_dir = _split_dev(
+            dataset_name=dataset_name,
+            data_dir=data_dir,
+            dev_ratio=dev_ratio,
+            re_download=re_download,
+            suffix='csv')
         return data_dir
 
 
 class IMDBLoader(CLSBaseLoader):
     r"""
-    **IMDb** 数据集的 **Loader** ，如果您使用了这个数据集，请引用以下的文章
+    **IMDb** 数据集的 **Loader**，如果您使用了这个数据集，请引用以下的文章
 
         http://www.aclweb.org/anthology/P11-1015。
-        
-    原始数据中内容应该为：每一行为一个 sample ，制表符之前为 **target** ，制表符之后为 **文本内容** 。
+
+    原始数据中内容应该为：每一行为一个 sample ，制表符之前为 **target**，制表符之后
+    为 **文本内容**。
 
     Example::
 
         neg	Alan Rickman & Emma...
         neg	I have seen this...
 
-    **IMDBLoader** 读取后的 :class:`~fastNLP.core.DataSet` 将具有以下两列内容: ``raw_words`` 代表需要分类的文本，``target`` 代表文本的标签：
+    **IMDBLoader** 读取后的 :class:`~fastNLP.core.DataSet` 将具有以下两列内容:
+    ``raw_words`` 代表需要分类的文本，``target`` 代表文本的标签：
 
     .. csv-table::
        :header: "raw_words", "target"
@@ -192,17 +210,19 @@ class IMDBLoader(CLSBaseLoader):
 
         根据 ``dev_ratio`` 的值随机将 train 中的数据取出一部分作为 dev 数据。
 
-        :param dev_ratio: 如果路径中没有 ``dev.txt`` ，从 train 划分多少作为 dev 的数据。 如果为 **0** ，则不划分 dev
+        :param dev_ratio: 如果路径中没有 ``dev.txt``，从 train 划分多少作为 dev
+            的数据。如果为 **0**，则不划分 dev
         :param re_download: 是否重新下载数据，以重新切分数据。
         :return: 数据集的目录地址
         """
         dataset_name = 'aclImdb'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        data_dir = _split_dev(dataset_name=dataset_name,
-                              data_dir=data_dir,
-                              dev_ratio=dev_ratio,
-                              re_download=re_download,
-                              suffix='txt')
+        data_dir = _split_dev(
+            dataset_name=dataset_name,
+            data_dir=data_dir,
+            dev_ratio=dev_ratio,
+            re_download=re_download,
+            suffix='txt')
         return data_dir
 
 
@@ -226,7 +246,7 @@ class SSTLoader(Loader):
         "(3 (3 (2 If) (3 (2 you) (3 (2 sometimes) ..."
         "..."
 
-    ``raw_words`` 列是 :class:`str` 。
+    ``raw_words`` 列是 :class:`str`。
 
     """
 
@@ -259,54 +279,66 @@ class SSTLoader(Loader):
 
 
 class YelpFullLoader(CLSBaseLoader):
-    """
-    **Yelp Review Full** 数据集的 **Loader**，如果您使用了这个数据集，请引用以下的文章
+    r"""
+    **Yelp Review Full** 数据集的 **Loader**，如果您使用了这个数据集，请引用以下的
+    文章
 
-        Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional Networks for Text Classification. Advances
-        in Neural Information Processing Systems 28 (NIPS 2015)
+        Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional
+        Networks for Text Classification. Advances in Neural Information
+        Processing Systems 28 (NIPS 2015)
     """
+
     def download(self, dev_ratio: float = 0.0, re_download: bool = False):
         r"""
-        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv`` , ``test.csv`` , ``dev.csv`` 三个文件。
-        如果 ``dev_ratio`` 为 0，则只有 ``train.csv`` 和 ``test.csv`` 。
+        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv``，
+        ``test.csv`` , ``dev.csv`` 三个文件。如果 ``dev_ratio`` 为 0，则只有
+        ``train.csv`` 和 ``test.csv``。
 
-        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数据。如果为 **0** ，则不划分 dev
+        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数
+            据。如果为 **0**，则不划分 dev
         :param re_download: 是否重新下载数据，以重新切分数据。
         :return: 数据集的目录地址
         """
         dataset_name = 'yelp-review-full'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        data_dir = _split_dev(dataset_name=dataset_name,
-                              data_dir=data_dir,
-                              dev_ratio=dev_ratio,
-                              re_download=re_download,
-                              suffix='csv')
+        data_dir = _split_dev(
+            dataset_name=dataset_name,
+            data_dir=data_dir,
+            dev_ratio=dev_ratio,
+            re_download=re_download,
+            suffix='csv')
         return data_dir
 
 
 class YelpPolarityLoader(CLSBaseLoader):
-    """
-    **Yelp Review Polarity** 数据集的 **Loader**，如果您使用了这个数据集，请引用以下的文章
+    r"""
+    **Yelp Review Polarity** 数据集的 **Loader**，如果您使用了这个数据集，请引用以
+    下的文章
 
-        Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional Networks for Text Classification. Advances
-        in Neural Information Processing Systems 28 (NIPS 2015)
+        Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional
+        Networks for Text Classification. Advances in Neural Information
+        Processing Systems 28 (NIPS 2015)
     """
+
     def download(self, dev_ratio: float = 0.0, re_download: bool = False):
         r"""
-        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv`` , ``test.csv`` , ``dev.csv`` 三个文件。
-        如果 ``dev_ratio`` 为 0，则只有 ``train.csv`` 和 ``test.csv`` 。
+        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv``，
+        ``test.csv`` , ``dev.csv`` 三个文件。如果 ``dev_ratio`` 为 0，则只有
+        ``train.csv`` 和 ``test.csv``。
 
-        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数据。如果为 **0** ，则不划分 dev
+        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数
+            据。如果为 **0**，则不划分 dev
         :param re_download: 是否重新下载数据，以重新切分数据。
         :return: 数据集的目录地址
         """
         dataset_name = 'yelp-review-polarity'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        data_dir = _split_dev(dataset_name=dataset_name,
-                              data_dir=data_dir,
-                              dev_ratio=dev_ratio,
-                              re_download=re_download,
-                              suffix='csv')
+        data_dir = _split_dev(
+            dataset_name=dataset_name,
+            data_dir=data_dir,
+            dev_ratio=dev_ratio,
+            re_download=re_download,
+            suffix='csv')
         return data_dir
 
 
@@ -315,9 +347,9 @@ class SST2Loader(Loader):
     **SST-2** 数据集的 **Loader**，如果您使用了该数据集，请引用以下的文章
 
     https://nlp.stanford.edu/pubs/SocherBauerManningNg_ACL2013.pdf
-    
-    原始数据中内容应该为：第一行为标题（具体内容会被忽略），之后每一行为一个 sample ，第一个制表符之前是 **句子** ，
-    第一个制表符之后认为是 **label** 。
+
+    原始数据中内容应该为：第一行为标题（具体内容会被忽略），之后每一行为一个
+    sample ，第一个制表符之前是 **句子**，第一个制表符之后认为是 **label**。
 
     Example::
 
@@ -357,9 +389,10 @@ class SST2Loader(Loader):
                     if line:
                         sep_index = line.index('\t')
                         raw_words = line[sep_index + 1:]
-                        index = int(line[: sep_index])
+                        index = int(line[:sep_index])
                         if raw_words:
-                            ds.append(Instance(raw_words=raw_words, index=index))
+                            ds.append(
+                                Instance(raw_words=raw_words, index=index))
             else:
                 for line in f:
                     line = line.strip()
@@ -367,7 +400,8 @@ class SST2Loader(Loader):
                         raw_words = line[:-2]
                         target = line[-1]
                         if raw_words:
-                            ds.append(Instance(raw_words=raw_words, target=target))
+                            ds.append(
+                                Instance(raw_words=raw_words, target=target))
         return ds
 
     def download(self):
@@ -382,11 +416,12 @@ class SST2Loader(Loader):
 
 class ChnSentiCorpLoader(Loader):
     r"""
-    **ChnSentiCorp** 数据集的 **Loader**，该数据取自 https://github.com/pengming617/bert_classification/tree/master/data，在
+    **ChnSentiCorp** 数据集的 **Loader**，该数据取自：
+    https://github.com/pengming617/bert_classification/tree/master/data，在
     https://arxiv.org/pdf/1904.09223.pdf 与 https://arxiv.org/pdf/1906.08101.pdf 有使用。
 
-    支持读取的数据的格式为：第一行为标题（具体内容会被忽略），之后每一行为一个 sample，第一个制表符之前被认为是 **label** ，第
-    一个制表符之后认为是 **句子** 。
+    支持读取的数据的格式为：第一行为标题（具体内容会被忽略），之后每一行为一个
+    sample，第一个制表符之前被认为是 **label**，第一个制表符之后认为是 **句子**。
 
     Example::
 
@@ -442,9 +477,10 @@ class THUCNewsLoader(Loader):
     r"""
     **THUCNews** 数据集的 **Loader**，该数据取自
     http://thuctc.thunlp.org/#%E4%B8%AD%E6%96%87%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB%E6%95%B0%E6%8D%AE%E9%9B%86THUCNews
-    
+
     数据用于 document-level 分类任务，新闻 10 分类。
-    原始数据内容为：每行一个 sample，第一个 ``"\t"`` 之前为 **target** ，第一个 ``"\t"`` 之后为 **raw_words** 。
+    原始数据内容为：每行一个 sample，第一个 ``"\t"`` 之前为 **target**，第一个
+    ``"\t"`` 之后为 **raw_words**。
 
     Example::
 
@@ -463,7 +499,7 @@ class THUCNewsLoader(Loader):
     def __init__(self):
         super(THUCNewsLoader, self).__init__()
 
-    def _load(self, path: str = None):
+    def _load(self, path: str):
         ds = DataSet()
         with open(path, 'r', encoding='utf-8') as f:
             for line in f:
@@ -487,8 +523,10 @@ class THUCNewsLoader(Loader):
 
 class WeiboSenti100kLoader(Loader):
     r"""
-    **WeiboSenti100k** 数据集的 **Loader**，该数据取自 https://github.com/SophonPlus/ChineseNlpCorpus/，
-    在 https://arxiv.org/abs/1906.08101 有使用。微博 sentiment classification，二分类。
+    **WeiboSenti100k** 数据集的 **Loader**。
+    该数据取自 https://github.com/SophonPlus/ChineseNlpCorpus/，
+    在 https://arxiv.org/abs/1906.08101 有使用。微博 sentiment classification，
+    二分类。
 
     Example::
 
@@ -510,7 +548,7 @@ class WeiboSenti100kLoader(Loader):
     def __init__(self):
         super(WeiboSenti100kLoader, self).__init__()
 
-    def _load(self, path: str = None):
+    def _load(self, path: str):
         ds = DataSet()
         with open(path, 'r', encoding='utf-8') as f:
             next(f)
@@ -536,25 +574,31 @@ class MRLoader(CLSBaseLoader):
     """
     **MR** 数据集的 **Loader**
     """
+
     def __init__(self):
         super(MRLoader, self).__init__()
 
-    def download(self, dev_ratio: float = 0.0, re_download: bool = False) -> str:
+    def download(self,
+                 dev_ratio: float = 0.0,
+                 re_download: bool = False) -> str:
         r"""
-        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv`` , ``test.csv`` , ``dev.csv`` 三个文件。
-        如果 ``dev_ratio`` 为 0，则只有 ``train.csv`` 和 ``test.csv`` 。
+        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv``，
+        ``test.csv`` , ``dev.csv`` 三个文件。如果 ``dev_ratio`` 为 0，则只有
+        ``train.csv`` 和 ``test.csv``。
 
-        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数据。如果为 **0** ，则不划分 dev
+        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数
+            据。如果为 **0**，则不划分 dev
         :param re_download: 是否重新下载数据，以重新切分数据。
         :return: 数据集的目录地址
         """
         dataset_name = r'mr'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        data_dir = _split_dev(dataset_name=dataset_name,
-                              data_dir=data_dir,
-                              dev_ratio=dev_ratio,
-                              re_download=re_download,
-                              suffix='csv')
+        data_dir = _split_dev(
+            dataset_name=dataset_name,
+            data_dir=data_dir,
+            dev_ratio=dev_ratio,
+            re_download=re_download,
+            suffix='csv')
         return data_dir
 
 
@@ -562,25 +606,31 @@ class R8Loader(CLSBaseLoader):
     """
     **R8** 数据集的 **Loader**
     """
+
     def __init__(self):
         super(R8Loader, self).__init__()
 
-    def download(self, dev_ratio: float = 0.0, re_download: bool = False) -> str:
+    def download(self,
+                 dev_ratio: float = 0.0,
+                 re_download: bool = False) -> str:
         r"""
-        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv`` , ``test.csv`` , ``dev.csv`` 三个文件。
-        如果 ``dev_ratio`` 为 0，则只有 ``train.csv`` 和 ``test.csv`` 。
+        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv``，
+        ``test.csv`` , ``dev.csv`` 三个文件。如果 ``dev_ratio`` 为 0，则只有
+        ``train.csv`` 和 ``test.csv``。
 
-        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数据。如果为 **0** ，则不划分 dev
+        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数
+            据。如果为 **0**，则不划分 dev
         :param re_download: 是否重新下载数据，以重新切分数据。
         :return: 数据集的目录地址
         """
         dataset_name = r'R8'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        data_dir = _split_dev(dataset_name=dataset_name,
-                              data_dir=data_dir,
-                              dev_ratio=dev_ratio,
-                              re_download=re_download,
-                              suffix='csv')
+        data_dir = _split_dev(
+            dataset_name=dataset_name,
+            data_dir=data_dir,
+            dev_ratio=dev_ratio,
+            re_download=re_download,
+            suffix='csv')
         return data_dir
 
 
@@ -588,25 +638,31 @@ class R52Loader(CLSBaseLoader):
     """
     **R52** 数据集的 **Loader**
     """
+
     def __init__(self):
         super(R52Loader, self).__init__()
 
-    def download(self, dev_ratio: float = 0.0, re_download: bool = False) -> str:
+    def download(self,
+                 dev_ratio: float = 0.0,
+                 re_download: bool = False) -> str:
         r"""
-        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv`` , ``test.csv`` , ``dev.csv`` 三个文件。
-        如果 ``dev_ratio`` 为 0，则只有 ``train.csv`` 和 ``test.csv`` 。
+        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv``，
+        ``test.csv`` , ``dev.csv`` 三个文件。如果 ``dev_ratio`` 为 0，则只有
+        ``train.csv`` 和 ``test.csv``。
 
-        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数据。如果为 **0** ，则不划分 dev
+        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数
+            据。如果为 **0**，则不划分 dev
         :param re_download: 是否重新下载数据，以重新切分数据。
         :return: 数据集的目录地址
         """
         dataset_name = r'R52'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        data_dir = _split_dev(dataset_name=dataset_name,
-                              data_dir=data_dir,
-                              dev_ratio=dev_ratio,
-                              re_download=re_download,
-                              suffix='csv')
+        data_dir = _split_dev(
+            dataset_name=dataset_name,
+            data_dir=data_dir,
+            dev_ratio=dev_ratio,
+            re_download=re_download,
+            suffix='csv')
         return data_dir
 
 
@@ -614,25 +670,31 @@ class NG20Loader(CLSBaseLoader):
     """
     **NG20** 数据集的 **Loader**
     """
+
     def __init__(self):
         super(NG20Loader, self).__init__()
 
-    def download(self, dev_ratio: float = 0.0, re_download: bool = False) -> str:
+    def download(self,
+                 dev_ratio: float = 0.0,
+                 re_download: bool = False) -> str:
         r"""
-        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv`` , ``test.csv`` , ``dev.csv`` 三个文件。
-        如果 ``dev_ratio`` 为 0，则只有 ``train.csv`` 和 ``test.csv`` 。
+        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv``，
+        ``test.csv`` , ``dev.csv`` 三个文件。如果 ``dev_ratio`` 为 0，则只有
+        ``train.csv`` 和 ``test.csv``。
 
-        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数据。如果为 **0** ，则不划分 dev
+        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数
+            据。如果为 **0**，则不划分 dev
         :param re_download: 是否重新下载数据，以重新切分数据。
         :return: 数据集的目录地址
         """
         dataset_name = r'20ng'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        data_dir = _split_dev(dataset_name=dataset_name,
-                              data_dir=data_dir,
-                              dev_ratio=dev_ratio,
-                              re_download=re_download,
-                              suffix='csv')
+        data_dir = _split_dev(
+            dataset_name=dataset_name,
+            data_dir=data_dir,
+            dev_ratio=dev_ratio,
+            re_download=re_download,
+            suffix='csv')
         return data_dir
 
 
@@ -640,23 +702,29 @@ class OhsumedLoader(CLSBaseLoader):
     """
     **Ohsumed** 数据集的 **Loader**
     """
+
     def __init__(self):
         super(OhsumedLoader, self).__init__()
 
-    def download(self, dev_ratio: float = 0.0, re_download: bool = False) -> str:
+    def download(self,
+                 dev_ratio: float = 0.0,
+                 re_download: bool = False) -> str:
         r"""
-        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv`` , ``test.csv`` , ``dev.csv`` 三个文件。
-        如果 ``dev_ratio`` 为 0，则只有 ``train.csv`` 和 ``test.csv`` 。
+        自动下载数据集。下载完成后在 ``output_dir`` 中有 ``train.csv``，
+        ``test.csv`` , ``dev.csv`` 三个文件。如果 ``dev_ratio`` 为 0，则只有
+        ``train.csv`` 和 ``test.csv``。
 
-        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数据。如果为 **0** ，则不划分 dev
+        :param dev_ratio: 如果路径中没有验证集 ，从 train 划分多少作为 dev 的数
+            据。如果为 **0**，则不划分 dev
         :param re_download: 是否重新下载数据，以重新切分数据。
         :return: 数据集的目录地址
         """
         dataset_name = r'ohsumed'
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        data_dir = _split_dev(dataset_name=dataset_name,
-                              data_dir=data_dir,
-                              dev_ratio=dev_ratio,
-                              re_download=re_download,
-                              suffix='csv')
+        data_dir = _split_dev(
+            dataset_name=dataset_name,
+            data_dir=data_dir,
+            dev_ratio=dev_ratio,
+            re_download=re_download,
+            suffix='csv')
         return data_dir

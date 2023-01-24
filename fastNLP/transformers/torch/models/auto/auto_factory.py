@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2021 The HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,12 +15,12 @@
 import importlib
 from collections import OrderedDict
 
-from .configuration_auto import AutoConfig, model_type_to_module_name, replace_list_option_in_docstrings
-from .dynamic import get_class_from_dynamic_module
+from fastNLP.core.log import logger
 from fastNLP.transformers.torch.configuration_utils import PretrainedConfig
 from fastNLP.transformers.torch.file_utils import copy_func
-from fastNLP.core.log import logger
-
+from .configuration_auto import (AutoConfig, model_type_to_module_name,
+                                 replace_list_option_in_docstrings)
+from .dynamic import get_class_from_dynamic_module
 
 CLASS_DOCSTRING = """
     This is a generic model class that will be instantiated as one of the model classes of the library when created
@@ -113,7 +112,7 @@ FROM_PRETRAINED_TORCH_DOCSTRING = """
                 A dictionary of proxy servers to use by protocol or endpoint, e.g., :obj:`{'http': 'foo.bar:3128',
                 'http://hostname': 'foo.bar:4012'}`. The proxies are used on each request.
             output_loading_info(:obj:`bool`, `optional`, defaults to :obj:`False`):
-                Whether ot not to also return a dictionary containing missing keys, unexpected keys and error messages.
+                Whether or not to also return a dictionary containing missing keys, unexpected keys and error messages.
             local_files_only(:obj:`bool`, `optional`, defaults to :obj:`False`):
                 Whether or not to only look at local files (e.g., not try downloading the model).
             revision(:obj:`str`, `optional`, defaults to :obj:`"main"`):
@@ -206,7 +205,7 @@ FROM_PRETRAINED_TF_DOCSTRING = """
                 A dictionary of proxy servers to use by protocol or endpoint, e.g., :obj:`{'http': 'foo.bar:3128',
                 'http://hostname': 'foo.bar:4012'}`. The proxies are used on each request.
             output_loading_info(:obj:`bool`, `optional`, defaults to :obj:`False`):
-                Whether ot not to also return a dictionary containing missing keys, unexpected keys and error messages.
+                Whether or not to also return a dictionary containing missing keys, unexpected keys and error messages.
             local_files_only(:obj:`bool`, `optional`, defaults to :obj:`False`):
                 Whether or not to only look at local files (e.g., not try downloading the model).
             revision(:obj:`str`, `optional`, defaults to :obj:`"main"`):
@@ -299,7 +298,7 @@ FROM_PRETRAINED_FLAX_DOCSTRING = """
                 A dictionary of proxy servers to use by protocol or endpoint, e.g., :obj:`{'http': 'foo.bar:3128',
                 'http://hostname': 'foo.bar:4012'}`. The proxies are used on each request.
             output_loading_info(:obj:`bool`, `optional`, defaults to :obj:`False`):
-                Whether ot not to also return a dictionary containing missing keys, unexpected keys and error messages.
+                Whether or not to also return a dictionary containing missing keys, unexpected keys and error messages.
             local_files_only(:obj:`bool`, `optional`, defaults to :obj:`False`):
                 Whether or not to only look at local files (e.g., not try downloading the model).
             revision(:obj:`str`, `optional`, defaults to :obj:`"main"`):
@@ -348,14 +347,14 @@ def _get_model_class(config, model_mapping):
         return supported_models
 
     name_to_model = {model.__name__: model for model in supported_models}
-    architectures = getattr(config, "architectures", [])
+    architectures = getattr(config, 'architectures', [])
     for arch in architectures:
         if arch in name_to_model:
             return name_to_model[arch]
-        elif f"TF{arch}" in name_to_model:
-            return name_to_model[f"TF{arch}"]
-        elif f"Flax{arch}" in name_to_model:
-            return name_to_model[f"Flax{arch}"]
+        elif f'TF{arch}' in name_to_model:
+            return name_to_model[f'TF{arch}']
+        elif f'Flax{arch}' in name_to_model:
+            return name_to_model[f'Flax{arch}']
 
     # If not architecture is set in the config or match the supported models, the first element of the tuple is the
     # defaults.
@@ -368,10 +367,9 @@ class _BaseAutoModelClass:
 
     def __init__(self, *args, **kwargs):
         raise EnvironmentError(
-            f"{self.__class__.__name__} is designed to be instantiated "
-            f"using the `{self.__class__.__name__}.from_pretrained(pretrained_model_name_or_path)` or "
-            f"`{self.__class__.__name__}.from_config(config)` methods."
-        )
+            f'{self.__class__.__name__} is designed to be instantiated '
+            f'using the `{self.__class__.__name__}.from_pretrained(pretrained_model_name_or_path)` or '
+            f'`{self.__class__.__name__}.from_config(config)` methods.')
 
     @classmethod
     def from_config(cls, config, **kwargs):
@@ -380,88 +378,110 @@ class _BaseAutoModelClass:
             return model_class._from_config(config, **kwargs)
 
         raise ValueError(
-            f"Unrecognized configuration class {config.__class__} for this kind of AutoModel: {cls.__name__}.\n"
+            f'Unrecognized configuration class {config.__class__} for this kind of AutoModel: {cls.__name__}.\n'
             f"Model type should be one of {', '.join(c.__name__ for c in cls._model_mapping.keys())}."
         )
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
-        config = kwargs.pop("config", None)
-        trust_remote_code = kwargs.pop("trust_remote_code", False)
-        kwargs["_from_auto"] = True
+    def from_pretrained(cls, pretrained_model_name_or_path, *model_args,
+                        **kwargs):
+        config = kwargs.pop('config', None)
+        trust_remote_code = kwargs.pop('trust_remote_code', False)
+        kwargs['_from_auto'] = True
         if not isinstance(config, PretrainedConfig):
             config, kwargs = AutoConfig.from_pretrained(
-                pretrained_model_name_or_path, return_unused_kwargs=True, **kwargs
-            )
-        if hasattr(config, "auto_map") and cls.__name__ in config.auto_map:
+                pretrained_model_name_or_path,
+                return_unused_kwargs=True,
+                **kwargs)
+        if hasattr(config, 'auto_map') and cls.__name__ in config.auto_map:
             if not trust_remote_code:
                 raise ValueError(
-                    f"Loading {pretrained_model_name_or_path} requires you to execute the modeling file in that repo "
-                    "on your local machine. Make sure you have read the code there to avoid malicious use, then set "
-                    "the option `trust_remote_code=True` to remove this error."
+                    f'Loading {pretrained_model_name_or_path} requires you to execute the modeling file in that repo '
+                    'on your local machine. Make sure you have read the code there to avoid malicious use, then set '
+                    'the option `trust_remote_code=True` to remove this error.'
                 )
-            if kwargs.get("revision", None) is None:
+            if kwargs.get('revision', None) is None:
                 logger.warning(
-                    "Explicitly passing a `revision` is encouraged when loading a model with custom code to ensure "
-                    "no malicious code has been contributed in a newer revision."
+                    'Explicitly passing a `revision` is encouraged when loading a model with custom code to ensure '
+                    'no malicious code has been contributed in a newer revision.'
                 )
             class_ref = config.auto_map[cls.__name__]
-            module_file, class_name = class_ref.split(".")
+            module_file, class_name = class_ref.split('.')
             model_class = get_class_from_dynamic_module(
-                pretrained_model_name_or_path, module_file + ".py", class_name, **kwargs
-            )
-            return model_class.from_pretrained(pretrained_model_name_or_path, *model_args, config=config, **kwargs)
+                pretrained_model_name_or_path, module_file + '.py', class_name,
+                **kwargs)
+            return model_class.from_pretrained(
+                pretrained_model_name_or_path,
+                *model_args,
+                config=config,
+                **kwargs)
         elif type(config) in cls._model_mapping.keys():
             model_class = _get_model_class(config, cls._model_mapping)
-            return model_class.from_pretrained(pretrained_model_name_or_path, *model_args, config=config, **kwargs)
+            return model_class.from_pretrained(
+                pretrained_model_name_or_path,
+                *model_args,
+                config=config,
+                **kwargs)
         raise ValueError(
-            f"Unrecognized configuration class {config.__class__} for this kind of AutoModel: {cls.__name__}.\n"
+            f'Unrecognized configuration class {config.__class__} for this kind of AutoModel: {cls.__name__}.\n'
             f"Model type should be one of {', '.join(c.__name__ for c in cls._model_mapping.keys())}."
         )
 
 
-def insert_head_doc(docstring, head_doc=""):
+def insert_head_doc(docstring, head_doc=''):
     if len(head_doc) > 0:
         return docstring.replace(
-            "one of the model classes of the library ",
-            f"one of the model classes of the library (with a {head_doc} head) ",
+            'one of the model classes of the library ',
+            f'one of the model classes of the library (with a {head_doc} head) ',
         )
-    return docstring.replace(
-        "one of the model classes of the library ", "one of the base model classes of the library "
-    )
+    return docstring.replace('one of the model classes of the library ',
+                             'one of the base model classes of the library ')
 
 
-def auto_class_update(cls, checkpoint_for_example="bert-base-cased", head_doc=""):
+def auto_class_update(cls,
+                      checkpoint_for_example='bert-base-cased',
+                      head_doc=''):
     # Create a new class with the right name from the base class
     model_mapping = cls._model_mapping
     name = cls.__name__
     class_docstring = insert_head_doc(CLASS_DOCSTRING, head_doc=head_doc)
-    cls.__doc__ = class_docstring.replace("BaseAutoModelClass", name)
+    cls.__doc__ = class_docstring.replace('BaseAutoModelClass', name)
 
     # Now we need to copy and re-register `from_config` and `from_pretrained` as class methods otherwise we can't
     # have a specific docstrings for them.
     from_config = copy_func(_BaseAutoModelClass.from_config)
-    from_config_docstring = insert_head_doc(FROM_CONFIG_DOCSTRING, head_doc=head_doc)
-    from_config_docstring = from_config_docstring.replace("BaseAutoModelClass", name)
-    from_config_docstring = from_config_docstring.replace("checkpoint_placeholder", checkpoint_for_example)
+    from_config_docstring = insert_head_doc(
+        FROM_CONFIG_DOCSTRING, head_doc=head_doc)
+    from_config_docstring = from_config_docstring.replace(
+        'BaseAutoModelClass', name)
+    from_config_docstring = from_config_docstring.replace(
+        'checkpoint_placeholder', checkpoint_for_example)
     from_config.__doc__ = from_config_docstring
-    from_config = replace_list_option_in_docstrings(model_mapping._model_mapping, use_model_types=False)(from_config)
+    from_config = replace_list_option_in_docstrings(
+        model_mapping._model_mapping, use_model_types=False)(
+            from_config)
     cls.from_config = classmethod(from_config)
 
-    if name.startswith("TF"):
+    if name.startswith('TF'):
         from_pretrained_docstring = FROM_PRETRAINED_TF_DOCSTRING
-    elif name.startswith("Flax"):
+    elif name.startswith('Flax'):
         from_pretrained_docstring = FROM_PRETRAINED_FLAX_DOCSTRING
     else:
         from_pretrained_docstring = FROM_PRETRAINED_TORCH_DOCSTRING
     from_pretrained = copy_func(_BaseAutoModelClass.from_pretrained)
-    from_pretrained_docstring = insert_head_doc(from_pretrained_docstring, head_doc=head_doc)
-    from_pretrained_docstring = from_pretrained_docstring.replace("BaseAutoModelClass", name)
-    from_pretrained_docstring = from_pretrained_docstring.replace("checkpoint_placeholder", checkpoint_for_example)
-    shortcut = checkpoint_for_example.split("/")[-1].split("-")[0]
-    from_pretrained_docstring = from_pretrained_docstring.replace("shortcut_placeholder", shortcut)
+    from_pretrained_docstring = insert_head_doc(
+        from_pretrained_docstring, head_doc=head_doc)
+    from_pretrained_docstring = from_pretrained_docstring.replace(
+        'BaseAutoModelClass', name)
+    from_pretrained_docstring = from_pretrained_docstring.replace(
+        'checkpoint_placeholder', checkpoint_for_example)
+    shortcut = checkpoint_for_example.split('/')[-1].split('-')[0]
+    from_pretrained_docstring = from_pretrained_docstring.replace(
+        'shortcut_placeholder', shortcut)
     from_pretrained.__doc__ = from_pretrained_docstring
-    from_pretrained = replace_list_option_in_docstrings(model_mapping._model_mapping)(from_pretrained)
+    from_pretrained = replace_list_option_in_docstrings(
+        model_mapping._model_mapping)(
+            from_pretrained)
     cls.from_pretrained = classmethod(from_pretrained)
     return cls
 
@@ -486,13 +506,13 @@ def getattribute_from_module(module, attr):
         return getattr(module, attr)
     # Some of the mappings have entries model_type -> object of another model type. In that case we try to grab the
     # object at the top level.
-    transformers_module = importlib.import_module("transformers")
+    transformers_module = importlib.import_module('transformers')
     return getattribute_from_module(transformers_module, attr)
 
 
 class _LazyAutoMapping(OrderedDict):
-    """
-    " A mapping config to object (model or tokenizer for instance) that will load keys and values when it is accessed.
+    """" A mapping config to object (model or tokenizer for instance) that will
+    load keys and values when it is accessed.
 
     Args:
 
@@ -502,7 +522,10 @@ class _LazyAutoMapping(OrderedDict):
 
     def __init__(self, config_mapping, model_mapping):
         self._config_mapping = config_mapping
-        self._reverse_config_mapping = {v: k for k, v in config_mapping.items()}
+        self._reverse_config_mapping = {
+            v: k
+            for k, v in config_mapping.items()
+        }
         self._model_mapping = model_mapping
         self._modules = {}
 
@@ -517,9 +540,12 @@ class _LazyAutoMapping(OrderedDict):
         module_name = model_type_to_module_name(model_type)
         if module_name not in self._modules:
             try:
-                self._modules[module_name] = importlib.import_module(f".{module_name}", "fastNLP.transformers.torch.models")
+                self._modules[module_name] = importlib.import_module(
+                    f'.{module_name}', 'fastNLP.transformers.torch.models')
             except ImportError:
-                raise ImportError(f"fastNLP transformers does not support {module_name} now, please install and import `transformers` to use it.")
+                raise ImportError(
+                    f'fastNLP transformers does not support {module_name} now, please install and import `transformers` to use it.'
+                )
         return getattribute_from_module(self._modules[module_name], attr)
 
     def keys(self):
@@ -546,20 +572,18 @@ class _LazyAutoMapping(OrderedDict):
         ]
 
     def items(self):
-        return [
-            (
-                self._load_attr_from_module(key, self._config_mapping[key]),
-                self._load_attr_from_module(key, self._model_mapping[key]),
-            )
-            for key in self._model_mapping.keys()
-            if key in self._config_mapping.keys()
-        ]
+        return [(
+            self._load_attr_from_module(key, self._config_mapping[key]),
+            self._load_attr_from_module(key, self._model_mapping[key]),
+        ) for key in self._model_mapping.keys()
+                if key in self._config_mapping.keys()]
 
     def __iter__(self):
         return iter(self._mapping.keys())
 
     def __contains__(self, item):
-        if not hasattr(item, "__name__") or item.__name__ not in self._reverse_config_mapping:
+        if not hasattr(item, '__name__'
+                       ) or item.__name__ not in self._reverse_config_mapping:
             return False
         model_type = self._reverse_config_mapping[item.__name__]
         return model_type in self._model_mapping

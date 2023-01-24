@@ -1,9 +1,12 @@
-import pytest
 import numpy as np
+import pytest
 
+from fastNLP.core.collators.padders.utils import (get_padded_nest_list,
+                                                  get_padded_numpy_array,
+                                                  get_shape, is_number,
+                                                  is_number_or_numpy_number,
+                                                  is_numpy_number_dtype)
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
-from fastNLP.core.collators.padders.utils import get_shape, get_padded_numpy_array, \
-    get_padded_nest_list, is_number_or_numpy_number, is_numpy_number_dtype, is_number
 
 
 def test_get_shape():

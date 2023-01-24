@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2020 The Facebook AI Research Team Authors and The HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,42 +12,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..roberta.tokenization_roberta import RobertaTokenizer
 from fastNLP.core.log import logger
+from ..roberta.tokenization_roberta import RobertaTokenizer
 
 __all__ = [
-    "BartTokenizer",
+    'BartTokenizer',
 ]
 
-VOCAB_FILES_NAMES = {"vocab_file": "vocab.json", "merges_file": "merges.txt"}
+VOCAB_FILES_NAMES = {'vocab_file': 'vocab.json', 'merges_file': 'merges.txt'}
 
 # See all BART models at https://huggingface.co/models?filter=bart
 PRETRAINED_VOCAB_FILES_MAP = {
-    "vocab_file": {
-        "facebook/bart-base": "https://huggingface.co/facebook/bart-base/resolve/main/vocab.json",
-        "facebook/bart-large": "https://huggingface.co/facebook/bart-large/resolve/main/vocab.json",
-        "facebook/bart-large-mnli": "https://huggingface.co/facebook/bart-large-mnli/resolve/main/vocab.json",
-        "facebook/bart-large-cnn": "https://huggingface.co/facebook/bart-large-cnn/resolve/main/vocab.json",
-        "facebook/bart-large-xsum": "https://huggingface.co/facebook/bart-large-xsum/resolve/main/vocab.json",
-        "yjernite/bart_eli5": "https://huggingface.co/yjernite/bart_eli5/resolve/main/vocab.json",
+    'vocab_file': {
+        'facebook/bart-base':
+        'https://huggingface.co/facebook/bart-base/resolve/main/vocab.json',
+        'facebook/bart-large':
+        'https://huggingface.co/facebook/bart-large/resolve/main/vocab.json',
+        'facebook/bart-large-mnli':
+        'https://huggingface.co/facebook/bart-large-mnli/resolve/main/vocab.json',
+        'facebook/bart-large-cnn':
+        'https://huggingface.co/facebook/bart-large-cnn/resolve/main/vocab.json',
+        'facebook/bart-large-xsum':
+        'https://huggingface.co/facebook/bart-large-xsum/resolve/main/vocab.json',
+        'yjernite/bart_eli5':
+        'https://huggingface.co/yjernite/bart_eli5/resolve/main/vocab.json',
     },
-    "merges_file": {
-        "facebook/bart-base": "https://huggingface.co/facebook/bart-base/resolve/main/merges.txt",
-        "facebook/bart-large": "https://huggingface.co/facebook/bart-large/resolve/main/merges.txt",
-        "facebook/bart-large-mnli": "https://huggingface.co/facebook/bart-large-mnli/resolve/main/merges.txt",
-        "facebook/bart-large-cnn": "https://huggingface.co/facebook/bart-large-cnn/resolve/main/merges.txt",
-        "facebook/bart-large-xsum": "https://huggingface.co/facebook/bart-large-xsum/resolve/main/merges.txt",
-        "yjernite/bart_eli5": "https://huggingface.co/yjernite/bart_eli5/resolve/main/merges.txt",
+    'merges_file': {
+        'facebook/bart-base':
+        'https://huggingface.co/facebook/bart-base/resolve/main/merges.txt',
+        'facebook/bart-large':
+        'https://huggingface.co/facebook/bart-large/resolve/main/merges.txt',
+        'facebook/bart-large-mnli':
+        'https://huggingface.co/facebook/bart-large-mnli/resolve/main/merges.txt',
+        'facebook/bart-large-cnn':
+        'https://huggingface.co/facebook/bart-large-cnn/resolve/main/merges.txt',
+        'facebook/bart-large-xsum':
+        'https://huggingface.co/facebook/bart-large-xsum/resolve/main/merges.txt',
+        'yjernite/bart_eli5':
+        'https://huggingface.co/yjernite/bart_eli5/resolve/main/merges.txt',
     },
 }
 
 PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES = {
-    "facebook/bart-base": 1024,
-    "facebook/bart-large": 1024,
-    "facebook/bart-large-mnli": 1024,
-    "facebook/bart-large-cnn": 1024,
-    "facebook/bart-large-xsum": 1024,
-    "yjernite/bart_eli5": 1024,
+    'facebook/bart-base': 1024,
+    'facebook/bart-large': 1024,
+    'facebook/bart-large-mnli': 1024,
+    'facebook/bart-large-cnn': 1024,
+    'facebook/bart-large-xsum': 1024,
+    'yjernite/bart_eli5': 1024,
 }
 
 

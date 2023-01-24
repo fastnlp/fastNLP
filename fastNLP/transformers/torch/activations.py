@@ -16,24 +16,23 @@ import math
 
 from packaging import version
 
-from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 from fastNLP.core.log import logger
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 
 if _NEED_IMPORT_TORCH:
     import torch
-    from torch import nn, tanh, sigmoid
+    from torch import nn, sigmoid, tanh
     from torch.nn.functional import relu
 else:
-    from fastNLP.core.utils.dummy_class import (
-        DummyClass as relu, 
-        DummyClass as tanh,
-        DummyClass as sigmoid,
-)
+    from fastNLP.core.utils.dummy_class import DummyClass as relu
+    from fastNLP.core.utils.dummy_class import DummyClass as sigmoid
+    from fastNLP.core.utils.dummy_class import DummyClass as tanh
 
 
 def _gelu_python(x):
-    """
-    Original Implementation of the GELU activation function in Google BERT repo when initially created. For
+    """Original Implementation of the GELU activation function in Google BERT
+    repo when initially created. For.
+
     information: OpenAI GPT's GELU is slightly different (and gives slightly different results): 0.5 * x * (1 +
     torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3)))) This is now written in C in nn.functional
     Also see the Gaussian Error Linear Units paper: https://arxiv.org/abs/1606.08415
@@ -42,22 +41,28 @@ def _gelu_python(x):
 
 
 def gelu_new(x):
+    """Implementation of the GELU activation function currently in Google BERT
+    repo (identical to OpenAI GPT).
+
+    Also see the Gaussian Error Linear Units paper:
+    https://arxiv.org/abs/1606.08415
     """
-    Implementation of the GELU activation function currently in Google BERT repo (identical to OpenAI GPT). Also see
-    the Gaussian Error Linear Units paper: https://arxiv.org/abs/1606.08415
-    """
-    return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
+    return 0.5 * x * (1.0 + torch.tanh(
+        math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
+
 
 if _NEED_IMPORT_TORCH:
-    if version.parse(torch.__version__) < version.parse("1.4"):
+    if version.parse(torch.__version__) < version.parse('1.4'):
         gelu = _gelu_python
     else:
         gelu = nn.functional.gelu
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as gelu
 
+
 def gelu_fast(x):
-    return 0.5 * x * (1.0 + torch.tanh(x * 0.7978845608 * (1.0 + 0.044715 * x * x)))
+    return 0.5 * x * (1.0 + torch.tanh(x * 0.7978845608 *
+                                       (1.0 + 0.044715 * x * x)))
 
 
 def quick_gelu(x):
@@ -65,17 +70,18 @@ def quick_gelu(x):
 
 
 def _silu_python(x):
-    """
-    See Gaussian Error Linear Units (Hendrycks et al., https://arxiv.org/abs/1606.08415) where the SiLU (Sigmoid Linear
-    Unit) was originally introduced and coined, and see Sigmoid-Weighted Linear Units for Neural Network Function
-    Approximation in Reinforcement Learning (Elfwing et al., https://arxiv.org/abs/1702.03118) and Swish: a Self-Gated
-    Activation Function (Ramachandran et al., https://arxiv.org/abs/1710.05941v1) where the SiLU was experimented with
-    later.
-    """
+    """See Gaussian Error Linear Units (Hendrycks et al.,
+    https://arxiv.org/abs/1606.08415) where the SiLU (Sigmoid Linear Unit) was
+    originally introduced and coined, and see Sigmoid-Weighted Linear Units for
+    Neural Network Function Approximation in Reinforcement Learning (Elfwing et
+    al., https://arxiv.org/abs/1702.03118) and Swish: a Self-Gated Activation
+    Function (Ramachandran et al., https://arxiv.org/abs/1710.05941v1) where
+    the SiLU was experimented with later."""
     return x * torch.sigmoid(x)
 
+
 if _NEED_IMPORT_TORCH:
-    if version.parse(torch.__version__) < version.parse("1.7"):
+    if version.parse(torch.__version__) < version.parse('1.7'):
         silu = _silu_python
     else:
         silu = nn.functional.silu
@@ -84,14 +90,17 @@ else:
 
 
 def _mish_python(x):
-    """
-    See Mish: A Self-Regularized Non-Monotonic Activation Function (Misra., https://arxiv.org/abs/1908.08681). Also
-    visit the official repository for the paper: https://github.com/digantamisra98/Mish
+    """See Mish: A Self-Regularized Non-Monotonic Activation Function (Misra.,
+    https://arxiv.org/abs/1908.08681).
+
+    Also visit the official repository for the paper:
+    https://github.com/digantamisra98/Mish
     """
     return x * torch.tanh(nn.functional.softplus(x))
 
+
 if _NEED_IMPORT_TORCH:
-    if version.parse(torch.__version__) < version.parse("1.9"):
+    if version.parse(torch.__version__) < version.parse('1.9'):
         mish = _mish_python
     else:
         mish = nn.functional.mish
@@ -104,17 +113,17 @@ def linear_act(x):
 
 
 ACT2FN = {
-    "relu": relu,
-    "silu": silu,
-    "swish": silu,
-    "gelu": gelu,
-    "tanh": tanh,
-    "gelu_new": gelu_new,
-    "gelu_fast": gelu_fast,
-    "quick_gelu": quick_gelu,
-    "mish": mish,
-    "linear": linear_act,
-    "sigmoid": sigmoid,
+    'relu': relu,
+    'silu': silu,
+    'swish': silu,
+    'gelu': gelu,
+    'tanh': tanh,
+    'gelu_new': gelu_new,
+    'gelu_fast': gelu_fast,
+    'quick_gelu': quick_gelu,
+    'mish': mish,
+    'linear': linear_act,
+    'sigmoid': sigmoid,
 }
 
 
@@ -122,4 +131,6 @@ def get_activation(activation_string):
     if activation_string in ACT2FN:
         return ACT2FN[activation_string]
     else:
-        raise KeyError(f"function {activation_string} not found in ACT2FN mapping {list(ACT2FN.keys())}")
+        raise KeyError(
+            f'function {activation_string} not found in ACT2FN mapping {list(ACT2FN.keys())}'
+        )

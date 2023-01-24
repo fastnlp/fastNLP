@@ -1,9 +1,12 @@
 import pytest
+
+from fastNLP.core.utils import f_rich_progress, f_tqdm_progress
 from fastNLP.envs.imports import _module_available
-from fastNLP.core.utils import f_tqdm_progress, f_rich_progress
+
 
 def test_raise():
-    if not _module_available('tqdm') or f_rich_progress.dummy or f_tqdm_progress.dummy:
+    if not _module_available(
+            'tqdm') or f_rich_progress.dummy or f_tqdm_progress.dummy:
         pytest.skip('No tqdm')
     t = f_rich_progress.add_task('test', total=10)
     with pytest.raises(AssertionError):

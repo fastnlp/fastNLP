@@ -1,10 +1,4 @@
-__all__ = [
-    'is_jittor_module',
-    'is_jittor_dataset',
-    'jittor_collate_wraps',
-]
-
-from collections.abc import Mapping, Callable
+from collections.abc import Callable, Mapping
 from functools import wraps
 
 from fastNLP.envs.imports import _NEED_IMPORT_JITTOR
@@ -14,9 +8,15 @@ if _NEED_IMPORT_JITTOR:
 
 from fastNLP.core.dataset import Instance
 
+__all__ = [
+    'is_jittor_module',
+    'is_jittor_dataset',
+    'jittor_collate_wraps',
+]
+
+
 def is_jittor_module(model) -> bool:
-    """
-    判断传入的 ``model`` 是否是 :class:`jittor.Module` 类型。
+    """判断传入的 ``model`` 是否是 :class:`jittor.Module` 类型。
 
     :param model:
     :return: 当前模型是否为 ``jittor`` 的模型
@@ -26,9 +26,9 @@ def is_jittor_module(model) -> bool:
     except BaseException:
         return False
 
+
 def is_jittor_dataset(dataset) -> bool:
-    """
-    判断传入的 ``dataset`` 是否是 :class:`jittor.dataset.Dataset` 类型。
+    """判断传入的 ``dataset`` 是否是 :class:`jittor.dataset.Dataset` 类型。
 
     :param dataset:
     :return: 当前 ``dataset`` 是否为 ``jittor`` 的数据集类型
@@ -43,9 +43,9 @@ def is_jittor_dataset(dataset) -> bool:
 
 
 def jittor_collate_wraps(func, auto_collator: Callable):
-    """
-    对 ``jittor`` 的 ``collate_fn`` 进行 wrap 封装,。如果数据集为 :class:`Mapping` 类型，那么采用 ``auto_collator`` ，
-    否则还是采用 ``jittor`` 的 ``collate_batch``。
+    r"""对 ``jittor`` 的 ``collate_fn`` 进行 wrap 封装,。如果数据集为
+    :class:`Mapping` 类型，那么采用 ``auto_collator``，否则还是采用 ``jittor``
+    的 ``collate_batch``。
 
     :param func:
     :param auto_collator:
@@ -58,7 +58,8 @@ def jittor_collate_wraps(func, auto_collator: Callable):
             if auto_collator is not None:
                 result = auto_collator(batch)
             else:
-                raise ValueError(f"auto_collator is None, but batch exist fastnlp instance!")
+                raise ValueError(
+                    'auto_collator is None, but batch exist fastnlp instance!')
         elif isinstance(batch[0], Mapping):
             if auto_collator is not None:
                 result = auto_collator(batch)

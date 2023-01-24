@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2018 The HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,51 +11,44 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" Auto Config class. """
+"""Auto Config class."""
 import importlib
 import re
 from collections import OrderedDict
 from typing import List, Union
 
+from fastNLP.core.log import logger
 from fastNLP.transformers.torch.configuration_utils import PretrainedConfig
 from fastNLP.transformers.torch.file_utils import CONFIG_NAME
-from fastNLP.core.log import logger
 
+CONFIG_MAPPING_NAMES = OrderedDict([
+    # Add configs here
+    ('bart', 'BartConfig'),
+    ('roberta', 'RobertaConfig'),
+    ('bert', 'BertConfig'),
+    ('gpt2', 'GPT2Config'),
+    ('cpt', 'CPTConfig'),
+])
 
-CONFIG_MAPPING_NAMES = OrderedDict(
-    [
-        # Add configs here
-        ("bart", "BartConfig"),
-        ("roberta", "RobertaConfig"),
-        ("bert", "BertConfig"),
-        ("gpt2", "GPT2Config"),
-        ("cpt", "CPTConfig"),
-    ]
-)
+CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict([
+    # Add archive maps here
+    ('bert', 'BERT_PRETRAINED_CONFIG_ARCHIVE_MAP'),
+    ('bart', 'BART_PRETRAINED_CONFIG_ARCHIVE_MAP'),
+    ('gpt2', 'GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP'),
+    ('roberta', 'ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP'),
+    ('cpt', 'BART_PRETRAINED_CONFIG_ARCHIVE_MAP'),
+])
 
-CONFIG_ARCHIVE_MAP_MAPPING_NAMES = OrderedDict(
-    [
-        # Add archive maps here
-        ("bert", "BERT_PRETRAINED_CONFIG_ARCHIVE_MAP"),
-        ("bart", "BART_PRETRAINED_CONFIG_ARCHIVE_MAP"),
-        ("gpt2", "GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP"),
-        ("roberta", "ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP"),
-        ("cpt", "BART_PRETRAINED_CONFIG_ARCHIVE_MAP"),
-    ]
-)
+MODEL_NAMES_MAPPING = OrderedDict([
+    # Add full (and cased) model names here
+    ('bart', 'BART'),
+    ('roberta', 'RoBERTa'),
+    ('bert', 'BERT'),
+    ('gpt2', 'OpenAI GPT-2'),
+    ('cpt', 'CPT')
+])
 
-MODEL_NAMES_MAPPING = OrderedDict(
-    [
-        # Add full (and cased) model names here
-        ("bart", "BART"),
-        ("roberta", "RoBERTa"),
-        ("bert", "BERT"),
-        ("gpt2", "OpenAI GPT-2"),
-        ("cpt", "CPT")
-    ]
-)
-
-SPECIAL_MODEL_TYPE_TO_MODULE_NAME = OrderedDict([("openai-gpt", "openai")])
+SPECIAL_MODEL_TYPE_TO_MODULE_NAME = OrderedDict([('openai-gpt', 'openai')])
 
 
 def model_type_to_module_name(key):
@@ -65,11 +57,11 @@ def model_type_to_module_name(key):
     if key in SPECIAL_MODEL_TYPE_TO_MODULE_NAME:
         return SPECIAL_MODEL_TYPE_TO_MODULE_NAME[key]
 
-    return key.replace("-", "_")
+    return key.replace('-', '_')
 
 
 def config_class_to_model_type(config):
-    """Converts a config class name to the corresponding model type"""
+    """Converts a config class name to the corresponding model type."""
     for key, cls in CONFIG_MAPPING_NAMES.items():
         if cls == config:
             return key
@@ -77,9 +69,7 @@ def config_class_to_model_type(config):
 
 
 class _LazyConfigMapping(OrderedDict):
-    """
-    A dictionary that lazily load its values when they are requested.
-    """
+    """A dictionary that lazily load its values when they are requested."""
 
     def __init__(self, mapping):
         self._mapping = mapping
@@ -91,7 +81,8 @@ class _LazyConfigMapping(OrderedDict):
         value = self._mapping[key]
         module_name = model_type_to_module_name(key)
         if module_name not in self._modules:
-            self._modules[module_name] = importlib.import_module(f".{module_name}", "fastNLP.transformers.torch.models")
+            self._modules[module_name] = importlib.import_module(
+                f'.{module_name}', 'fastNLP.transformers.torch.models')
         return getattr(self._modules[module_name], value)
 
     def keys(self):
@@ -114,9 +105,8 @@ CONFIG_MAPPING = _LazyConfigMapping(CONFIG_MAPPING_NAMES)
 
 
 class _LazyLoadAllMappings(OrderedDict):
-    """
-    A mapping that will load all pairs of key values at the first access (either by indexing, requestions keys, values,
-    etc.)
+    """A mapping that will load all pairs of key values at the first access
+    (either by indexing, requestions keys, values, etc.)
 
     Args:
         mapping: The mapping to load.
@@ -138,7 +128,8 @@ class _LazyLoadAllMappings(OrderedDict):
 
         for model_type, map_name in self._mapping.items():
             module_name = model_type_to_module_name(model_type)
-            module = importlib.import_module(f".{module_name}", "fastNLP.transformers.torch.models")
+            module = importlib.import_module(
+                f'.{module_name}', 'fastNLP.transformers.torch.models')
             mapping = getattr(module, map_name)
             self._data.update(mapping)
 
@@ -169,22 +160,29 @@ class _LazyLoadAllMappings(OrderedDict):
         return item in self._data
 
 
-ALL_PRETRAINED_CONFIG_ARCHIVE_MAP = _LazyLoadAllMappings(CONFIG_ARCHIVE_MAP_MAPPING_NAMES)
+ALL_PRETRAINED_CONFIG_ARCHIVE_MAP = _LazyLoadAllMappings(
+    CONFIG_ARCHIVE_MAP_MAPPING_NAMES)
 
 
 def _get_class_name(model_class: Union[str, List[str]]):
     if isinstance(model_class, (list, tuple)):
-        return " or ".join([f":class:`~fastNLP.transformers.torch.{c}`" for c in model_class if c is not None])
-    return f":class:`~fastNLP.transformers.torch.{model_class}`"
+        return ' or '.join([
+            f':class:`~fastNLP.transformers.torch.{c}`' for c in model_class
+            if c is not None
+        ])
+    return f':class:`~fastNLP.transformers.torch.{model_class}`'
 
 
 def _list_model_options(indent, config_to_class=None, use_model_types=True):
     if config_to_class is None and not use_model_types:
-        raise ValueError("Using `use_model_types=False` requires a `config_to_class` dictionary.")
+        raise ValueError(
+            'Using `use_model_types=False` requires a `config_to_class` dictionary.'
+        )
     if use_model_types:
         if config_to_class is None:
             model_type_to_name = {
-                model_type: f":class:`~fastNLP.transformers.torch.{config}`" for model_type, config in CONFIG_MAPPING_NAMES.items()
+                model_type: f':class:`~fastNLP.transformers.torch.{config}`'
+                for model_type, config in CONFIG_MAPPING_NAMES.items()
             }
         else:
             model_type_to_name = {
@@ -193,7 +191,7 @@ def _list_model_options(indent, config_to_class=None, use_model_types=True):
                 if model_type in MODEL_NAMES_MAPPING
             }
         lines = [
-            f"{indent}- **{model_type}** -- {model_type_to_name[model_type]} ({MODEL_NAMES_MAPPING[model_type]} model)"
+            f'{indent}- **{model_type}** -- {model_type_to_name[model_type]} ({MODEL_NAMES_MAPPING[model_type]} model)'
             for model_type in sorted(model_type_to_name.keys())
         ]
     else:
@@ -203,28 +201,35 @@ def _list_model_options(indent, config_to_class=None, use_model_types=True):
             if config in CONFIG_MAPPING_NAMES
         }
         config_to_model_name = {
-            config: MODEL_NAMES_MAPPING[model_type] for model_type, config in CONFIG_MAPPING_NAMES.items()
+            config: MODEL_NAMES_MAPPING[model_type]
+            for model_type, config in CONFIG_MAPPING_NAMES.items()
         }
         lines = [
-            f"{indent}- :class:`~fastNLP.transformers.torch.{config_name}` configuration class: {config_to_name[config_name]} ({config_to_model_name[config_name]} model)"
+            f'{indent}- :class:`~fastNLP.transformers.torch.{config_name}` configuration class: {config_to_name[config_name]} ({config_to_model_name[config_name]} model)'
             for config_name in sorted(config_to_name.keys())
         ]
-    return "\n".join(lines)
+    return '\n'.join(lines)
 
 
-def replace_list_option_in_docstrings(config_to_class=None, use_model_types=True):
+def replace_list_option_in_docstrings(config_to_class=None,
+                                      use_model_types=True):
+
     def docstring_decorator(fn):
         docstrings = fn.__doc__
-        lines = docstrings.split("\n")
+        lines = docstrings.split('\n')
         i = 0
-        while i < len(lines) and re.search(r"^(\s*)List options\s*$", lines[i]) is None:
+        while i < len(lines) and re.search(r'^(\s*)List options\s*$',
+                                           lines[i]) is None:
             i += 1
         if i < len(lines):
-            indent = re.search(r"^(\s*)List options\s*$", lines[i]).groups()[0]
+            indent = re.search(r'^(\s*)List options\s*$', lines[i]).groups()[0]
             if use_model_types:
-                indent = f"{indent}    "
-            lines[i] = _list_model_options(indent, config_to_class=config_to_class, use_model_types=use_model_types)
-            docstrings = "\n".join(lines)
+                indent = f'{indent}    '
+            lines[i] = _list_model_options(
+                indent,
+                config_to_class=config_to_class,
+                use_model_types=use_model_types)
+            docstrings = '\n'.join(lines)
         else:
             raise ValueError(
                 f"The function {fn} should have an empty 'List options' in its docstring as placeholder, current docstring is:\n{docstrings}"
@@ -245,8 +250,8 @@ class AutoConfig:
 
     def __init__(self):
         raise EnvironmentError(
-            "AutoConfig is designed to be instantiated "
-            "using the `AutoConfig.from_pretrained(pretrained_model_name_or_path)` method."
+            'AutoConfig is designed to be instantiated '
+            'using the `AutoConfig.from_pretrained(pretrained_model_name_or_path)` method.'
         )
 
     @classmethod
@@ -335,10 +340,11 @@ class AutoConfig:
             >>> config.unused_kwargs
             {'foo': False}
         """
-        kwargs["_from_auto"] = True
-        config_dict, _ = PretrainedConfig.get_config_dict(pretrained_model_name_or_path, **kwargs)
-        if "model_type" in config_dict:
-            config_class = CONFIG_MAPPING[config_dict["model_type"]]
+        kwargs['_from_auto'] = True
+        config_dict, _ = PretrainedConfig.get_config_dict(
+            pretrained_model_name_or_path, **kwargs)
+        if 'model_type' in config_dict:
+            config_class = CONFIG_MAPPING[config_dict['model_type']]
             return config_class.from_dict(config_dict, **kwargs)
         else:
             # Fallback: use pattern matching on the string.
@@ -347,7 +353,6 @@ class AutoConfig:
                     return config_class.from_dict(config_dict, **kwargs)
 
         raise ValueError(
-            f"Unrecognized model in {pretrained_model_name_or_path}. "
-            f"Should have a `model_type` key in its {CONFIG_NAME}, or contain one of the following strings "
-            f"in its name: {', '.join(CONFIG_MAPPING.keys())}"
-        )
+            f'Unrecognized model in {pretrained_model_name_or_path}. '
+            f'Should have a `model_type` key in its {CONFIG_NAME}, or contain one of the following strings '
+            f"in its name: {', '.join(CONFIG_MAPPING.keys())}")

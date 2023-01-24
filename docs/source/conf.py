@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
 #
@@ -57,9 +56,9 @@ autodoc_default_options = {
 add_module_names = False
 autosummary_ignore_module_all = False
 # autodoc_typehints = "description"
-autoclass_content = "class"
+autoclass_content = 'class'
 typehints_fully_qualified = False
-typehints_defaults = "comma"
+typehints_defaults = 'comma'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -78,7 +77,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = "zh_CN"
+language = 'zh_CN'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -99,10 +98,7 @@ html_theme = 'sphinx_rtd_theme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = {
-    'collapse_navigation': False,
-    'titles_only': True
-}
+html_theme_options = {'collapse_navigation': False, 'titles_only': True}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -135,15 +131,15 @@ latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
-    
+
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
-    
+
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
-    
+
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -158,10 +154,7 @@ latex_documents = []
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'fastNLP', 'fastNLP Documentation',
-     [author], 1)
-]
+man_pages = [(master_doc, 'fastNLP', 'fastNLP Documentation', [author], 1)]
 
 # -- Options for Texinfo output ----------------------------------------------
 
@@ -169,21 +162,21 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'fastNLP', 'fastNLP Documentation',
-     author, 'fastNLP', 'A fast NLP tool for programming.',
-     'Miscellaneous'),
+    (master_doc, 'fastNLP', 'fastNLP Documentation', author, 'fastNLP',
+     'A fast NLP tool for programming.', 'Miscellaneous'),
 ]
 
 # -- Options for Multiversions ----------------------------------------------
 smv_latest_version = 'dev0.8.0'
 
+
 # -- Extension configuration -------------------------------------------------
 def maybe_skip_member(app, what, name, obj, skip, options):
     if obj.__doc__ is None:
         return True
-    if name == "__init__":
+    if name == '__init__':
         return False
-    if name.startswith("_"):
+    if name.startswith('_'):
         return True
     return skip
 

@@ -1,44 +1,38 @@
 import io
-import pickle
 import os
+import pickle
 from typing import Any, List
 
 import numpy as np
-from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
-from fastNLP.envs.env import FASTNLP_NO_SYNC
+
 from fastNLP.core.utils import paddle_move_data_to_device
+from fastNLP.envs.env import FASTNLP_NO_SYNC
+from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 
 if _NEED_IMPORT_PADDLE:
     import paddle
     import paddle.distributed as dist
-    from paddle.framework.io import (
-        _is_state_dict,
-        _build_saved_state_dict,
-        _unpack_saved_dict,
-        _pickle_save,
-        _pack_loaded_dict,
-        _ndarray_to_tensor,
-        _parse_load_result,
-    )
+    from paddle.framework.io import (_build_saved_state_dict, _is_state_dict,
+                                     _ndarray_to_tensor, _pack_loaded_dict,
+                                     _parse_load_result, _pickle_save,
+                                     _unpack_saved_dict)
 
-__all__ = []
+__all__ = []  # type: ignore
+
 
 def _validate_output_list_for_rank(my_rank, dst, gather_list):
     if dst == my_rank:
         if not gather_list:
             raise ValueError(
-                "Argument ``gather_list`` must be specified on destination rank."
-            )
+                'Argument ``gather_list`` must be specified on destination '
+                'rank.')
     elif gather_list:
-        raise ValueError(
-            "Argument ``gather_list`` must NOT be specified "
-            "on non-destination ranks."
-        )
+        raise ValueError('Argument ``gather_list`` must NOT be specified '
+                         'on non-destination ranks.')
+
 
 def paddle_pickle_dump(obj, stream, protocol):
-    """
-    Reference to `paddle.save`
-    """
+    """Reference to `paddle.save`"""
     if _is_state_dict(obj):
         saved_obj = _build_saved_state_dict(obj)
         saved_obj = _unpack_saved_dict(saved_obj, protocol)
@@ -46,22 +40,21 @@ def paddle_pickle_dump(obj, stream, protocol):
     else:
         _pickle_save(obj, stream, protocol)
 
+
 def paddle_pickle_load(stream):
-    """
-    Reference to `paddle.load`
-    """
+    """Reference to `paddle.load`"""
     load_result = pickle.load(stream)
     if isinstance(load_result, dict):
         load_result = _pack_loaded_dict(load_result)
-        if "StructuredToParameterName@@" in load_result:
+        if 'StructuredToParameterName@@' in load_result:
 
-            for key in load_result["StructuredToParameterName@@"]:
+            for key in load_result['StructuredToParameterName@@']:
                 if isinstance(load_result[key], np.ndarray):
                     load_result[key] = _ndarray_to_tensor(
                         load_result[key], return_numpy=False)
 
-            if "StructuredToParameterName@@" in load_result:
-                del load_result["StructuredToParameterName@@"]
+            if 'StructuredToParameterName@@' in load_result:
+                del load_result['StructuredToParameterName@@']
         else:
             load_result = _parse_load_result(load_result, return_numpy=False)
 
@@ -69,6 +62,7 @@ def paddle_pickle_load(stream):
         load_result = _parse_load_result(load_result, return_numpy=False)
 
     return load_result
+
 
 def _object_to_tensor(obj, device=None):
     f = io.BytesIO()
@@ -81,13 +75,15 @@ def _object_to_tensor(obj, device=None):
         local_size = paddle_move_data_to_device(local_size, device)
     return byte_tensor, local_size
 
+
 def _tensor_to_object(tensor, tensor_size):
-    buf = tensor.astype(paddle.uint8).detach().cpu().numpy().tobytes()[:tensor_size]
+    buf = tensor.astype(
+        paddle.uint8).detach().cpu().numpy().tobytes()[:tensor_size]
     return paddle_pickle_load(io.BytesIO(buf))
 
+
 def fastnlp_paddle_gather_object(obj, dst=0, group=None):
-    """
-    从其它 rank gather 东西到 dst rank 。
+    """从其它 rank gather 东西到 dst rank 。
 
     Example::
         >>> # Assumes world_size of 3.
@@ -116,8 +112,8 @@ def fastnlp_paddle_gather_object(obj, dst=0, group=None):
         object_gather_list = None
 
     # if group is None:
-        # TODO 2.2 版本存在 bug
-        # group = dist.collective._get_global_group()
+    # TODO 2.2 版本存在 bug
+    # group = dist.collective._get_global_group()
 
     if group is not None and not group.is_member():
         return
@@ -126,16 +122,19 @@ def fastnlp_paddle_gather_object(obj, dst=0, group=None):
     my_rank = dist.get_rank()
     _validate_output_list_for_rank(my_rank, dst, object_gather_list)
     # 防止 unpickle 的时候出现在了发送的 gpu 上。
-    obj = paddle_move_data_to_device(obj, device="cpu")
+    obj = paddle_move_data_to_device(obj, device='cpu')
     input_tensor, local_size = _object_to_tensor(obj)
     # 目前 paddle 的 group 仅支持 nccl
-    input_tensor = paddle_move_data_to_device(input_tensor, device=paddle.device.get_device())
-    local_size = paddle_move_data_to_device(local_size, device=paddle.device.get_device())
+    input_tensor = paddle_move_data_to_device(
+        input_tensor, device=paddle.device.get_device())
+    local_size = paddle_move_data_to_device(
+        local_size, device=paddle.device.get_device())
 
     # 收集所有的 local_size，找到最大的 size
     object_size_list = []
     dist.all_gather(object_size_list, local_size, group=group)
-    max_object_size = int(max(object_size_list).item())  # type: ignore[type-var]
+    max_object_size = int(
+        max(object_size_list).item())  # type: ignore[type-var]
     input_tensor.reshape_(max_object_size)
     # TODO 暂时没有在 paddle 中发现类似 torch.distributed.gather 的函数
     output_tensors = []
@@ -147,7 +146,13 @@ def fastnlp_paddle_gather_object(obj, dst=0, group=None):
         tensor_size = object_size_list[i]
         object_gather_list[i] = _tensor_to_object(tensor, tensor_size)
 
-def send_recv_object(obj, src, cur_rank, device, group=None, use_calc_stream=True):
+
+def send_recv_object(obj,
+                     src,
+                     cur_rank,
+                     device,
+                     group=None,
+                     use_calc_stream=True):
     # src rank send to all other ranks
     size = paddle_move_data_to_device(paddle.to_tensor([0]), device)
 
@@ -161,17 +166,27 @@ def send_recv_object(obj, src, cur_rank, device, group=None, use_calc_stream=Tru
         dist.broadcast(size, src, group=group)
         for subrank in range(world_size):
             if subrank != src:
-                dist.send(tensor=tensor, dst=subrank, group=group, use_calc_stream=use_calc_stream)
+                dist.send(
+                    tensor=tensor,
+                    dst=subrank,
+                    group=group,
+                    use_calc_stream=use_calc_stream)
     else:
         dist.broadcast(size, src, group=group)
-        tensor = paddle_move_data_to_device(paddle.to_tensor([0] * size), device)
-        dist.recv(tensor=tensor, src=src, group=group, use_calc_stream=use_calc_stream)
+        tensor = paddle_move_data_to_device(
+            paddle.to_tensor([0] * size), device)
+        dist.recv(
+            tensor=tensor,
+            src=src,
+            group=group,
+            use_calc_stream=use_calc_stream)
 
     return _tensor_to_object(tensor.cpu(), size)
 
-def fastnlp_paddle_all_gather(obj: Any, device=None, group=None) ->List:
-    """
-    实现任何类型的数据都使用该接口可以进行 all_gather 操作。对于非 tensor 类型的数据，通过 pickle 序列化再反序列化的方式进行传输。
+
+def fastnlp_paddle_all_gather(obj: Any, device=None, group=None) -> List:
+    r"""实现任何类型的数据都使用该接口可以进行 all_gather 操作。对于非 tensor 类型的
+    数据，通过 pickle 序列化再反序列化的方式进行传输。
 
     example::
 
@@ -185,33 +200,33 @@ def fastnlp_paddle_all_gather(obj: Any, device=None, group=None) ->List:
                 {'a': 1, 'b':[1, 2], 'c':{'d': 2}}
             ]
 
-    :param obj: 任意结构的数据，如果为 tensor ，需要保证每个显卡上的 tensor 的形状是一样的。如果传入的是非 tensor 对象都将直接进行
-        序列化之后进行传输。
+    :param obj: 任意结构的数据，如果为 tensor ，需要保证每个显卡上的 tensor 的形状
+        是一样的。如果传入的是非 tensor 对象都将直接进行序列化之后进行传输。
     :param device: 当前该参数无意义。
     :param group:
-    :return: 返回的结果是 [obj0, obj1, ...]，其中 obj_i 即为第 i 个 rank 上的 obj 。
+    :return: 返回的结果是 [obj0, obj1, ...]，其中 obj_i 即为第 i 个 rank 上的
+        obj 。
     """
     if int(os.environ.get(FASTNLP_NO_SYNC, '0')) == 2:
         return [obj]
 
     # if group is None:
-        # TODO 2.2 版本存在 bug
-        # group = dist.collective._get_global_group()
+    # TODO 2.2 版本存在 bug
+    # group = dist.collective._get_global_group()
     if isinstance(obj, paddle.Tensor):
-        objs = []
+        objs: List[Any] = []
         dist.all_gather(objs, obj, group=group)
     else:
         objs = [None for _ in range(dist.get_world_size())]
         # 防止 unpickle 的时候弄到发送的 gpu 上了
-        obj = paddle_move_data_to_device(obj, "cpu")
+        obj = paddle_move_data_to_device(obj, 'cpu')
         objs = all_gather_object(objs, obj, group=group)
 
     return objs
 
 
 def fastnlp_paddle_broadcast_object(obj, src, device=None, group=None):
-    """
-    将 src 上的 obj 对象广播到其它 rank 上。
+    """将 src 上的 obj 对象广播到其它 rank 上。
 
     :param obj: 需要发送的对象
     :param src: 从哪里发出。
@@ -227,8 +242,9 @@ def fastnlp_paddle_broadcast_object(obj, src, device=None, group=None):
 
     cur_rank = dist.get_rank()
     if cur_rank == src:
-        # 如果有 tensor 全部移动到 cpu 上，方便 pickle , 不然 unpickle 的时候可能会 pickle 到发送过来的卡那里
-        obj = paddle_move_data_to_device(obj, "cpu")
+        # 如果有 tensor 全部移动到 cpu 上，方便 pickle , 不然 unpickle 的时候可能
+        # 会 pickle 到发送过来的卡那里
+        obj = paddle_move_data_to_device(obj, 'cpu')
 
     if device is None:
         device = paddle.device.get_device()
@@ -247,6 +263,7 @@ def fastnlp_paddle_broadcast_object(obj, src, device=None, group=None):
     dist.broadcast(tensor, src=src, group=group)
 
     return _tensor_to_object(tensor, tensor_size=size.item())
+
 
 def all_gather_object(object_list, obj, group=None):
     """
@@ -270,7 +287,7 @@ def all_gather_object(object_list, obj, group=None):
 
     if group is not None and not group.is_member():
         return
-    
+
     current_device = paddle.device.get_device()
 
     input_tensor, local_size = _object_to_tensor(obj, device=current_device)
@@ -279,7 +296,8 @@ def all_gather_object(object_list, obj, group=None):
     object_size_list = []
     # Allgather tensor sizes
     dist.all_gather(object_size_list, local_size, group=group)
-    max_object_size = int(max(object_size_list).item())  # type: ignore[type-var]
+    max_object_size = int(
+        max(object_size_list).item())  # type: ignore[type-var]
     # 将张量进行 pad
     pad_dims = []
     pad_by = (max_object_size - local_size).detach().cpu()

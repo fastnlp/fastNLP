@@ -1,9 +1,9 @@
-__all__ = [
-]
-
 from typing import Any
+
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.envs.utils import _module_available
+
+__all__ = []  # type: ignore
 
 _IS_TORCHMETRICS_AVAILABLE = _module_available('torchmetrics')
 _IS_ALLENNLP_AVAILABLE = _module_available('allennlp')
@@ -26,8 +26,7 @@ if _IS_TORCHEVAL_AVAILABLE:
 
 
 def _is_torchmetrics_metric(metric: Any) -> bool:
-    """
-    检查输入的对象是否为torchmetrics对象
+    """检查输入的对象是否为torchmetrics对象.
 
     :param metric:
     :return:
@@ -39,8 +38,7 @@ def _is_torchmetrics_metric(metric: Any) -> bool:
 
 
 def _is_allennlp_metric(metric: Any) -> bool:
-    """
-    检查输入的对象是否为allennlp对象
+    """检查输入的对象是否为allennlp对象.
 
     :param metric:
     :return:
@@ -52,8 +50,7 @@ def _is_allennlp_metric(metric: Any) -> bool:
 
 
 def _is_paddle_metric(metric: Any) -> bool:
-    """
-    检查输入的对象是否为allennlp对象
+    """检查输入的对象是否为allennlp对象.
 
     :param metric:
     :return:
@@ -64,9 +61,9 @@ def _is_paddle_metric(metric: Any) -> bool:
         return False
 
 
-def _is_torcheval_metric(metric: Any) ->bool:
-    """
-    检查输入的对象是否为torcheval对象
+def _is_torcheval_metric(metric: Any) -> bool:
+    """检查输入的对象是否为torcheval对象.
+
     :param metric:
     :return:
     """
@@ -77,6 +74,7 @@ def _is_torcheval_metric(metric: Any) ->bool:
 
 
 class AggregateMethodError(BaseException):
+
     def __init__(self, should_have_aggregate_method, only_warn=False):
         super(AggregateMethodError, self).__init__(self)
         self.should_have_aggregate_method = should_have_aggregate_method
