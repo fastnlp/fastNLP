@@ -942,8 +942,8 @@ class DataSet:
         #   只检测第一个数据是否为dict类型，若是则默认所有返回值为dict；否则报错。
         if not isinstance(apply_out[0], Mapping):
             raise Exception(
-                f'The result of func:{_get_fun_msg(func)} is not a dict, but of type {type(apply_out[0])}'
-            )
+                f'The result of func:{_get_fun_msg(func)} is not a dict, '
+                f'but of type {type(apply_out[0])}')
 
         for key, value in apply_out[0].items():
             results[key] = [value]

@@ -863,6 +863,7 @@ def test_trainer_checkpoint_callback_2(driver, device, version):
 def test_trainer_checkpoint_callback_without_timestamp_folder(
         model_and_optimizers: TrainerParameters, driver, device,
         use_timestamp_folder):
+    skip_no_cuda(device)
     path = Path.cwd().joinpath('test_model_checkpoint')
     path.mkdir(exist_ok=True, parents=True)
     try:
@@ -922,3 +923,6 @@ def test_trainer_checkpoint_callback_without_timestamp_folder(
         assert 'trainer-epoch_3' in all_saved_model_paths
     finally:
         rank_zero_rm(path)
+
+    if dist.is_initialized():
+        dist.destroy_process_group()

@@ -11,6 +11,7 @@ from fastNLP.core.metrics.metric import Metric
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 
 from .utils import find_free_network_port, setup_ddp
+from tests.helpers.utils import skip_no_cuda
 
 if _NEED_IMPORT_TORCH:
     import torch
@@ -50,7 +51,8 @@ def _test(local_rank: int,
     # dataset 也类似（每个进程有自己的一个）
     dataset = copy.deepcopy(dataset)
     metric.to(device)
-    # 把数据拆到每个 GPU 上，有点模仿 DistributedSampler 的感觉，但这里数据单位是一个 batch（即每个 i 取了一个 batch 到自己的 GPU 上）
+    # 把数据拆到每个 GPU 上，有点模仿 DistributedSampler 的感觉，但这里数据单位是
+    # 一个 batch（即每个 i 取了一个 batch 到自己的 GPU 上）
     for i in range(local_rank, len(dataset), world_size):
         pred = dataset[i]['pred']
         pred = F.softmax(pred, dim=2)
@@ -64,6 +66,7 @@ def _test(local_rank: int,
 
 @pytest.fixture(scope='class', autouse=True)
 def pre_process():
+    skip_no_cuda()
     global pool
     pool = Pool(processes=NUM_PROCESSES)
     master_port = find_free_network_port()
@@ -86,23 +89,23 @@ class TestPerplexity:
         dataset = DataSet([
             Instance(
                 pred=torch.rand(2, 8, 5, generator=torch.manual_seed(22)),
-                target=torch.randint(5, (2, 8),
-                                     generator=torch.manual_seed(22)),
+                target=torch.randint(
+                    5, (2, 8), generator=torch.manual_seed(22)),
             ),
             Instance(
                 pred=torch.rand(2, 8, 5, generator=torch.manual_seed(18)),
-                target=torch.randint(5, (2, 8),
-                                     generator=torch.manual_seed(18)),
+                target=torch.randint(
+                    5, (2, 8), generator=torch.manual_seed(18)),
             ),
             Instance(
                 pred=torch.rand(2, 8, 5, generator=torch.manual_seed(16)),
-                target=torch.randint(5, (2, 8),
-                                     generator=torch.manual_seed(16)),
+                target=torch.randint(
+                    5, (2, 8), generator=torch.manual_seed(16)),
             ),
             Instance(
                 pred=torch.rand(2, 8, 5, generator=torch.manual_seed(14)),
-                target=torch.randint(5, (2, 8),
-                                     generator=torch.manual_seed(14)),
+                target=torch.randint(
+                    5, (2, 8), generator=torch.manual_seed(14)),
             )
         ])
         metric_kwargs['ignore_labels'] = [-100, -101]
