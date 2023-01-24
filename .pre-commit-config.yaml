@@ -1,0 +1,57 @@
+repos:
+#   参数说明 https://flake8.pycqa.org/en/latest/user/options.html
+  - repo: https://github.com/PyCQA/flake8
+    rev: 4.0.1
+    hooks:
+      - id: flake8
+        args: ["--exclude", "fastNLP/transformers/*", "--extend-ignore", "E402,E501,E741,F403,F405"]
+  # - repo: https://github.com/PyCQA/isort
+  #   rev: 5.10.1
+  #   hooks:
+  #     - id: isort
+  #       args: ["-m=2"]
+  - repo: https://github.com/pre-commit/mirrors-yapf
+    rev: v0.32.0
+    hooks:
+      - id: yapf
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.1
+    hooks:
+      - id: codespell
+        args:
+          - --skip=docs/*,tests/data_for_tests/*,tutorials,fastNLP/transformers/*,*.tsv
+          - -L ans,rouge,ROUGE,warmup
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.2.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: check-added-large-files
+        args: ["--maxkb=100"]
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: requirements-txt-fixer
+      - id: double-quote-string-fixer
+      - id: check-merge-conflict
+      - id: fix-encoding-pragma
+        args: ["--remove"]
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+# parameter introduction: https://docformatter.readthedocs.io/en/latest/usage.html#use-from-the-command-line
+  - repo: https://github.com/myint/docformatter
+    rev: v1.4
+    hooks:
+      - id: docformatter
+        args: ["--in-place", "--wrap-descriptions", "79"]
+# check type-hint
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.991
+    hooks:
+      - id: mypy
+        exclude: |-
+          (?x)(
+              ^tests
+              | ^docs
+              | tutorials
+              | fastNLP/transformers
+          )
