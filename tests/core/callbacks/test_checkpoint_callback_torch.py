@@ -853,3 +853,72 @@ def test_trainer_checkpoint_callback_2(driver, device, version):
 
     if dist.is_initialized():
         dist.destroy_process_group()
+
+
+@pytest.mark.torch
+# 测试保存断点时不产生时间戳文件夹
+@pytest.mark.parametrize('driver,device,use_timestamp_folder',
+                         [('torch', 'cpu', False), ('torch', [1, 2], False)])
+@magic_argv_env_context(timeout=100)
+def test_trainer_checkpoint_callback_without_timestamp_folder(
+        model_and_optimizers: TrainerParameters, driver, device,
+        use_timestamp_folder):
+    path = Path.cwd().joinpath('test_model_checkpoint')
+    path.mkdir(exist_ok=True, parents=True)
+    try:
+        callbacks = [
+            CheckpointCallback(
+                folder=path,
+                every_n_epochs=1,
+                every_n_batches=None,
+                save_object='trainer',
+                use_timestamp_folder=False)
+        ]
+        trainer = Trainer(
+            model=model_and_optimizers.model,
+            driver=driver,
+            device=device,
+            optimizers=model_and_optimizers.optimizers,
+            train_dataloader=model_and_optimizers.train_dataloader,
+            evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+            input_mapping=model_and_optimizers.input_mapping,
+            output_mapping=model_and_optimizers.output_mapping,
+            metrics=model_and_optimizers.metrics,
+            n_epochs=3,
+            callbacks=callbacks,
+            output_from_new_proc='all')
+        trainer.run()
+        all_saved_model_paths = {w.name: w for w in path.iterdir()}
+        assert 'trainer-epoch_1' in all_saved_model_paths
+        assert 'trainer-epoch_3' in all_saved_model_paths
+        callbacks = [
+            CheckpointCallback(
+                folder=path,
+                every_n_epochs=1,
+                every_n_batches=None,
+                save_object='trainer',
+                use_timestamp_folder=True)
+        ]
+        trainer = Trainer(
+            model=model_and_optimizers.model,
+            driver=driver,
+            device=device,
+            optimizers=model_and_optimizers.optimizers,
+            train_dataloader=model_and_optimizers.train_dataloader,
+            evaluate_dataloaders=model_and_optimizers.evaluate_dataloaders,
+            input_mapping=model_and_optimizers.input_mapping,
+            output_mapping=model_and_optimizers.output_mapping,
+            metrics=model_and_optimizers.metrics,
+            n_epochs=3,
+            callbacks=callbacks,
+            output_from_new_proc='all')
+        trainer.load_checkpoint(folder=path.joinpath('trainer-epoch_2'))
+        trainer.run()
+        all_saved_model_paths = {
+            w.name: w
+            for w in path.joinpath(os.environ[FASTNLP_LAUNCH_TIME]).iterdir()
+        }
+        assert 'trainer-epoch_1' not in all_saved_model_paths
+        assert 'trainer-epoch_3' in all_saved_model_paths
+    finally:
+        rank_zero_rm(path)

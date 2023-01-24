@@ -1,6 +1,6 @@
 numpy>=1.14.2
 packaging
+packaging
 prettytable>=0.7.2
 regex!=2019.12.17
-requests
-rich==11.2.0
+rich==12.6.0

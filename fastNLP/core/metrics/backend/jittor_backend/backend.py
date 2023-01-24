@@ -22,12 +22,12 @@ class JittorBackend(Backend):
         return tensor
 
     def create_tensor(self, value: Union[float, List]):
-        """创建 tensor，并且填入 value 作为值."""
+        """创建 tensor，并且填入 value 作为值。"""
         tensor = jittor.array(value)
         return tensor
 
     def fill_value(self, tensor, value: Union[float, List, np.ndarray]):
-        """将 tensor 的值设置为 value."""
+        """将 tensor 的值设置为 value。"""
         length = len(value) if isinstance(value, (np.ndarray, list)) else 1
         value = jittor.array(value)
         for i in range(length):

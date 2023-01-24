@@ -69,6 +69,8 @@ class CheckpointCallback(Callback):
         json`` 文件，记录当前的 results。仅在设置了 ``topk`` 的场景下有用，默认为
         ``True``。
     :param kwargs:
+        * *use_timestamp_folder* (``bool``) 类型 -- 是否创建以脚本的启动时间命名的
+          文件夹，默认为 ``True``。
     """
 
     def __init__(

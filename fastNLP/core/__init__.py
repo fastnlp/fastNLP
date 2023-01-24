@@ -90,6 +90,7 @@ __all__ = [
     'ClassifyFPreRecMetric',
     'BLEU',
     'ROUGE',
+    'Perplexity',
 
     # samplers
     'ReproducibleSampler',
