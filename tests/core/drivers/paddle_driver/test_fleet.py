@@ -52,7 +52,7 @@ def generate_driver(labels,
 
 @pytest.mark.paddledist
 class TestFleetDriverFunction:
-    """测试 PaddleFleetDriver 一些简单函数的测试类，基本都是测试能否运行、是否存在 import 错误等问题."""
+    """测试 PaddleFleetDriver 一些简单函数的测试类，基本都是测试能否运行、是否存在 import 错误等问题。"""
 
     @classmethod
     def setup_class(cls):
@@ -87,7 +87,7 @@ class TestFleetDriverFunction:
     @magic_argv_env_context
     def test_get_no_sync_context(self):
         """测试 get_no_sync_context 函数."""
-        with self.driver.get_model_no_sync_context():
+        with self.driver.get_model_no_sync_context()():
             pass
         dist.barrier()
 

@@ -11,16 +11,16 @@ sys.path.append('../../../')
 
 from dataclasses import dataclass
 
-import paddle.distributed.fleet as fleet
-from paddle.io import DataLoader
-from paddle.optimizer import Adam
-
 from fastNLP.core.callbacks.progress_callback import RichCallback
 from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.core.metrics.accuracy import Accuracy
 from tests.helpers.datasets.paddle_data import PaddleArgMaxDataset
 from tests.helpers.models.paddle_model import \
     PaddleNormalModel_Classification_2
+
+import paddle.distributed.fleet as fleet
+from paddle.io import DataLoader
+from paddle.optimizer import Adam
 
 
 @dataclass

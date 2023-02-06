@@ -1,4 +1,15 @@
 import os
+import sys
+
+path = os.path.abspath(__file__)
+folders = path.split(os.sep)
+for folder in list(folders[::-1]):
+    if 'fastnlp' not in folder.lower():
+        folders.pop(-1)
+    else:
+        break
+path = os.sep.join(folders)
+sys.path.extend([path, os.path.join(path, 'fastNLP')])
 
 import numpy as np
 import pytest

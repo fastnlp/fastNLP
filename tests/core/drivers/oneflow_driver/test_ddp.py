@@ -1,8 +1,16 @@
 import os
 import sys
-
-sys.path.append('../../../../')
 from pathlib import Path
+
+path = os.path.abspath(__file__)
+folders = path.split(os.sep)
+for folder in list(folders[::-1]):
+    if 'fastnlp' not in folder.lower():
+        folders.pop(-1)
+    else:
+        break
+path = os.sep.join(folders)
+sys.path.extend([path, os.path.join(path, 'fastNLP')])
 
 import pytest
 
@@ -109,7 +117,8 @@ class TestDDPDriverFunction:
         """
         测试 get_no_sync_context 函数
         """
-        res = driver.get_model_no_sync_context()
+        with driver.get_model_no_sync_context()():
+            pass
         comm.barrier()
         """
         测试 is_global_zero 函数

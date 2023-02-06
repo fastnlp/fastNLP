@@ -5,10 +5,20 @@
     >>> # 测试通过 deepspeed 拉起
     >>> deepspeed _test_trainer_deepspeed.py
 """
+import os
 import sys
-
-sys.path.append('../../../')
+import argparse
 from dataclasses import dataclass
+
+path = os.path.abspath(__file__)
+folders = path.split(os.sep)
+for folder in list(folders[::-1]):
+    if 'fastnlp' not in folder.lower():
+        folders.pop(-1)
+    else:
+        break
+path = os.sep.join(folders)
+sys.path.extend([path, os.path.join(path, 'fastNLP')])
 
 from torch.optim import Adam
 from torch.utils.data import DataLoader
@@ -76,7 +86,12 @@ def test_trainer_deepspeed(
 
 
 if __name__ == '__main__':
-    device = [4, 5]
+    parser = argparse.ArgumentParser(description='Input trainer parameters.')
+    parser.add_argument('-d', '--device', type=int, nargs='+', default=None)
+
+    args = parser.parse_args()
+    if args.device is None:
+        args.device = [4, 5]
     # device = [0,1,3]
     callbacks = [
         # RecordMetricCallback(monitor="acc#acc", metric_threshold=0.0, larger_better=True),
@@ -84,7 +99,7 @@ if __name__ == '__main__':
     ]
     config = None
     test_trainer_deepspeed(
-        device=device,
+        device=args.device,
         callbacks=callbacks,
         strategy='deepspeed',
         config=config,

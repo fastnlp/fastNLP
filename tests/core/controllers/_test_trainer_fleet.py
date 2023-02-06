@@ -9,14 +9,20 @@
     >>> # 测试在限制 GPU 的情况下直接使用多卡
     >>> CUDA_VISIBLE_DEVICES=3,4,5,6 FASTNLP_BACKEND=paddle python _test_trainer_fleet.py
 """
+import os
 import sys
-
-sys.path.append('../../../')
-
+import argparse
 from dataclasses import dataclass
 
-from paddle.io import DataLoader
-from paddle.optimizer import Adam
+path = os.path.abspath(__file__)
+folders = path.split(os.sep)
+for folder in list(folders[::-1]):
+    if 'fastnlp' not in folder.lower():
+        folders.pop(-1)
+    else:
+        break
+path = os.sep.join(folders)
+sys.path.extend([path, os.path.join(path, 'fastNLP')])
 
 from fastNLP.core.callbacks.progress_callback import RichCallback
 from fastNLP.core.controllers.trainer import Trainer
@@ -24,6 +30,9 @@ from fastNLP.core.metrics.accuracy import Accuracy
 from tests.helpers.datasets.paddle_data import PaddleArgMaxDataset
 from tests.helpers.models.paddle_model import \
     PaddleNormalModel_Classification_1
+
+from paddle.io import DataLoader
+from paddle.optimizer import Adam
 
 
 @dataclass
@@ -80,16 +89,21 @@ def test_trainer_fleet(
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Input trainer parameters.')
+    parser.add_argument('-d', '--device', type=int, nargs='+', default=None)
+
+    args = parser.parse_args()
+    if args.device is None:
+        args.device = [0, 1, 3]
+
     driver = 'paddle'
-    device = [0, 1, 3]
-    # device = 2
     callbacks = [
         # RecordMetricCallback(monitor="acc#acc", metric_threshold=0.0, larger_better=True),
         RichCallback(5),
     ]
     test_trainer_fleet(
         driver=driver,
-        device=device,
+        device=args.device,
         callbacks=callbacks,
         n_epochs=5,
     )

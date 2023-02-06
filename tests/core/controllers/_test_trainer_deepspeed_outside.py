@@ -4,9 +4,17 @@
 """
 import os
 import sys
-
-sys.path.append('../../../')
 from dataclasses import dataclass
+
+path = os.path.abspath(__file__)
+folders = path.split(os.sep)
+for folder in list(folders[::-1]):
+    if 'fastnlp' not in folder.lower():
+        folders.pop(-1)
+    else:
+        break
+path = os.sep.join(folders)
+sys.path.extend([path, os.path.join(path, 'fastNLP')])
 
 import deepspeed
 import torch

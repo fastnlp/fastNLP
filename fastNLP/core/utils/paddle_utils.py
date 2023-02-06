@@ -1,10 +1,12 @@
 import os
 import re
+import operator
 from typing import Any, Optional, Union
 
 from fastNLP.envs import (FASTNLP_BACKEND_LAUNCH, FASTNLP_DISTRIBUTED_CHECK,
                           USER_CUDA_VISIBLE_DEVICES)
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
+from fastNLP.envs.utils import _compare_version
 
 if _NEED_IMPORT_PADDLE:
     import paddle
@@ -71,9 +73,8 @@ def _convert_data_device(device: Union[str, int]) -> str:
 
 
 def paddle_to(
-    data: 'paddle.Tensor', device: Union[str, int,
-                                         'paddle.fluid.core_avx.Place',
-                                         'paddle.CPUPlace', 'paddle.CUDAPlace']
+    data: 'paddle.Tensor', device: Union[str, int, 'paddle.CPUPlace',
+                                         'paddle.CUDAPlace']
 ) -> 'paddle.Tensor':
     r"""将 ``data`` 迁移到指定的 ``device`` 上。:class:`paddle.Tensor` 没有类似
     :meth:`torch.Tensor.to` 的函数来迁移张量，因此该函数只是集成了 :func:`paddle.
@@ -81,11 +82,16 @@ def paddle_to(
 
     :param data: 要迁移的张量；
     :param device: 目标设备，可以是 ``str`` 或 ``int`` 及 **paddle** 自己的
-        :class:`paddle.fluid.core_avx.Place`、:class:`paddle.CPUPlace` 和
-        :class:`paddle.CUDAPlace` 类型；
+        :class:`paddle.CPUPlace` 、:class:`paddle.CUDAPlace` 类型；
     :return: 迁移后的张量；
     """
-    if isinstance(device, paddle.fluid.core_avx.Place):
+    if _compare_version('paddle', operator.lt, '2.4.0'):
+        place_class = paddle.fluid.core_avx.Place
+    else:
+        # 2.4.1 起 Place 位置发生变化
+        # TODO 对 Place 的判断是否还有必要？
+        place_class = paddle.fluid.libpaddle.Place
+    if isinstance(device, place_class):
         if device.is_cpu_place():
             return data.cpu()
         else:

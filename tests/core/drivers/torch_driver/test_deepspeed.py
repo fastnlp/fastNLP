@@ -118,7 +118,7 @@ def test_multi_optimizers():
 
 @pytest.mark.deepspeed
 class TestDeepSpeedDriverFunction:
-    """测试 TorchDeepSpeedDriver 一些简单函数的测试类，基本都是测试能否运行、是否存在 import 错误等问题."""
+    """测试 DeepSpeedDriver 一些简单函数的测试类，基本都是测试能否运行、是否存在 import 错误等问题."""
 
     @classmethod
     def setup_class(cls):

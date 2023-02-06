@@ -124,7 +124,8 @@ class TestDDPDriverFunction:
         """
         测试 get_no_sync_context 函数
         """
-        res = driver.get_model_no_sync_context()
+        with driver.get_model_no_sync_context()():
+            pass
         dist.barrier()
         """
         测试 is_global_zero 函数
