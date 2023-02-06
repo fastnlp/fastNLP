@@ -9,6 +9,7 @@ from typing import Any, Callable, List, Optional, Union
 import numpy as np
 
 from ..log import logger
+from ..utils.utils import pretty_table_printer
 
 __all__ = ['FieldArray']
 
@@ -48,18 +49,21 @@ class FieldArray:
         """
         self.content.pop(index)
 
+    def __repr__(self):
+        return str(pretty_table_printer(self))
+
     def __iter__(self):
         for idx in range(len(self)):
             yield self[idx]
 
-    def __getitem__(self, indices: Union[int, List[int]]):
+    def __getitem__(self, indices: Union[int, slice, List[int]]):
         return self.get(indices)
 
     def __setitem__(self, idx: int, val: Any):
         assert isinstance(idx, int)
         self.content[idx] = val
 
-    def get(self, indices: Union[int, List[int]]):
+    def get(self, indices: Union[int, slice, List[int]]):
         r"""
         根据给定的 ``indices`` 返回内容。
 
@@ -72,11 +76,15 @@ class FieldArray:
                 indices = len(self) - 1
             assert 0 <= indices < len(self)
             return self.content[indices]
+
         try:
-            contents = [self.content[i] for i in indices]
+            if isinstance(indices, slice):
+                contents = self.content[indices]
+            else:
+                contents = [self.content[i] for i in indices]
         except BaseException as e:
             raise e
-        return np.array(contents)
+        return np.array(contents, dtype=object)
 
     def __len__(self):
         r"""

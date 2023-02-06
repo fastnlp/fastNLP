@@ -554,13 +554,28 @@ class TestFieldArray:
         assert isinstance(ans[0], np.ndarray) is True
         assert ans[0].tolist() == [1.1, 2.2, 3.3, 4.4, 5.5]
         assert ans[1].tolist() == [1, 2, 3, 4, 5]
-        assert ans.dtype == np.float64
+        assert ans.dtype == object
 
     def test_getitem_v2(self):
         x = np.random.rand(10, 5)
         fa = FieldArray('my_field', x)
         indices = [0, 1, 3, 4, 6]
         for a, b in zip(fa[indices], x[indices]):
+            assert a.tolist() == b.tolist()
+
+    def test_getitem_slice(self):
+        x = np.random.rand(10, 5)
+        fa = FieldArray('my_field', x)
+        for a, b in zip(fa[3:7], x[3:7]):
+            assert a.tolist() == b.tolist()
+
+        for a, b in zip(fa[:4], x[:5]):
+            assert a.tolist() == b.tolist()
+
+        for a, b in zip(fa[6:], x[6:]):
+            assert a.tolist() == b.tolist()
+
+        for a, b in zip(fa[-5:-3], x[-5:-3]):
             assert a.tolist() == b.tolist()
 
     def test_append(self):

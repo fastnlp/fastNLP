@@ -500,7 +500,7 @@ def _is_iterable(value):
         return False
 
 
-def pretty_table_printer(dataset_or_ins) -> PrettyTable:
+def pretty_table_printer(container) -> PrettyTable:
     r"""
     用于在 **fastNLP** 中展示数据的函数::
 
@@ -511,8 +511,9 @@ def pretty_table_printer(dataset_or_ins) -> PrettyTable:
         | [1, 1, 1] | [2, 2, 2] | ['a', 'b', 'c'] |
         +-----------+-----------+-----------------+
 
-    :param dataset_or_ins: 要展示的 :class:`~fastNLP.core.DataSet` 或者
-        :class:`~fastNLP.core.Instance` 实例；
+    :param container: 要展示的 :class:`~fastNLP.core.DataSet`、
+        :class:`~fastNLP.core.Instance` 或 :class:`~fastNLP.core.FieldArray`
+        实例；
     :return: 根据命令行大小进行自动截断的数据表格；
     """
     x = PrettyTable()
@@ -524,23 +525,31 @@ def pretty_table_printer(dataset_or_ins) -> PrettyTable:
         column = 144
         row = 11
 
-    if type(dataset_or_ins).__name__ == 'DataSet':
-        x.field_names = list(dataset_or_ins.field_arrays.keys())
+    if type(container).__name__ == 'DataSet':
+        x.field_names = list(container.field_arrays.keys())
         c_size = len(x.field_names)
-        for ins in dataset_or_ins:
+        for ins in container:
             x.add_row(
                 [sub_column(ins[k], column, c_size, k) for k in x.field_names])
             row -= 1
             if row < 0:
                 x.add_row(['...' for _ in range(c_size)])
                 break
-    elif type(dataset_or_ins).__name__ == 'Instance':
-        x.field_names = list(dataset_or_ins.fields.keys())
+    elif type(container).__name__ == 'Instance':
+        x.field_names = list(container.fields.keys())
         c_size = len(x.field_names)
         x.add_row([
-            sub_column(dataset_or_ins[k], column, c_size, k)
-            for k in x.field_names
+            sub_column(container[k], column, c_size, k) for k in x.field_names
         ])
+    elif type(container).__name__ == 'FieldArray':
+        x.field_names = [container.name]
+        c_size = len(x.field_names)
+        for content in container.content:
+            x.add_row([sub_column(content, column, 1, container.name)])
+            row -= 1
+            if row < 0:
+                x.add_row(['...'])
+                break
 
     else:
         raise Exception('only accept  DataSet and Instance')
