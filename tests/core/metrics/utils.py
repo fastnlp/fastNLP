@@ -5,6 +5,7 @@ from typing import Union
 
 import numpy as np
 
+from fastNLP.core.metrics import Metric
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH
 
 if _NEED_IMPORT_TORCH:
@@ -48,3 +49,31 @@ def _assert_allclose(my_result: Union[float, np.ndarray],
     :return:
     """
     assert np.allclose(a=my_result, b=sklearn_result, atol=atol)
+
+
+class DemoMetric(Metric):
+
+    def __init__(self, backend):
+        super(DemoMetric, self).__init__(backend=backend)
+        self.register_element('a', 0, aggregate_method='sum')
+
+    def update(self, a):
+        self.a += a
+
+    def get_metric(self) -> dict:
+        return {'a': self.a}
+
+
+class DemoMetric2(Metric):
+
+    def __init__(self, backend, aggregate_when_get_metric):
+        super(DemoMetric2, self).__init__(
+            backend=backend,
+            aggregate_when_get_metric=aggregate_when_get_metric)
+        self.register_element('a', [0, 0, 0, 0], aggregate_method='sum')
+
+    def update(self, a):
+        self.a += a
+
+    def get_metric(self) -> dict:
+        return {'a': self.a}

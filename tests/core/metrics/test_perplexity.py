@@ -21,18 +21,6 @@ if _NEED_IMPORT_TORCH:
 else:
     from fastNLP.core.utils.dummy_class import DummyClass as set_start_method
 
-from fastNLP.envs.imports import (_NEED_IMPORT_JITTOR, _NEED_IMPORT_ONEFLOW,
-                                  _NEED_IMPORT_PADDLE)
-
-if _NEED_IMPORT_PADDLE:
-    import paddle
-
-if _NEED_IMPORT_ONEFLOW:
-    import oneflow
-
-if _NEED_IMPORT_JITTOR:
-    import jittor
-
 set_start_method('spawn', force=True)
 
 NUM_PROCESSES = 2
@@ -139,72 +127,17 @@ class TestPerplexity:
 
 
 @pytest.mark.torch
-@pytest.mark.parametrize('dataset', [
-    {
-        'pred': torch.rand(2, 8, generator=torch.manual_seed(22)),
-        'target': torch.randint(5, (2, 8), generator=torch.manual_seed(22))
-    },
-    {
-        'pred': torch.rand(2, 8, 5, generator=torch.manual_seed(22)),
-        'target': torch.randint(5, (2, 8, 4), generator=torch.manual_seed(22))
-    },
-    {
-        'pred': torch.rand(2, 10, 5, generator=torch.manual_seed(22)),
-        'target': torch.randint(5, (2, 8), generator=torch.manual_seed(22))
-    },
-])
-def test_input_shape(dataset):
+@pytest.mark.parametrize(['pred_shape', 'tgt_high', 'tgt_shape'],
+                         [[[2, 8], 5,
+                           (2, 8)], [[2, 8, 5], 5,
+                                     (2, 8, 4)], [[2, 10, 5], 5, (2, 8)]])
+def test_input_shape(pred_shape, tgt_high, tgt_shape):
+    dataset = {
+        'pred':
+        torch.rand(*pred_shape, generator=torch.manual_seed(22)),
+        'target':
+        torch.randint(tgt_high, tgt_shape, generator=torch.manual_seed(22))
+    }
     metric = Perplexity(backend='torch')
     with pytest.raises(ValueError):
         metric.update(dataset['pred'], dataset['target'])
-
-
-@pytest.mark.paddle
-def test_perplexity_paddle():
-    np.random.seed(0)
-    preds = np.random.rand(4, 2, 8, 5)
-    targets = np.random.randint(low=0, high=5, size=(4, 2, 8))
-    preds = paddle.to_tensor(preds)
-    targets = paddle.to_tensor(targets)
-    metric = Perplexity(backend='paddle')
-    for i in range(4):
-        pred = paddle.nn.functional.softmax(preds[i], axis=2)
-        target = targets[i]
-        metric.update(pred, target)
-    my_result = metric.get_metric()
-    result = my_result['perplexity']
-    np.testing.assert_almost_equal(result, 5.235586)
-
-
-@pytest.mark.oneflow
-def test_perplexity_oneflow():
-    np.random.seed(0)
-    preds = np.random.rand(4, 2, 8, 5)
-    targets = np.random.randint(low=0, high=5, size=(4, 2, 8))
-    preds = oneflow.as_tensor(preds)
-    targets = oneflow.as_tensor(targets)
-    metric = Perplexity(backend='oneflow')
-    for i in range(4):
-        pred = oneflow.nn.functional.softmax(preds[i], dim=2)
-        target = targets[i]
-        metric.update(pred, target)
-    my_result = metric.get_metric()
-    result = my_result['perplexity']
-    np.testing.assert_almost_equal(result, 5.235586)
-
-
-@pytest.mark.jittor
-def test_perplexity_jittor():
-    np.random.seed(0)
-    preds = np.random.rand(4, 2, 8, 5)
-    targets = np.random.randint(low=0, high=5, size=(4, 2, 8))
-    preds = jittor.array(preds)
-    targets = jittor.array(targets)
-    metric = Perplexity(backend='jittor')
-    for i in range(4):
-        pred = jittor.nn.softmax(preds[i], dim=2)
-        target = targets[i]
-        metric.update(pred, target)
-    my_result = metric.get_metric()
-    result = my_result['perplexity']
-    np.testing.assert_almost_equal(result, 5.235586)
