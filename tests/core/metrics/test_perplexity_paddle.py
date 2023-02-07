@@ -41,7 +41,7 @@ def _test(local_rank: int,
         target[0, 7] = -101
         metric.update(pred, target)
     results = metric.get_metric()
-    np.testing.assert_almost_equal(results['perplexity'], 5.165595, decimal=6)
+    np.testing.assert_almost_equal(results['perplexity'], 5.677935, decimal=6)
 
 
 @pytest.mark.paddledist
@@ -65,21 +65,20 @@ class TestPerplexity:
     def test_v1(self, metric_kwargs: Dict[str, Any]) -> None:
         if sys.platform == 'win32':
             pytest.skip('DDP not supported on windows')
-        paddle.seed(22)
+        np.random.seed(22)
         dataset = DataSet([
             Instance(
-                pred=paddle.rand((2, 8, 5)),
-                target=paddle.randint(5, shape=(2, 8))),
+                pred=paddle.to_tensor(np.random.rand(2, 8, 5)),
+                target=paddle.to_tensor(np.random.randint(5, size=(2, 8)))),
             Instance(
-                pred=paddle.rand((2, 8, 5)),
-                target=paddle.randint(5, shape=(2, 8))),
+                pred=paddle.to_tensor(np.random.rand(2, 8, 5)),
+                target=paddle.to_tensor(np.random.randint(5, size=(2, 8)))),
             Instance(
-                pred=paddle.rand((2, 8, 5)),
-                target=paddle.randint(5, shape=(2, 8)),
-            ),
+                pred=paddle.to_tensor(np.random.rand(2, 8, 5)),
+                target=paddle.to_tensor(np.random.randint(5, size=(2, 8)))),
             Instance(
-                pred=paddle.rand((2, 8, 5)),
-                target=paddle.randint(5, shape=(2, 8)))
+                pred=paddle.to_tensor(np.random.rand(2, 8, 5)),
+                target=paddle.to_tensor(np.random.randint(5, size=(2, 8)))),
         ])
         metric_kwargs['ignore_labels'] = [-100, -101]
         world_size = int(os.environ['PADDLE_TRAINERS_NUM'])
@@ -99,21 +98,22 @@ class TestPerplexity:
 @pytest.mark.parametrize('device', ['cuda', 'cpu'])
 def test_perplexity_paddle(device, metric_kwargs):
     skip_no_cuda(device)
-    paddle.seed(22)
+    # 用 numpy 的种子是因为种子似乎会受到影响
+    # 在上层批量执行时会导致结果出错
+    np.random.seed(22)
     dataset = DataSet([
         Instance(
-            pred=paddle.rand((2, 8, 5)),
-            target=paddle.randint(5, shape=(2, 8))),
+            pred=paddle.to_tensor(np.random.rand(2, 8, 5)),
+            target=paddle.to_tensor(np.random.randint(5, size=(2, 8)))),
         Instance(
-            pred=paddle.rand((2, 8, 5)),
-            target=paddle.randint(5, shape=(2, 8))),
+            pred=paddle.to_tensor(np.random.rand(2, 8, 5)),
+            target=paddle.to_tensor(np.random.randint(5, size=(2, 8)))),
         Instance(
-            pred=paddle.rand((2, 8, 5)),
-            target=paddle.randint(5, shape=(2, 8)),
-        ),
+            pred=paddle.to_tensor(np.random.rand(2, 8, 5)),
+            target=paddle.to_tensor(np.random.randint(5, size=(2, 8)))),
         Instance(
-            pred=paddle.rand((2, 8, 5)),
-            target=paddle.randint(5, shape=(2, 8)))
+            pred=paddle.to_tensor(np.random.rand(2, 8, 5)),
+            target=paddle.to_tensor(np.random.randint(5, size=(2, 8)))),
     ])
     metric_kwargs['ignore_labels'] = [-100, -101]
     metric_kwargs['aggregate_when_get_metric'] = False

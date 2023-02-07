@@ -202,6 +202,8 @@ def run_pytest(argv):
 def skip_no_cuda(device='cuda', reason='no cuda'):
     """用于跳过在环境不支持 cpu 的情况下需要 gpu 的测试 注意尽量不要放在 try 内，因为 pytest.skip 会 raise 一个名为
     Skipped 的异常，导致 跳转到 except 语句."""
+    if device == 'cpu':
+        return
     import pytest
     if os.environ.get('CUDA_VISIBLE_DEVICES') == '':
         pytest.skip(reason)

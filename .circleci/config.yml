@@ -1,0 +1,185 @@
+version: 2.1
+
+jobs:
+  lint:
+    docker:
+      - image: cimg/python:3.7.4
+    steps:
+      - checkout
+  build_other_tests:
+    parameters:
+      # The python version must match available image tags in
+      # https://circleci.com/developer/images/image/cimg/python
+      python:
+        type: string
+        default: "3.7.4"
+    docker:
+      - image: cimg/python:<< parameters.python >>
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Install Test Dependencies
+          command: |
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install pytest coverage pandas datasets nltk
+      - run:
+          name: Run Pytest
+          command: |
+            cd tests/
+            coverage run -m pytest . -m "not (torch or paddle or paddledist or jittor or oneflow or deepspeed or oneflowdist or torchpaddle or torchjittor or torchoneflow)"
+            coverage xml -i
+            coverage report -m -i
+
+  build_torch_cpu:
+    parameters:
+      # The python version must match available image tags in
+      # https://circleci.com/developer/images/image/cimg/python
+      python:
+        type: string
+        default: "3.7.4"
+      torch:
+        type: string
+    docker:
+      - image: cimg/python:<< parameters.python >>
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Install Test Dependencies
+          command: |
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install pytest coverage scikit-learn nltk
+      - run:
+          name: Install PyTorch
+          command: |
+            python -V
+            pip install torch==<< parameters.torch >>+cpu -f https://download.pytorch.org/whl/torch_stable.html
+            pip install torchmetrics torcheval transformers
+      - run:
+          name: Run unittests
+          command: |
+            cd tests/
+            coverage run -m pytest . -m torch
+            coverage xml -i
+            coverage report -m -i
+
+  build_paddle_cpu:
+    parameters:
+      # The python version must match available image tags in
+      # https://circleci.com/developer/images/image/cimg/python
+      python:
+        type: string
+        default: "3.7.4"
+    docker:
+      - image: cimg/python:<< parameters.python >>
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Install Test Dependencies
+          command: |
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install pytest coverage nltk
+      - run:
+          name: Install PaddlePaddle
+          command: |
+            python -V
+            pip install paddlepaddle==2.4.1
+            pip install paddlenlp
+      - run:
+          name: Run unittests
+          command: |
+            cd tests/
+            coverage run -m pytest . -m paddle
+            coverage xml -i
+            coverage report -m -i
+
+  build_oneflow_cpu:
+    parameters:
+      # The python version must match available image tags in
+      # https://circleci.com/developer/images/image/cimg/python
+      python:
+        type: string
+        default: "3.7.4"
+    docker:
+      - image: cimg/python:<< parameters.python >>
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Install Test Dependencies
+          command: |
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install pytest coverage nltk
+      - run:
+          name: Install Oneflow
+          command: |
+            python -V
+            pip install -f https://staging.oneflow.info/branch/master/cpu --pre oneflow
+      - run:
+          name: Run unittests
+          command: |
+            cd tests/
+            coverage run -m pytest . -m oneflow
+            coverage xml -i
+            coverage report -m -i
+
+  build_jittor_cpu:
+    parameters:
+      # The python version must match available image tags in
+      # https://circleci.com/developer/images/image/cimg/python
+      python:
+        type: string
+        default: "3.7.4"
+    docker:
+      - image: cimg/python:<< parameters.python >>
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Install Test Dependencies
+          command: |
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install pytest coverage requests nltk datasets
+      - run:
+          name: Install Jittor
+          command: |
+            python -V
+            pip install jittor
+      - run:
+          name: Run unittests
+          command: |
+            cd tests/
+            coverage run -m pytest . -m jittor
+            coverage xml -i
+            coverage report -m -i
+
+workflows:
+  fastnlp_test:
+    jobs:
+      # - lint
+      - build_other_tests:
+          name: Test Other
+          python: "3.9.0"
+      - build_torch_cpu:
+          name: Test CPU - Torch 1.6
+          # python: "3.9.0"
+          torch: "1.6.0"
+      - build_torch_cpu:
+          name: Test CPU - Torch 1.12
+          python: "3.9.0"
+          torch: "1.12.0"
+      - build_paddle_cpu:
+          name: Test CPU - PaddlePaddle
+      - build_oneflow_cpu:
+          name: Test CPU - Oneflow
+          python: "3.9.0"
+      - build_jittor_cpu:
+          name: Test CPU - Jittor
+          # python: "3.9.0"

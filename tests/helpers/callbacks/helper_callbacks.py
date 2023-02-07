@@ -42,11 +42,11 @@ class RecordMetricCallback(Callback):
 
     def on_train_end(self, trainer):
         if self.larger_better:
-            assert self.metric >= self.metric_begin_value
-            assert self.metric > self.metric_threshold
+            assert self.metric >= self.metric_begin_value, self.metric
+            assert self.metric > self.metric_threshold, self.metric
         else:
-            assert self.metric <= self.metric_begin_value
-            assert self.metric < self.metric_threshold
+            assert self.metric <= self.metric_begin_value, self.metric
+            assert self.metric < self.metric_threshold, self.metric
 
 
 class RecordTrainerEventTriggerCallback(Callback):
