@@ -10,7 +10,7 @@ from fastNLP.core.metrics.metric import Metric
 from fastNLP.core.utils.utils import _check_valid_parameters_number
 from fastNLP.envs import _module_available
 
-_UCODE_RANGES = (
+CHINESE_UCODE_RANGES = (
     ('\u3400', '\u4db5'),
     ('\u4e00', '\u9fa5'),
     ('\u9fa6', '\u9fbb'),
@@ -35,26 +35,38 @@ _UCODE_RANGES = (
     ('\u3300', '\u33ff'),
 )
 
+_REGEX = (
+    # 对于以下特殊符号，在前面插入一个空格
+    (re.compile(r'([\{-\~\[-\` -\&\(-\+\:-\@\/])'), r' \1 '),
+    # 除非前面有数字，否则句点或者逗号前后都加入一个空格
+    (re.compile(r'([^0-9])([\.,])'), r'\1 \2 '),
+    # 除非后面有数字，否则句点或者逗号前后都加入一个空格
+    (re.compile(r'([\.,])([^0-9])'), r' \1 \2'),
+    # 前面是数字时，后面跟着的破折号前后各加一个空格
+    (re.compile(r'([0-9])(-)'), r'\1 \2 '),
+)
+
+if _module_available('regex'):
+    import regex
+
+    _INT_REGEX = (
+        # p{S} : 匹配所有的特殊符号，包括符号，运算符，标点符号等。
+        # p{P} : 匹配所有的标点字符，包括符号，标点符号等，主要用于分隔单词
+        # P{N} : 匹配所有非数字字符
+        # 分离出前跟非数字的标点符号
+        (regex.compile(r'(\P{N})(\p{P})'), r'\1 \2 '),
+        # 分离出后跟非数字的标点符号
+        (regex.compile(r'(\p{P})(\P{N})'), r' \1 \2'),
+        # 分离出所有特殊符号
+        (regex.compile(r'(\p{S})'), r' \1 '),
+    )
+
 
 class _BaseTokenizer:
     """sacre_bleu中tokenzier的基类 。
 
     :param lowercase: 在设定tokenizer时是否将字母小写处理。
     """
-    _REGEX = (
-        (re.compile(r'([\{-\~\[-\` -\&\(-\+\:-\@\/])'), r' \1 '),
-        (re.compile(r'([^0-9])([\.,])'), r'\1 \2 '),
-        (re.compile(r'([\.,])([^0-9])'), r' \1 \2'),
-        (re.compile(r'([0-9])(-)'), r'\1 \2 '),
-    )
-
-    if _module_available('regex'):
-        import regex
-        _INT_REGEX = (
-            (regex.compile(r'(\P{N})(\p{P})'), r'\1 \2 '),
-            (regex.compile(r'(\p{P})(\P{N})'), r' \1 \2'),
-            (regex.compile(r'(\p{S})'), r' \1 '),
-        )
 
     def __init__(self, lowercase: bool = False) -> None:
         self.lowercase = lowercase
@@ -68,7 +80,7 @@ class _BaseTokenizer:
 
        :return: 被正则化后的输入。
        """
-        for (_re, repl) in cls._REGEX:
+        for (_re, repl) in _REGEX:
             line = _re.sub(repl, line)
         return ' '.join(line.split())
 
@@ -155,7 +167,7 @@ class _zhTokenizer(_BaseTokenizer):
 
        :return: 返回是否中文的bool值。
        """
-        for start, end in _UCODE_RANGES:
+        for start, end in CHINESE_UCODE_RANGES:
             if start <= uchar <= end:
                 return True
         return False
@@ -206,7 +218,7 @@ class _intlTokenizer(_BaseTokenizer):
 
        :return: 返回处理过的输入。
        """
-        for (_re, repl) in cls._INT_REGEX:
+        for (_re, repl) in _INT_REGEX:
             line = _re.sub(repl, line)
 
         return ' '.join(line.split())
@@ -308,15 +320,15 @@ class BLEU(Metric):
     """
 
     def __init__(
-        self,
-        n_gram: int = 4,
-        smooth: bool = False,
-        ngram_weights: Optional[Sequence[float]] = None,
-        backend: Union[str, Backend, None] = 'auto',
-        aggregate_when_get_metric: bool = None,
-        tokenizer_fn: Union[Callable, str] = None,
-        lowercase: bool = False,
-        **kwargs: Any,
+            self,
+            n_gram: int = 4,
+            smooth: bool = False,
+            ngram_weights: Optional[Sequence[float]] = None,
+            backend: Union[str, Backend, None] = 'auto',
+            aggregate_when_get_metric: bool = None,
+            tokenizer_fn: Union[Callable, str] = None,
+            lowercase: bool = False,
+            **kwargs: Any,
     ):
         super().__init__(backend=backend,
                          aggregate_when_get_metric=aggregate_when_get_metric)
@@ -327,8 +339,8 @@ class BLEU(Metric):
                 f'The number of weights in weights is different from n_gram: {len(ngram_weights)} != {n_gram}'
             )
         self.ngram_weights = ngram_weights if ngram_weights is not None else [
-            1.0 / n_gram
-        ] * n_gram
+                                                                                 1.0 / n_gram
+                                                                             ] * n_gram
 
         self.register_element(name='pred_len',
                               value=0,
@@ -365,9 +377,9 @@ class BLEU(Metric):
             )
 
     def update(
-        self, predictions: Union[str, Sequence[str]],
-        references: Union[str, Sequence[str],
-                          Sequence[Sequence[str]]]) -> None:
+            self, predictions: Union[str, Sequence[str]],
+            references: Union[str, Sequence[str],
+                              Sequence[Sequence[str]]]) -> None:
         r"""
        :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
        :param predictions: 预测的 ``sentence``, type为``Sequence``，长度可变，假设为 ``L``
