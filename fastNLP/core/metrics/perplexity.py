@@ -76,14 +76,10 @@ class Perplexity(Metric):
         probs = pred.reshape(-1, pred.shape[-1])
         target = target.reshape(-1)
         if self.ignore_labels is not None:
-            mask = np.ones(target.shape, dtype=bool)
+            mask = np.ones_like(target, dtype=bool)
             for ignore_label in self.ignore_labels:
-                mask_temp = np.not_equal(target, ignore_label)
-                mask = (mask == mask_temp)
-            target = np.ma.array(
-                target,
-                mask=(mask == False),  # noqa: E712
-                fill_value=0).filled()
+                mask &= np.not_equal(target, ignore_label)
+            target = np.ma.array(target, mask=~mask, fill_value=0).filled()
             probs = np.take(probs, target, axis=1).diagonal()[mask]
         else:
             probs = np.take(probs, target, axis=1).diagonal()
