@@ -47,6 +47,7 @@ def test_trainer_deepspeed(
     config,
     n_epochs=2,
 ):
+    skip_no_cuda()
     model = TorchNormalModel_Classification_1(
         num_labels=TrainDeepSpeedConfig.num_labels,
         feature_dimension=TrainDeepSpeedConfig.feature_dimension)

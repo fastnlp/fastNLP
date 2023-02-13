@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -27,7 +28,7 @@ from tests.helpers.datasets.oneflow_data import (OneflowNormalDataset,
                                                  OneflowNormalXYDataset)
 from tests.helpers.models.oneflow_model import \
     OneflowNormalModel_Classification_1
-from tests.helpers.utils import recover_logger
+from tests.helpers.utils import recover_logger, skip_no_cuda
 
 if _NEED_IMPORT_ONEFLOW:
     import oneflow
@@ -1018,7 +1019,22 @@ def test_customized_sampler_dataloader(inherit):
         pass
 
 
+@pytest.mark.oneflow
+def test_element_dist():
+    r"""分布式的测试"""
+    skip_no_cuda()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'python',
+        '-m',
+        'oneflow.distributed.launch',
+        '--nproc_per_node',
+        '2',
+        f"{path.joinpath('test_dist_utils.py')}",
+    ]
+    subprocess.check_call(command, env=os.environ)
+
+
 if __name__ == '__main__':
-    # python -m oneflow.distributed.launch --nproc_per_node 2 test_ddp.py
-    from tests.helpers.utils import run_pytest
-    run_pytest(sys.argv)
+
+    pytest.main([f'{__file__}', '-m', 'oneflowdist'])

@@ -6,10 +6,18 @@
     >>> python -m oneflow.distributed.launch --nproc_per_node 2 _test_trainer_oneflow.py -w
 """
 import sys
-
-sys.path.append('../../../')
 import os
 from dataclasses import dataclass
+
+path = os.path.abspath(__file__)
+folders = path.split(os.sep)
+for folder in list(folders[::-1]):
+    if 'fastnlp' not in folder.lower():
+        folders.pop(-1)
+    else:
+        break
+path = os.sep.join(folders)
+sys.path.extend([path, os.path.join(path, 'fastNLP')])
 
 from fastNLP.core.controllers.trainer import Trainer
 from fastNLP.core.metrics.accuracy import Accuracy

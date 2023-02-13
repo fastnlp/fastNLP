@@ -131,7 +131,7 @@ def test_getter_setter():
 
 
 @pytest.mark.paddle
-def test_dist_element():
+def test_element_dist():
     """测试上面的测试函数."""
     skip_no_cuda()
     path = Path(os.path.abspath(__file__)).parent

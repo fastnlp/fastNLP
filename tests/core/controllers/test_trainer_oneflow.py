@@ -1,4 +1,7 @@
+import os
 from dataclasses import dataclass
+from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -67,3 +70,33 @@ def test_trainer_oneflow(
         callbacks=callbacks,
     )
     trainer.run()
+
+
+@pytest.mark.oneflow
+def test_distributed_launch_outside_1():
+    r"""测试用户自己不初始化 ddp，使用 python -m oneflow.distributed.launch
+    启动"""
+    skip_no_cuda()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'python',
+        '-m',
+        'oneflow.distributed.launch',
+        '--nproc_per_node',
+        '2',
+        f"{path.joinpath('_test_trainer_oneflow.py')}",
+    ]
+    subprocess.check_call(command, env=os.environ)
+
+
+@pytest.mark.oneflow
+def test_distributed_launch_outside_2():
+    r"""测试用户自己初始化 ddp，使用 python -m oneflow.distributed.launch
+    启动"""
+    skip_no_cuda()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'python', '-m', 'oneflow.distributed.launch', '--nproc_per_node', '2',
+        f"{path.joinpath('_test_trainer_oneflow.py')}", '-w'
+    ]
+    subprocess.check_call(command, env=os.environ)

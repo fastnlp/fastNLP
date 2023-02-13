@@ -130,7 +130,7 @@ def test_perplexity_paddle(device, metric_kwargs):
 
 
 @pytest.mark.paddle
-def test_dist_perplexity():
+def test_perplexity_dist():
     """测试上面的测试函数."""
     skip_no_cuda()
     path = Path(os.path.abspath(__file__)).parent
