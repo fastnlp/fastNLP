@@ -119,7 +119,6 @@ class DeepSpeedDriver(TorchDDPDriver):
         * *config* -- ``deepspeed`` 的各项设置；**FastNLP** 允许用户传入自己的设置
           以增强灵活性，但这会使参数中的 ``optimizer`` 、``strategy`` 、 ``fp16``
           等失效，即当这个参数存在时，**FastNLP** 会用该参数覆盖其它的设置。
-    :kwargs:
         * *accumulation_steps* -- 即在 :class:`~fastNLP.core.controllers.
           Trainer` 传入的 ``accumulation_steps``。deepspeed 会将 ``config`` 的
           ``gradient_accumulation_steps`` 设置为该值。
@@ -127,6 +126,7 @@ class DeepSpeedDriver(TorchDDPDriver):
           Trainer` 传入的 ``train_dataloader``。``deepspeed`` 需要通过它来获取数
           据的 ``batch_size`` 用于设置 ``train_micro_batch_size_per_gpu``。如果
           没有传入的话，则会设置为 **1**。
+    :kwargs:
         * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
           ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
 
@@ -239,9 +239,9 @@ class DeepSpeedDriver(TorchDDPDriver):
         self._has_setup = False
         # 判断传入的模型是否经过 _has_ddpwrapped 包裹；
         self._has_ddpwrapped = False
-        self.accumulation_steps = kwargs.get('accumulation_steps', 1)
+        self.accumulation_steps = self._ds_kwargs.get('accumulation_steps', 1)
         # 获取 batch_size 以设置 train_micro_batch_size_per_gpu 参数
-        train_dl = kwargs.get('train_dataloader', None)
+        train_dl = self._ds_kwargs.get('train_dataloader', None)
         if train_dl is not None:
             self.train_micro_batch_size = self.get_dataloader_args(
                 train_dl).batch_size

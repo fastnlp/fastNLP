@@ -1,3 +1,6 @@
+import os
+import subprocess
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -1070,3 +1073,16 @@ class TestSaveLoad:
 
         finally:
             rank_zero_rm(path)
+
+
+@pytest.mark.paddle
+def test_fleet():
+    """测试上面的测试函数."""
+    skip_no_cuda()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'pytest', f"{path.joinpath('test_fleet.py')}", '-m', 'paddledist'
+    ]
+    env = deepcopy(os.environ)
+    env['FASTNLP_BACKEND'] = 'paddle'
+    subprocess.check_call(command, env=env)

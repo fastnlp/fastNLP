@@ -1,5 +1,8 @@
 import os
+import subprocess
+from copy import deepcopy
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List
 
 import pytest
@@ -30,9 +33,10 @@ class TrainPaddleConfig:
     evaluate_every = 2
 
 
-@pytest.mark.parametrize('device', ['cpu', 1, [0, 1]])
+@pytest.mark.parametrize('device', ['cpu', 0, [0, 1]])
 @pytest.mark.parametrize('callbacks', [[RichCallback(5)]])
 @pytest.mark.paddledist
+@pytest.mark.paddle
 @magic_argv_env_context
 def test_trainer_paddle(
     device,
@@ -74,3 +78,72 @@ def test_trainer_paddle(
         callbacks=callbacks,
     )
     trainer.run()
+
+
+@pytest.mark.paddle
+def test_trainer_paddle_distributed():
+    """测试多卡的 paddle."""
+    skip_no_cuda()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'pytest', f"{path.joinpath('test_trainer_paddle.py')}", '-m',
+        'paddledist'
+    ]
+    env = deepcopy(os.environ)
+    env['FASTNLP_BACKEND'] = 'paddle'
+    subprocess.check_call(command, env=env)
+
+
+@pytest.mark.paddle
+def test_distributed_launch_1():
+    """测试用户自己不初始化 ddp，直接启动."""
+    pytest.skip()
+    skip_no_cuda()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'python', f"{path.joinpath('_test_trainer_fleet.py')}", '-d', '0', '1'
+    ]
+    env = deepcopy(os.environ)
+    env['FASTNLP_BACKEND'] = 'paddle'
+    subprocess.check_call(command, env=env)
+
+
+@pytest.mark.paddle
+def test_distributed_launch_2():
+    """测试用户自己不初始化 ddp，使用 python -m paddle.distributed.launch 启动."""
+    # TODO 下面两个测试会出现显卡没有占用但使用率100%的问题
+    # 似乎是测试文件中 labels 数目有问题，但出现一次问题就要重启机器
+    # 暂时跳过这几个测试
+    pytest.skip()
+    skip_no_cuda()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'python',
+        '-m',
+        'paddle.distributed.launch',
+        '--devices',
+        '0,1',
+        f"{path.joinpath('_test_trainer_fleet.py')}",
+    ]
+    env = deepcopy(os.environ)
+    env['FASTNLP_BACKEND'] = 'paddle'
+    subprocess.check_call(command, env=env)
+
+
+@pytest.mark.paddle
+def test_distributed_launch_outside_1():
+    """测试用户自己不初始化 ddp，使用 python -m paddle.distributed.launch 启动."""
+    skip_no_cuda()
+    pytest.skip()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'python',
+        '-m',
+        'paddle.distributed.launch',
+        '--devices',
+        '0,1',
+        f"{path.joinpath('_test_trainer_fleet_outside.py')}",
+    ]
+    env = deepcopy(os.environ)
+    env['FASTNLP_BACKEND'] = 'paddle'
+    subprocess.check_call(command, env=env)

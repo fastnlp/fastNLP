@@ -1,18 +1,23 @@
+import os
+import subprocess
+from pathlib import Path
 from dataclasses import dataclass
 
 import pytest
 
 from fastNLP.core.callbacks.progress_callback import RichCallback
 from fastNLP.core.controllers.trainer import Trainer
-from fastNLP.core.drivers.torch_driver import DeepSpeedDriver
 from fastNLP.core.drivers.torch_driver.utils import _create_default_config
 from fastNLP.core.metrics.accuracy import Accuracy
-from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _NEED_IMPORT_DEEPSPEED
 
 if _NEED_IMPORT_TORCH:
-    import torch
     from torch.optim import Adam
     from torch.utils.data import DataLoader
+
+if _NEED_IMPORT_DEEPSPEED:
+    import deepspeed
+    from deepspeed import comm
 
 from tests.helpers.datasets.torch_data import TorchArgMaxDataset
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
@@ -30,72 +35,93 @@ class TrainDeepSpeedConfig:
 
 
 @pytest.mark.deepspeed
-class TestTrainer:
+@pytest.mark.parametrize('device', [[0, 1]])
+@pytest.mark.parametrize('callbacks', [[RichCallback(5)]])
+@pytest.mark.parametrize('strategy', ['deepspeed', 'deepspeed_stage_1'])
+@pytest.mark.parametrize('config', [None, _create_default_config(stage=1)])
+@magic_argv_env_context
+def test_trainer_deepspeed(
+    device,
+    callbacks,
+    strategy,
+    config,
+    n_epochs=2,
+):
+    model = TorchNormalModel_Classification_1(
+        num_labels=TrainDeepSpeedConfig.num_labels,
+        feature_dimension=TrainDeepSpeedConfig.feature_dimension)
+    optimizers = Adam(params=model.parameters(), lr=0.0001)
+    train_dataloader = DataLoader(
+        dataset=TorchArgMaxDataset(TrainDeepSpeedConfig.feature_dimension, 20),
+        batch_size=TrainDeepSpeedConfig.batch_size,
+        shuffle=True)
+    val_dataloader = DataLoader(
+        dataset=TorchArgMaxDataset(TrainDeepSpeedConfig.feature_dimension, 12),
+        batch_size=TrainDeepSpeedConfig.batch_size,
+        shuffle=True)
+    train_dataloader = train_dataloader
+    evaluate_dataloaders = val_dataloader
+    evaluate_every = TrainDeepSpeedConfig.evaluate_every
+    metrics = {'acc': Accuracy()}
+    if config is not None:
+        config[
+            'train_micro_batch_size_per_gpu'] = TrainDeepSpeedConfig.batch_size
+    trainer = Trainer(
+        model=model,
+        driver='deepspeed',
+        device=device,
+        optimizers=optimizers,
+        train_dataloader=train_dataloader,
+        evaluate_dataloaders=evaluate_dataloaders,
+        evaluate_every=evaluate_every,
+        metrics=metrics,
+        output_mapping={'preds': 'pred'},
+        n_epochs=n_epochs,
+        callbacks=callbacks,
+        deepspeed_kwargs={
+            'strategy': strategy,
+            'config': config,
+            'train_dataloader': train_dataloader,
+        })
+    trainer.run()
 
-    @classmethod
-    def setup_class(cls):
-        skip_no_cuda()
-        # 不初始化的话从第二个测试例开始会因为环境变量报错。
-        torch_model = TorchNormalModel_Classification_1(1, 1)
-        torch_opt = torch.optim.Adam(params=torch_model.parameters(), lr=0.01)
-        device = [torch.device(i) for i in [0, 1]]
-        driver = DeepSpeedDriver(
-            model=torch_model,
-            parallel_device=device,
-        )
-        driver.set_optimizers(torch_opt)
-        driver.setup()
+    if comm.is_initialized():
+        comm.barrier()
+        comm.destroy_process_group()
+        deepspeed.utils.groups._WORLD_GROUP = None
 
-        return driver
 
-    @pytest.mark.parametrize('device', [[0, 1]])
-    @pytest.mark.parametrize('callbacks', [[RichCallback(5)]])
-    @pytest.mark.parametrize('strategy', ['deepspeed', 'deepspeed_stage_1'])
-    @pytest.mark.parametrize('config', [None, _create_default_config(stage=1)])
-    @magic_argv_env_context
-    def test_trainer_deepspeed(
-        self,
-        device,
-        callbacks,
-        strategy,
-        config,
-        n_epochs=2,
-    ):
-        model = TorchNormalModel_Classification_1(
-            num_labels=TrainDeepSpeedConfig.num_labels,
-            feature_dimension=TrainDeepSpeedConfig.feature_dimension)
-        optimizers = Adam(params=model.parameters(), lr=0.0001)
-        train_dataloader = DataLoader(
-            dataset=TorchArgMaxDataset(TrainDeepSpeedConfig.feature_dimension,
-                                       20),
-            batch_size=TrainDeepSpeedConfig.batch_size,
-            shuffle=True)
-        val_dataloader = DataLoader(
-            dataset=TorchArgMaxDataset(TrainDeepSpeedConfig.feature_dimension,
-                                       12),
-            batch_size=TrainDeepSpeedConfig.batch_size,
-            shuffle=True)
-        train_dataloader = train_dataloader
-        evaluate_dataloaders = val_dataloader
-        evaluate_every = TrainDeepSpeedConfig.evaluate_every
-        metrics = {'acc': Accuracy()}
-        if config is not None:
-            config[
-                'train_micro_batch_size_per_gpu'] = TrainDeepSpeedConfig.batch_size
-        trainer = Trainer(
-            model=model,
-            driver='torch',
-            device=device,
-            optimizers=optimizers,
-            train_dataloader=train_dataloader,
-            evaluate_dataloaders=evaluate_dataloaders,
-            evaluate_every=evaluate_every,
-            metrics=metrics,
-            output_mapping={'preds': 'pred'},
-            n_epochs=n_epochs,
-            callbacks=callbacks,
-            deepspeed_kwargs={
-                'strategy': strategy,
-                'config': config
-            })
-        trainer.run()
+@pytest.mark.deepspeed
+def test_distributed_launch_1():
+    """测试用户自己不初始化 ddp，直接启动."""
+    skip_no_cuda()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'python', f"{path.joinpath('_test_trainer_deepspeed.py')}", '-d', '0',
+        '1'
+    ]
+    subprocess.check_call(command, env=os.environ)
+
+
+@pytest.mark.deepspeed
+def test_distributed_launch_2():
+    """测试用户自己不初始化 ddp，但是使用 deepspeed 启动；"""
+    skip_no_cuda()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'deepspeed',
+        f"{path.joinpath('_test_trainer_deepspeed.py')}",
+    ]
+    subprocess.check_call(command, env=os.environ)
+
+
+@pytest.mark.deepspeed
+def test_distributed_launch_outside_1():
+    """测试用户自己初始化 ddp，通过 deepspeed 启动."""
+    skip_no_cuda()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'deepspeed',
+        f"{path.joinpath('_test_trainer_deepspeed_outside.py')}",
+    ]
+    subprocess.check_call(command, env=os.environ)

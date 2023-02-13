@@ -1,5 +1,7 @@
-import copy
 import os
+import subprocess
+from copy import deepcopy
+from pathlib import Path
 from typing import Any, Dict, Type
 
 import numpy as np
@@ -11,6 +13,7 @@ from fastNLP.core.metrics.backend import AutoBackend
 from fastNLP.core.metrics.element import Element
 from fastNLP.envs.imports import _NEED_IMPORT_PADDLE
 from fastNLP.core.drivers.paddle_driver.fleet_launcher import FleetLauncher
+from tests.helpers.utils import skip_no_cuda
 from .utils import DemoMetric, DemoMetric2
 
 if _NEED_IMPORT_PADDLE:
@@ -29,7 +32,7 @@ def _test(
     # metric 应该是每个进程有自己的一个 instance，所以在 _test 里面实例化
     metric = metric_class(**metric_kwargs)
     # dataset 也类似（每个进程有自己的一个）
-    dataset = copy.deepcopy(dataset)
+    dataset = deepcopy(dataset)
     metric.to(device)
     # 把数据拆到每个 GPU 上，有点模仿 DistributedSampler 的感觉，但这里数据单位是一个 batch（即每个 i 取了一个 batch 到自己的 GPU 上）
     for i in range(local_rank, len(dataset), world_size):
@@ -45,6 +48,7 @@ class TestElementFleet:
 
     @classmethod
     def setup_class(cls):
+        skip_no_cuda()
         devices = [0, 1]
         output_from_new_proc = 'all'
 
@@ -124,3 +128,17 @@ def test_getter_setter():
         ele2[0]
     with pytest.raises(TypeError):
         ele2[0] = 3
+
+
+@pytest.mark.paddle
+def test_dist_element():
+    """测试上面的测试函数."""
+    skip_no_cuda()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'pytest', f"{path.joinpath('test_element_paddle.py')}", '-m',
+        'paddledist'
+    ]
+    env = deepcopy(os.environ)
+    env['FASTNLP_BACKEND'] = 'paddle'
+    subprocess.check_call(command, env=env)

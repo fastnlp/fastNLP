@@ -1,7 +1,10 @@
 import os
 import signal
+import subprocess
 import sys
 import traceback
+from copy import deepcopy
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -210,3 +213,16 @@ class TestAllGatherAndBroadCast:
                 obj, src=0, device=paddle.device.get_device())
             assert int(data) == 0
         dist.barrier()
+
+
+@pytest.mark.paddle
+def test_dist_utils():
+    """测试上面的测试函数."""
+    skip_no_cuda()
+    path = Path(os.path.abspath(__file__)).parent
+    command = [
+        'pytest', f"{path.joinpath('test_dist_utils.py')}", '-m', 'paddledist'
+    ]
+    env = deepcopy(os.environ)
+    env['FASTNLP_BACKEND'] = 'paddle'
+    subprocess.check_call(command, env=env)

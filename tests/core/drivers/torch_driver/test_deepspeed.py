@@ -7,7 +7,7 @@ from fastNLP.core.drivers.torch_driver.deepspeed import DeepSpeedDriver
 from fastNLP.core.samplers import (BucketedBatchSampler, RandomSampler,
                                    UnrepeatedRandomSampler)
 from fastNLP.envs.distributed import rank_zero_rm
-from fastNLP.envs.imports import _NEED_IMPORT_TORCH
+from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _NEED_IMPORT_DEEPSPEED
 from tests.helpers.datasets.torch_data import TorchNormalXYDataset
 from tests.helpers.models.torch_model import TorchNormalModel_Classification_1
 from tests.helpers.utils import magic_argv_env_context, skip_no_cuda
@@ -16,6 +16,10 @@ if _NEED_IMPORT_TORCH:
     import torch
     import torch.distributed as dist
     from torch.utils.data import DataLoader
+
+if _NEED_IMPORT_DEEPSPEED:
+    import deepspeed
+    from deepspeed import comm
 
 
 def generate_driver(labels,
@@ -32,7 +36,7 @@ def generate_driver(labels,
         parallel_device=device,
         fp16=fp16,
         output_from_new_proc=output_from_new_proc,
-        train_dataloader=train_dataloader)
+        deepspeed_kwargs={'train_dataloader': train_dataloader})
     driver.set_optimizers(torch_opt)
     driver.setup()
 
@@ -112,74 +116,75 @@ def test_multi_optimizers():
     with pytest.raises(ValueError):
         driver.setup()
 
-    # if dist.is_initialized():
-    #     dist.destroy_process_group()
+    if comm.is_initialized():
+        comm.barrier()
+        comm.destroy_process_group()
+        deepspeed.utils.groups._WORLD_GROUP = None
 
 
 @pytest.mark.deepspeed
 class TestDeepSpeedDriverFunction:
     """测试 DeepSpeedDriver 一些简单函数的测试类，基本都是测试能否运行、是否存在 import 错误等问题."""
 
-    @classmethod
-    def setup_class(cls):
-        skip_no_cuda()
-        cls.driver = generate_driver(10, 10)
-
     @magic_argv_env_context
     def test_simple_functions(self):
         """简单测试多个函数."""
+        skip_no_cuda()
+        driver = generate_driver(10, 10)
         """
         测试 move_data_to_device 函数。这个函数仅调用了 torch_move_data_to_device ，测试例在
         tests/core/utils/test_torch_utils.py中，就不重复测试了
         """
-        self.driver.move_data_to_device(torch.rand((32, 64)))
+        driver.move_data_to_device(torch.rand((32, 64)))
         dist.barrier()
         """
         测试 is_distributed 函数
         """
-        assert self.driver.is_distributed() is True
+        assert driver.is_distributed() is True
         dist.barrier()
         """
         测试 get_no_sync_context 函数
         """
-        res = self.driver.get_model_no_sync_context()
+        res = driver.get_model_no_sync_context()
         dist.barrier()
         """
         测试 is_global_zero 函数
         """
-        self.driver.is_global_zero()
+        driver.is_global_zero()
         dist.barrier()
         """
         测试 unwrap_model 函数
         """
-        self.driver.unwrap_model()
+        driver.unwrap_model()
         dist.barrier()
         """
         测试 get_local_rank 函数
         """
-        self.driver.get_local_rank()
+        driver.get_local_rank()
         dist.barrier()
         """
         测试 all_gather 函数
         详细的测试在 test_dist_utils.py 中完成
         """
-        obj = {'rank': self.driver.global_rank}
-        obj_list = self.driver.all_gather(obj, group=None)
+        obj = {'rank': driver.global_rank}
+        obj_list = driver.all_gather(obj, group=None)
         for i, res in enumerate(obj_list):
             assert res['rank'] == i
         """
         测试 broadcast_object 函数
         详细的函数在 test_dist_utils.py 中完成
         """
-        if self.driver.global_rank == 0:
-            obj = {'rank': self.driver.global_rank}
+        if driver.global_rank == 0:
+            obj = {'rank': driver.global_rank}
         else:
             obj = None
-        res = self.driver.broadcast_object(obj, src=0)
+        res = driver.broadcast_object(obj, src=0)
         assert res['rank'] == 0
 
-        # if dist.is_initialized():
-        #     dist.destroy_process_group()
+        if comm.is_initialized():
+            comm.barrier()
+            comm.destroy_process_group()
+            deepspeed.utils.groups._WORLD_GROUP = None
 
 
 ############################################################################
@@ -191,12 +196,8 @@ class TestDeepSpeedDriverFunction:
 class TestSaveLoad:
     """测试多卡情况下 save 和 load 相关函数的表现."""
 
-    @classmethod
-    def setup_class(cls):
-        skip_no_cuda()
-        cls.driver = generate_driver(10, 10, device=[0, 1])
-
     def setup_method(self):
+        skip_no_cuda()
         self.dataset = TorchNormalXYDataset(100)
 
     @magic_argv_env_context
@@ -237,8 +238,10 @@ class TestSaveLoad:
         finally:
             rank_zero_rm(path)
 
-        # if dist.is_initialized():
-        #     dist.destroy_process_group()
+        if comm.is_initialized():
+            comm.barrier()
+            comm.destroy_process_group()
+            deepspeed.utils.groups._WORLD_GROUP = None
 
     @magic_argv_env_context
     @pytest.mark.parametrize('only_state_dict', ([True, False]))
@@ -259,7 +262,7 @@ class TestSaveLoad:
                 shuffle=True,
                 drop_last=False)
             dataloader.batch_sampler.set_distributed(
-                num_replicas=int(os.getenv('WORLD_SIZE', '1')),
+                num_replicas=len(device),
                 rank=int(os.getenv('RANK', '0')),
                 pad=True,
             )
@@ -365,8 +368,10 @@ class TestSaveLoad:
         finally:
             rank_zero_rm(path)
 
-        # if dist.is_initialized():
-        #     dist.destroy_process_group()
+        if comm.is_initialized():
+            comm.barrier()
+            comm.destroy_process_group()
+            deepspeed.utils.groups._WORLD_GROUP = None
 
     @magic_argv_env_context
     @pytest.mark.parametrize('only_state_dict', ([True, False]))
@@ -384,7 +389,7 @@ class TestSaveLoad:
             dataloader = dataloader_with_randomsampler(
                 self.dataset, 4, True, False, unrepeated=False)
             dataloader.batch_sampler.sampler.set_distributed(
-                num_replicas=int(os.getenv('WORLD_SIZE', '1')),
+                num_replicas=len(device),
                 rank=int(os.getenv('RANK', '0')),
                 pad=True)
             num_consumed_batches = 4
@@ -503,5 +508,7 @@ class TestSaveLoad:
         finally:
             rank_zero_rm(path)
 
-        # if dist.is_initialized():
-        #     dist.destroy_process_group()
+        if comm.is_initialized():
+            comm.barrier()
+            comm.destroy_process_group()
+            deepspeed.utils.groups._WORLD_GROUP = None

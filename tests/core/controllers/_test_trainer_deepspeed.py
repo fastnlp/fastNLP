@@ -1,7 +1,7 @@
 """这个文件测试多卡情况下使用 deepspeed 的情况::
 
     >>> # 测试直接使用多卡
-    >>> python _test_trainer_deepspeed.py
+    >>> python _test_trainer_deepspeed.py -d 4 5
     >>> # 测试通过 deepspeed 拉起
     >>> deepspeed _test_trainer_deepspeed.py
 """
@@ -22,6 +22,7 @@ sys.path.extend([path, os.path.join(path, 'fastNLP')])
 
 from torch.optim import Adam
 from torch.utils.data import DataLoader
+import torch.distributed as dist
 
 from fastNLP.core.callbacks.progress_callback import RichCallback
 from fastNLP.core.controllers.trainer import Trainer
@@ -83,6 +84,7 @@ def test_trainer_deepspeed(
             'config': config
         })
     trainer.run()
+    dist.barrier()
 
 
 if __name__ == '__main__':

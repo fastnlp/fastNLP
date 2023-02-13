@@ -1,9 +1,9 @@
 """这个文件测试多卡情况下使用 paddle 的情况::
 
     >>> # 测试用 python -m paddle.distributed.launch 启动
-    >>> FASTNLP_BACKEND=paddle python -m paddle.distributed.launch --gpus=0,2,3 _test_trainer_fleet.py
+    >>> FASTNLP_BACKEND=paddle python -m paddle.distributed.launch --devices=0,2,3 _test_trainer_fleet.py
     >>> # 测试在限制 GPU 的情况下用 python -m paddle.distributed.launch 启动
-    >>> CUDA_VISIBLE_DEVICES=0,2,3 FASTNLP_BACKEND=paddle python -m paddle.distributed.launch --gpus=0,2,3 _test_trainer_fleet.py
+    >>> CUDA_VISIBLE_DEVICES=0,2,3 FASTNLP_BACKEND=paddle python -m paddle.distributed.launch --devices=0,2,3 _test_trainer_fleet.py
     >>> # 测试直接使用多卡
     >>> FASTNLP_BACKEND=paddle python _test_trainer_fleet.py
     >>> # 测试在限制 GPU 的情况下直接使用多卡
