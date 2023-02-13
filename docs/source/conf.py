@@ -16,6 +16,8 @@ import sys
 
 sys.path.insert(0, os.path.abspath('../../'))
 
+import pytorch_sphinx_theme
+
 # -- Project information -----------------------------------------------------
 
 project = 'fastNLP'
@@ -25,7 +27,7 @@ author = 'fastNLP'
 # The short X.Y version
 version = '1.0'
 # The full version, including alpha/beta/rc tags
-release = '1.0.0-alpha'
+release = '1.0.0-beta'
 
 # -- General configuration ---------------------------------------------------
 
@@ -45,6 +47,7 @@ extensions = [
     'sphinx_autodoc_typehints',
     'sphinx_multiversion',
     'nbsphinx',
+    'sphinx_copybutton',
 ]
 
 autodoc_default_options = {
@@ -59,6 +62,8 @@ autosummary_ignore_module_all = False
 autoclass_content = 'class'
 typehints_fully_qualified = False
 typehints_defaults = 'comma'
+
+nbsphinx_allow_errors = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -85,25 +90,61 @@ language = 'zh_CN'
 exclude_patterns = ['modules.rst']
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+# pygments_style = 'sphinx'
 
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+# html_theme = 'sphinx_rtd_theme'
+html_theme = 'pytorch_sphinx_theme'
+html_theme_path = [pytorch_sphinx_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = {'collapse_navigation': False, 'titles_only': True}
+html_theme_options = {
+    'logo_url':
+    'http://www.fastnlp.top/',
+    'menu': [
+        # A link
+        {
+            'name': 'GitHub',
+            'url': 'https://github.com/fastnlp/fastNLP'
+        },
+        # A dropdown menu
+        # {
+        #     'name': 'Projects',
+        #     'children': [
+        #         # A vanilla dropdown item
+        #         {
+        #             'name': 'MMCV',
+        #             'url': 'https://github.com/open-mmlab/mmcv',
+        #         },
+        #         # A dropdown item with a description
+        #         {
+        #             'name': 'MMDetection',
+        #             'url': 'https://github.com/open-mmlab/mmdetection',
+        #             'description': 'Object detection toolbox and benchmark'
+        #         },
+        #     ],
+        #     # Optional, determining whether this dropdown menu will always be
+        #     # highlighted.
+        #     'active': True,
+        # },
+    ],
+    # Specify the language of shared menu
+    'menu_lang':
+    'cn',
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+html_css_files = ['css/readthedocs.css', 'css/badge_only.css']
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -114,11 +155,11 @@ html_static_path = ['_static']
 # 'searchbox.html']``.
 #
 # html_sidebars = {}
-html_sidebars = {
-    '**': [
-        'versions.html',
-    ],
-}
+# html_sidebars = {
+#     '**': [
+#         'versions.html',
+#     ],
+# }
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
@@ -165,6 +206,10 @@ texinfo_documents = [
     (master_doc, 'fastNLP', 'fastNLP Documentation', author, 'fastNLP',
      'A fast NLP tool for programming.', 'Miscellaneous'),
 ]
+
+# Ignore >>> when copying code
+copybutton_prompt_text = r'>>> |\.\.\. '
+copybutton_prompt_is_regexp = True
 
 # -- Options for Multiversions ----------------------------------------------
 smv_latest_version = 'dev0.8.0'

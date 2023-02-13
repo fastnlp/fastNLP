@@ -1,0 +1,20 @@
+table.colwidths-auto td {
+    width: 50%
+}
+
+.header-logo {
+    background-image: url("../image/fnlp-logo.png");
+    background-size: 130px 40px;
+    height: 40px;
+    width: 130px;
+}
+
+.two-column-table-wrapper {
+    width: 50%;
+    max-width: 300px;
+    overflow-x: auto;
+}
+
+.two-column-table-wrapper .highlight {
+    width: 1500px
+}
