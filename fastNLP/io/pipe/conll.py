@@ -426,7 +426,7 @@ class MsraNERPipe(_CNNERPipe):
         ``data_bundle.get_vocab('bigrams')`` 获取。
     :param trigrams: 是否增加一列 ``trigrams``。``trigrams`` 会对原文进行如下转化
         ``['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]``。如果设置为
-        ``True``，返回的 :class:`~fastNLP.core.DataSet`中 将有一列名为
+        ``True``，返回的 :class:`~fastNLP.core.DataSet` 中将有一列名为
         ``trigrams``，且已经转换为了 index 并设置为 input，对应的词表可以通过
         ``data_bundle.get_vocab('trigrams')`` 获取。
     :param num_proc: 处理数据时使用的进程数目。
@@ -471,7 +471,7 @@ class PeopleDailyPipe(_CNNERPipe):
         ``data_bundle.get_vocab('bigrams')`` 获取。
     :param trigrams: 是否增加一列 ``trigrams``。``trigrams`` 会对原文进行如下转化
         ``['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]``。如果设置为
-        ``True``，返回的 :class:`~fastNLP.core.DataSet`中 将有一列名为
+        ``True``，返回的 :class:`~fastNLP.core.DataSet` 中 将有一列名为
         ``trigrams``，且已经转换为了 index 并设置为 input，对应的词表可以通过
         ``data_bundle.get_vocab('trigrams')`` 获取。
     :param num_proc: 处理数据时使用的进程数目。
@@ -516,7 +516,7 @@ class WeiboNERPipe(_CNNERPipe):
         ``data_bundle.get_vocab('bigrams')`` 获取。
     :param trigrams: 是否增加一列 ``trigrams``。``trigrams`` 会对原文进行如下转化
         ``['复', '旦', '大', '学', ...]->["复旦大", "旦大学", ...]``。如果设置为
-        ``True``，返回的 :class:`~fastNLP.core.DataSet`中 将有一列名为
+        ``True``，返回的 :class:`~fastNLP.core.DataSet` 中 将有一列名为
         ``trigrams``，且已经转换为了 index 并设置为 input，对应的词表可以通过
         ``data_bundle.get_vocab('trigrams')`` 获取。
     :param num_proc: 处理数据时使用的进程数目。

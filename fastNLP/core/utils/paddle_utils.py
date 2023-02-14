@@ -32,7 +32,7 @@ def _convert_data_device(device: Union[str, int]) -> str:
     设置为可见的第一张显卡；这是为 了顺利执行 **paddle** 的分布式训练而设置的。在这种
     情况下，单纯使用 ``driver.data_device`` 是无效的。比如在分布式训练中将设备设置
     为 ``[0,2,3]``，且用户设置了 ``CUDA_VISIBLE_DEVICES=3,4,5,6``，那么在
-    ``rank1``的进程中有::
+    ``rank1`` 的进程中有::
 
         os.environ["CUDA_VISIBLE_DEVICES"] = "5"
         os.environ["USER_CUDA_VISIBLE_DEVICES"] = "3,4,5,6"

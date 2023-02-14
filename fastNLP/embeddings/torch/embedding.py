@@ -41,8 +41,8 @@ class Embedding(Module):
 
     :param init_embed: 支持传入 Embedding 的大小。支持以下类型：
 
-            1. 传入 tuple(int, int)，第一个 int 为 ``vocab_size``, 第二个 int
-               ``为embed_dim``；
+            1. 传入 tuple(int, int)，第一个 int 为 ``vocab_size``, 第二个 int 为
+               ``embed_dim``；
             2. 传入 :class:`Tensor`, :class:`Embedding`, :class:`numpy.\
                ndarray` 等则直接使用该值初始化 Embedding；
 

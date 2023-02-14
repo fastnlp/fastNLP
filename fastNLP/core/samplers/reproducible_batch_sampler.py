@@ -210,7 +210,9 @@ class ReproduceBatchSampler(ReproducibleBatchSampler):
 class RandomBatchSampler(ReproducibleBatchSampler):
     """随机分 batch 的 batch_sampler 。
 
-    :param dataset: 实现了 __len__ 方法的数据容器
+    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
+        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
+        jittor 框架的 `Dataset` 对象。
     :param batch_size: 每个 batch 的大小
     :param shuffle: 如果为 ``True``，将不进行打乱操作，实际上数据会以从长到短的方式
         输出
@@ -463,7 +465,9 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
 
     （因为桶内的数据的长度都接近）。
 
-    :param dataset: 实现了 __len__ 方法的数据容器。
+    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
+        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
+        jittor 框架的 :class:`Dataset` 对象。
     :param length: 每条数据的长度。
 
         * 为 ``List[int]`` 时

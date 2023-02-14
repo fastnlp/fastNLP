@@ -26,8 +26,8 @@ def _normalize_and_tokenize(
     stemmer: Optional[Any] = None,
     normalizer: Optional[Callable[[str], str]] = None,
 ) -> Sequence[str]:
-    r"""对``sentence``使用Porter stemmer用于去除单词后缀以改进匹配。并规范化句子以
-    及进行分词。
+    r"""对 ``sentence`` 使用Porter stemmer用于去除单词后缀以改进匹配。并规范化句子
+    以及进行分词。
 
     :param text: 一个输入的句子。
     :param stemmer: Porter-stemmer实例来去除单词后缀以改进匹配。
@@ -92,7 +92,7 @@ def _rougeN_score(pred: Sequence[str], reference: Sequence[str],
 
     :param pred: 一个预测句子的序列。
     :param reference: 一个标准译文句子的序列。
-    :param n_gram: ``N-gram``值。
+    :param n_gram: ``N-gram`` 值。
     """
 
     def get_n_gram(tokens: Sequence[str], n: int) -> Counter:

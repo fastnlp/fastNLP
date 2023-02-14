@@ -240,7 +240,7 @@ class OneflowDriver(Driver):
 
         :param folder: 保存断点重训的状态的文件夹；:meth:`save_checkpoint` 函数应
             该在该路径下面下面新增名为 ``FASTNLP_CHECKPOINT_FILENAME`` 与
-            ``FASTNLP_MODEL_FILENAME``（若 ``should_save_model`` 为 ``True``）
+            ``FASTNLP_MODEL_FILENAME`` （若 ``should_save_model`` 为 ``True``）
             的文件。把 model 相关的内容放入到 ``FASTNLP_MODEL_FILENAME`` 文件中，
             将传入的 ``states`` 以及自身产生的其它状态一并保存在
             ``FASTNLP_CHECKPOINT_FILENAME`` 里面。
@@ -383,13 +383,13 @@ class OneflowDriver(Driver):
         断点重训的加载函数，该函数会负责读取数据，并且恢复 **优化器** 、**sampler**
         的状态和 **模型** （如果 ``should_load_model`` 为 True）以及其它在
         :meth:`save_checkpoint` 函数中执行的保存操作，然后将一个 state 字典返回给
-        :class:`~fastNLP.core.controllers.Trainer`（字典的内容为函数
+        :class:`~fastNLP.core.controllers.Trainer字典的内容为函数
         :meth:`save_checkpoint` 接受到的 ``states`` ）。
 
         该函数应该在所有 rank 上执行。
 
         :param folder: 读取该 folder 下的 ``FASTNLP_CHECKPOINT_FILENAME`` 文件
-            与 ``FASTNLP_MODEL_FILENAME``（如果 should_load_model 为True）。
+            与 ``FASTNLP_MODEL_FILENAME`` （如果 should_load_model 为True）。
         :param dataloader: 当前给定 dataloader，需要根据保存的 dataloader 状态合
             理设置。若该值为 ``None``，则不需要返回 ``'dataloader'`` 以及
             ``'batch_idx_in_epoch'`` 这两个值。

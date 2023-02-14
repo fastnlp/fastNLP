@@ -136,7 +136,7 @@ class Callback:
         影响到输入模型的中的 ``batch`` 数据。
 
         :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
-        :param batch: batch 的数据，已经经过 ``input_mapping``（如果有）以及移动
+        :param batch: batch 的数据，已经经过 ``input_mapping`` （如果有）以及移动
             到指定设备 。
         :param list[int] indices: 当前的 ``batch`` 是数据集中的哪些数据。仅在
             ``DataLoader`` 支持得到当前 ``batch index`` 的时候有值，其它时候为

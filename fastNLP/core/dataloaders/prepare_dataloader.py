@@ -26,10 +26,12 @@ def prepare_dataloader(dataset,
     core.dataloaders.prepare_torch_dataloader` 或 :func:`~fastNLP.core.\
     dataloaders.prepare_paddle_dataloader` 等。
 
-    :param dataset: 实现 __getitem__() 和 __len__() 的对象；或这种对象的序列；或字
-        典。
+    :param dataset: 需要遍历的数据集。有下列几种情况：
 
-        * 为单个数据集对象时，返回一个 DataLoader 。
+        * 为单个数据集对象， ``dataset`` 可以是 :class:`~fastNLP.core.\
+          dataset.DataSet`、hugginface 的数据集或 pytorch、paddle、jittor、
+          oneflow 框架的 :class:`Dataset` 对象，以及一切实现了 :meth:`__len__`
+          和 :meth:`__getitem__` 方法的数据集对象。此时返回一个 DataLoader 。
         * 为数据集对象序列时，返回一个序列的 DataLoader 。
         * 为字典型 或 :class:`~fastNLP.io.DataBundle` 数据时，返回
           :class:`Dict` 类型的数据。

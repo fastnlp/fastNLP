@@ -185,7 +185,7 @@ class Vocabulary(object):
         r"""
         在新加入word时，检查_no_create_word的设置。
 
-        :param word: 要添加的新词或者是 :class:`List`类型的新词，如 word='I' 或者
+        :param word: 要添加的新词或者是 :class:`List` 类型的新词，如 word='I' 或者
             word=['I', 'am', 'a', 'Chinese'] 均可
         :param no_create_entry: 如果词语来自于非训练集建议设置为 ``True``。
 
@@ -440,8 +440,8 @@ class Vocabulary(object):
               finetune embedding 的话，这个词在更新之后可能会有更好的表示；
             * 如果这个词仅出现在了验证集或者测试集中，那么就不能为它们单独建立
               vector，而应该让它指向 ``<UNK>`` 这个 vector 的值。所以只位于
-              ``no_create_entry_dataset``中的 token 将首先从预训练的词表中寻找它的
-              表示，如果找到了，就使用该表示; 如果没有找到，则认为该词的表示应该为
+              ``no_create_entry_dataset`` 中的 token 将首先从预训练的词表中寻找它
+              的表示，如果找到了，就使用该表示; 如果没有找到，则认为该词的表示应该为
               ``<UNK>`` 的表示。
         :return: Vocabulary 自身
 
@@ -524,7 +524,7 @@ class Vocabulary(object):
             index = vocab['abc']
 
         :param w: 需要输入的词语
-        :return: 词语 ``w`` 对应的 :class:`int`类型的 index
+        :return: 词语 ``w`` 对应的 :class:`int` 类型的 index
         """
         return self.__getitem__(w)
 

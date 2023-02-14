@@ -144,7 +144,7 @@ class CWSPipe(Pipe):
     :param dataset_name: data 的名称，支持 ``['pku', 'msra', 'cityu'(繁体),
         'as'(繁体), None]``
     :param encoding_type: ``target`` 列使用什么类型的 encoding 方式，支持
-        ``['bmes', 'segapp']`` 两种。``"我 来自 复旦大学..."`` 这句话 ``bmes``的
+        ``['bmes', 'segapp']`` 两种。``"我 来自 复旦大学..."`` 这句话 ``bmes`` 的
         tag 为 ``[S, B, E, B, M, M, E...]``；``segapp`` 的 tag 为 ``[seg, app,
         seg, app, app, app, seg, ...]``。
     :param replace_num_alpha: 是否将数字和字母用特殊字符替换。

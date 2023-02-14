@@ -31,8 +31,8 @@ def _paddle2torch(paddle_tensor: 'paddle.Tensor',
     进行反向传播。
 
     :param paddle_tensor: 要转换的 **paddle** 张量；
-    :param device: 是否将转换后的张量迁移到特定设备上，为 ``None``时，和输入的张量相
-        同；
+    :param device: 是否将转换后的张量迁移到特定设备上，为 ``None`` 时，和输入的张量
+        相同；
     :param no_gradient: 是否保留原张量的梯度。为 ``None`` 时，新的张量与输入张量保
         持一致；为 ``True`` 时，全部不保留梯度；为 ``False`` 时，全部保留梯度；
     :return: 转换后的 **torch** 张量；
@@ -79,8 +79,8 @@ def _torch2paddle(torch_tensor: 'torch.Tensor',
     进行反向传播。
 
     :param torch_tensor: 要转换的 **torch** 张量；
-    :param device: 是否将转换后的张量迁移到特定设备上，为 ``None``时，和输入的张量相
-        同；
+    :param device: 是否将转换后的张量迁移到特定设备上，为 ``None`` 时，和输入的张量
+        相同；
     :param no_gradient: 是否保留原张量的梯度。为 ``None`` 时，新的张量与输入张量保
         持一致；为 ``True`` 时，全部不保留梯度；为 ``False`` 时，全部保留梯度；
     :return: 转换后的 **paddle** 张量；
@@ -117,7 +117,7 @@ def _jittor2torch(jittor_var: 'jittor.Var',
     :param jittor_var: 要转换的 **jittor** 变量；
     :param device: 是否将转换后的张量迁移到特定设备上，输入为 ``None`` 时，根据
         ``jittor.flags.use_cuda`` 决定；
-    :param no_gradient: 是否保留原张量的梯度。为``None``时，新的张量与输入张量保持
+    :param no_gradient: 是否保留原张量的梯度。为``None`` 时，新的张量与输入张量保持
         一致；为 ``True`` 时，全部不保留梯度；为 ``False`` 时，全部保留梯度；
     :return: 转换后的 **torch** 张量；
     """
@@ -152,7 +152,7 @@ def _torch2jittor(torch_tensor: 'torch.Tensor',
     """将 :class:`torch.Tensor` 转换为 :class:`jittor.Var`。
 
     :param torch_tensor: 要转换的 **torch** 张量；
-    :param no_gradient: 是否保留原张量的梯度。为``None``时，新的张量与输入张量保持
+    :param no_gradient: 是否保留原张量的梯度。为``None`` 时，新的张量与输入张量保持
         一致；为 ``True`` 时，全部不保留梯度；为 ``False`` 时，全部保留梯度；
     :return: 转换后的 **jittor** 变量；
     """
@@ -227,7 +227,7 @@ def jittor2torch(batch: Any,
         转换至 :class:`torch.Tensor` 的过程中无法保留原张量的梯度。
 
     :param batch: 包含 :class:`jittor.Var` 类型的数据集合；
-    :param device: 是否将转换后的张量迁移到特定设备上。为 ``None``时，和输入保持一
+    :param device: 是否将转换后的张量迁移到特定设备上。为 ``None`` 时，和输入保持一
         致；
     :param no_gradient: 是否保留原张量的梯度，在这个函数中该参数无效；
     :return: 转换后的数据；

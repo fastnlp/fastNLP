@@ -67,7 +67,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -88,7 +88,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -109,7 +109,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -130,7 +130,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -151,7 +151,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对对对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -169,7 +169,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对对对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -190,7 +190,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -211,7 +211,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -232,7 +232,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -253,7 +253,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -274,7 +274,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -295,7 +295,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -313,7 +313,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -331,7 +331,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -349,7 +349,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -370,7 +370,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -391,7 +391,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -412,7 +412,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -433,7 +433,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -454,7 +454,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -475,7 +475,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -496,7 +496,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -517,7 +517,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；
@@ -538,7 +538,7 @@ class Event:
         :param every: 每触发多少次才真正运行一次；
         :param once: 只在第多少次触发才真正运行一次。即第 ``once`` 次调用时才运行相
             应的函数，无论之前还是之后均不会运行；
-        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter``对
+        :param filter_fn: 输入参数的应该为 ``(filter, trainer)``，``filter`` 对
             象中包含了 `filter.num_called` 和 `filter.num_executed` 两个变量来分
             别获取当前被调用了多少次，真正执行了多少次；``trainer`` 对象即为当前正在
             运行的 Trainer；

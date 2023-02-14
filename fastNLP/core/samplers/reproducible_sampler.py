@@ -86,7 +86,9 @@ class ReproducibleSampler:
 class RandomSampler(ReproducibleSampler):
     """随机顺序的 Sampler 。
 
-    :param dataset: 实现了 __len__ 方法的数据容器
+    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
+        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
+        jittor 框架的 :class:`Dataset` 对象。
     :param shuffle: 是否在每次 iterate 的时候打乱顺序
     :param seed: 随机数种子
     :param kwargs: fastNLP 内部使用的参数
@@ -266,7 +268,9 @@ class SequentialSampler(RandomSampler):
     """按照顺序读取 ``dataset``。在多卡情况下，间隔读取，例如，在两卡情况下，卡 0 取 ``[0,2,4,..]``, 卡 1 取
     ``[1,3,5...]``。
 
-    :param dataset: 实现了 __len__ 方法的数据容器。
+    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
+        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
+        jittor 框架的 :class:`Dataset` 对象。
     :param kwargs:
     """
 
@@ -345,7 +349,9 @@ class SortedSampler(SequentialSampler):
     """将 ``dataset`` 中的数据根据 ``length`` 从长到短进行迭代。在多卡情况下，由于 ``padding``，最后一个
     ``sample`` 可能是最长 的那个 ``sample``。
 
-    :param dataset: 实现了 __len__ 方法的数据容器
+    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
+        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
+        jittor 框架的 :class:`Dataset` 对象。
     :param length: 每条数据的长度：
 
         * 为 ``List[int]`` 时

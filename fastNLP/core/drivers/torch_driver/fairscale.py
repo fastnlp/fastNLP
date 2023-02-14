@@ -385,7 +385,7 @@ class FairScaleDriver(TorchDDPDriver):
 
         :param folder: 保存断点重训的状态的文件夹；:meth:`save_checkpoint` 函数应
             该在该路径下面下面新增名为 ``FASTNLP_CHECKPOINT_FILENAME`` 与
-            ``FASTNLP_MODEL_FILENAME``（若 ``should_save_model`` 为 ``True``）
+            ``FASTNLP_MODEL_FILENAME`` （若 ``should_save_model`` 为 ``True``）
             的文件。把 model 相关的内容放入到 ``FASTNLP_MODEL_FILENAME`` 文件中，
             将传入的 ``states`` 以及自身产生的其它状态一并保存在
             ``FASTNLP_CHECKPOINT_FILENAME`` 里面。

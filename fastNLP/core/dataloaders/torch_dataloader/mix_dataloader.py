@@ -117,7 +117,10 @@ class MixDataLoader(DataLoader):
           ``0<idx<len(datasets[0])+...+len(datasets[x])``, 然后参数
           ``sampler``, ``drop_last``, ``ds_ratio`` 均无效。
 
-    :param datasets: 实现了 __getitem__() 和 __len__() 对象的序列或者字典。
+    :param datasets: 一个序列或者字典，其中包含了数个数据集对象。每个数据集可以是
+        :class:`~fastNLP.core.dataset.DataSet`、pytorch 的 :class:`Dataset`、
+        hugginface 的数据集对象，以及所有实现了 :meth:`__getitem__` 和
+        :meth:`__len__` 函数的对象。
     :param mode: ``mode`` 控制 ``MixDataLoader`` 运行模式。``mode`` 的取值范围为
         ``['sequential', 'mix', 'polling', 'Sampler']``，每种模式的详细功能见上
         文。
@@ -139,8 +142,11 @@ class MixDataLoader(DataLoader):
           对象。
 
 
-    :param sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方
-        法每次都会返回 dataset 的一个下标 index ，其取值范围为 ``[None, str, Dict[str, Sampler]]``:
+    :param sampler: 取样器，应该是实现了 :meth:`__len__` 和 :meth:`__iter__`
+        方法的实例化对象，例如 fastNLP 的 :class:`~fastNLP.core.samplers.\
+        ReproducibleSampler`、pytorch 的 :class:`Sampler` 对象等。其
+        :meth:`__iter__` 方法每次都会返回 dataset 的一个下标 index ，其取值范围为
+        ``[None, str, Dict[str, Sampler]]``:
 
         * sampler 为 ``None`` 时，``MixDataLoader`` 默认初始化 **pytorch** 的
           ``SequentialSampler`` 作为默认值。其功能时顺序返回 dataset 的下标。

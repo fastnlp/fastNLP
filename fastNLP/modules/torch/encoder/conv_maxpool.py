@@ -16,7 +16,7 @@ class ConvMaxpool(nn.Module):
     ``max_pooling``。最后得到每个 sample 的一个向量表示。
 
     :param in_channels: 输入 channel 的大小，一般是 embedding 的维度，或
-        ``encoder``的 output 维度
+        ``encoder`` 的 output 维度
     :param out_channels: 输出 channel 的数量。如果为 :class:`list`，则需要与
         ``kernel_sizes`` 的数量保持一致
     :param kernel_sizes: 输出 channel 的 kernel 大小。

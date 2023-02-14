@@ -8,9 +8,9 @@ __all__ = ['MoreEvaluateCallback']
 
 
 class MoreEvaluateCallback(HasMonitorCallback):
-    r"""当评测时需要调用不同的 ``evaluate_fn``（例如在大部分生成任务中，一般使用训练
-    loss 作为训练过程中的 evaluate；但同时在训练到一定 epoch 数量之后，会让模型生成
-    的完整的数据评测 bleu 等。此刻就可能需要两种不同的``evaluate_fn`` ），只使用
+    r"""当评测时需要调用不同的 ``evaluate_fn`` （例如在大部分生成任务中，一般使用训
+    练 loss 作为训练过程中的 evaluate；但同时在训练到一定 epoch 数量之后，会让模型生
+    成的完整的数据评测 bleu 等。此刻就可能需要两种不同的 ``evaluate_fn`` ），只使用
     Trainer 无法满足需求，可以通过调用本 callback 进行。如果需要根据本 callback 中
     的评测结果进行模型保存，请传入 ``topk`` 以及 ``topk_monitor`` 等相关参数。可以
     通过 ``evaluate_every`` 或 ``watch_monitor`` 控制触发进行 evaluate 的条件。

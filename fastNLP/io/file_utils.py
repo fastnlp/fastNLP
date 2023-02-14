@@ -345,11 +345,11 @@ def split_filename_suffix(filepath):
 
 def get_from_cache(url: str, cache_dir: Path) -> Path:
     r"""
-    尝试在 ``cache_dir``中寻找 ``url`` 定义的资源，如果没有找到，则从 ``url`` 下载
+    尝试在 ``cache_dir`` 中寻找 ``url`` 定义的资源，如果没有找到，则从 ``url`` 下载
     并将结果放在 ``cache_dir`` 下，缓存的名称由 ``url`` 的结果推断而来。会将下载的文
     件解压，将解压后的文件全部放在 ``cache_dir`` 文件夹中。
 
-    如果从 ``url``中下载的资源解压后有多个文件，则返回目录的路径；如果只有一个资源文
+    如果从 ``url`` 中下载的资源解压后有多个文件，则返回目录的路径；如果只有一个资源文
     件，则返回具体的路径。
 
     :param url: 资源的 url

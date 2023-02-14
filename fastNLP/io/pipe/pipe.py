@@ -12,7 +12,7 @@ class Pipe:
     :meth:`process` 函数的文档中指出该 ``Pipe`` 可处理的 :class:`~fastNLP.core.\
     DataSet` 应该具备怎样的格式；在 ``Pipe`` 文档中说明该 ``Pipe`` 返回后
     :class:`~fastNLP.core.DataSet` 的格式以及其 field 的信息；以及新增的
-    :class:`~fastNLP.core.Vocabulary`的信息。
+    :class:`~fastNLP.core.Vocabulary` 的信息。
 
     一般情况下 **Pipe** 处理包含以下的几个过程：
 

@@ -98,7 +98,7 @@ class TorchDataLoader(DataLoader):
 
         * callate_fn 为 ``None`` 时，需要注意的是此时传进来的 dataset 类型不能为
           :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None``
-          时，`TorchDataLoader`` 调用默认的 torch 框架的 ``DataLoader`` 自带的
+          时，``TorchDataLoader`` 调用默认的 torch 框架的 ``DataLoader`` 自带的
           `default_collate_fn` 作为 callate_fn 的默认值，其无法处理
           :class:`~fastNLP.core.dataset.DataSet` 的 dataset 对象。
         * callate_fn 为 ``'auto'`` 时，``TorchDataLoader`` 使用

@@ -18,7 +18,8 @@ class MixSampler:
     """所有 mix_sampler 的基类。
 
     :param dataset: 一个字典，每个元素都是一个实现了 __getitem__ 和 __len__ 的数据
-        容器
+        容器，如 :class:`~fastNLP.core.dataset.DataSet`、huggingface 的数据集对
+        象或 pytorch、paddle、oneflow、jittor 框架的 :class:`Dataset` 对象。
     :param batch_size: ``dataset`` 的批次大小，所有 ``dataset`` 均采用该
         ``batch_size`` 作为批次大小
     :param sampler: 实例化好的 ``sampler``，每个 ``dataset`` 对应一个

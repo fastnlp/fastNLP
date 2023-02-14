@@ -69,7 +69,7 @@ class Seq2SeqDecoder(nn.Module):
         :param tokens: ``[batch_size, max_len]``，截止到上一个时刻所有的 token 输
             出。
         :param state: 记录了 ``encoder`` 输出与 ``decoder`` 过去状态
-        :return: `下一个时刻的分布，形状为 ``[batch_size, vocab_size]``
+        :return: 下一个时刻的分布，形状为 ``[batch_size, vocab_size]``
         """
         outputs = self(state=state, tokens=tokens)
         if isinstance(outputs, torch.Tensor):

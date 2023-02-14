@@ -46,7 +46,7 @@ class Evaluator:
 
     :param model: 训练所需要的模型，例如 ``torch.nn.Module``，等价于 ``Trainer``
         中的 ``model`` 参数；当 ``driver`` 参数传入为一个 :class:`~fastNLP.core.\
-        drivers.Driver`对象时，``model``参数将被忽略。
+        drivers.Driver` 对象时，``model`` 参数将被忽略。
     :param dataloaders: 用于评测的数据集。如果为多个，您需要使用 ``dict`` 传入，即
         对每一个数据集标上用于标识它们的标签；也可以使用 evaluate_dataloaders作为参
         数的名称。

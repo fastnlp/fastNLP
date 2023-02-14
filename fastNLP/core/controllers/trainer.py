@@ -57,13 +57,12 @@ class Trainer(TrainerEventTrigger):
 
             1. 当希望使用 ``DataParallel`` 时，您应当使用 ``TorchSingleDriver``，
                意味着您在初始化 ``Trainer`` 时参数 ``device`` 不应当为 ``List``；
-
             2. 当您选择自己初始化 ``init_process_group`` 时（这种情况要求您传入的
-                ``model`` 参数一定为 ``DistributedDataParallel``），您应当使用
-                ``TorchDDPDriver``，意味着您需要通过 ``python -m torch.
-                distributed.launch`` 的方式来启动训练，此时参数 ``device`` 应当设
-                置为 None（此时我们会忽略该参数），具体见下面对于参数 ``device`` 的
-                更详细的解释。
+               ``model`` 参数一定为 ``DistributedDataParallel``），您应当使用
+               ``TorchDDPDriver``，意味着您需要通过 ``python -m torch.
+               distributed.launch`` 的方式来启动训练，此时参数 ``device`` 应当设
+               置为 None（此时我们会忽略该参数），具体见下面对于参数 ``device`` 的
+               更详细的解释。
 
     :param driver: 训练模型所使用的具体的驱动模式，应当为以下中的一个：``["auto",
         "torch", "paddle", "jittor", "fairscale", "deepspeed", "oneflow"]``：
@@ -505,9 +504,9 @@ class Trainer(TrainerEventTrigger):
         * *check_dataloader_legality* -- 是否检查 ``DataLoader`` 是否合法，默认
           为 ``True``。
         * *extra_show_keys* -- 目前支持 ``[str, List[str], :class:`~fastNLP.\
-          core.callbacks.ExtraInfoStatistics`]`` 用于在进度条中显示除``loss``以外
-          的信息，如果传入 ``str`` 类型的数据，应当是 ``train_fn`` 返回的字典中包含
-          的关键字。仅当没有手动传入 ``ProgressBarCallback`` 类型的 ``callback``
+          core.callbacks.ExtraInfoStatistics`]`` 用于在进度条中显示除``loss`` 以
+          外的信息，如果传入 ``str`` 类型的数据，应当是 ``train_fn`` 返回的字典中包
+          含的关键字。仅当没有手动传入 ``ProgressBarCallback`` 类型的 ``callback``
           时生效。
 
     .. note::

@@ -22,9 +22,9 @@ class ClassifyFPreRecMetric(Metric):
     :param ignore_labels: 由 :class:`str` 组成的 :class:`list`. 这个列表中的
         class 不会被用于计算。例如在 POS tagging 时传入 ``['NN']``，则不会计算
         'NN' 个 label。
-    :param only_gross: 是否只计算总的 ``f1``, ``precision``, ``recall``的值；如果
-        为 ``False``，不仅返回总的 ``f1``, ``pre``, ``rec``, 还会返回每个 label
-        的 ``f1``, ``pre``, ``rec``。
+    :param only_gross: 是否只计算总的 ``f1``, ``precision``, ``recall`` 的值；
+        如果为 ``False``，不仅返回总的 ``f1``, ``pre``, ``rec``, 还会返回每个
+        label 的 ``f1``, ``pre``, ``rec``。
     :param f_type: `micro` 或 `macro`。
 
         * `micro` : 通过先计算总体的 TP，FN 和 FP 的数量，再计算 f, precision,
