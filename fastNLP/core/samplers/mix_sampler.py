@@ -146,7 +146,7 @@ class MixSampler:
         pass
 
     def set_epoch(self, epoch: int) -> None:
-        """配合ddp使用，控制随机数种子.
+        """配合ddp使用，控制随机数种子。
 
         :param epoch: 当前的轮次
         :return:

@@ -11,7 +11,7 @@ class TorchWarmupCallback(Callback):
     调整学习率的 **callback**。
 
     :param warmup: 如果 ``warmup`` 为整数，则在该 step 之前，学习率根据
-        ``schedule`` 的策略变化；如果 ``warmup`` 为 ``float``，如 0.1,
+        ``schedule`` 的策略变化；如果 ``warmup`` 为 ``float``，如 0.1，
         则前 10% 的 step 是按照 ``schedule`` 策略调整。
     :param schedule: 对学习率进行调整的策略：
 

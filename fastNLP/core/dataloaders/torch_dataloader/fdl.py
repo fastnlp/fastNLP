@@ -19,8 +19,8 @@ __all__ = ['TorchDataLoader', 'prepare_torch_dataloader']
 
 
 class _FDataSet:
-    """提供给 :class:`TorchDataLoader` 使用的 warp 类，其功能是对 dataset 进行封 装，wrap 修改
-    dataset 的 __getitem__ 函数，增加返回 数据的下标 idx 。
+    r"""提供给 :class:`TorchDataLoader` 使用的 warp 类，其功能是对 dataset 进行
+    封装，wrap 修改 dataset 的 __getitem__ 函数，增加返回 数据的下标 idx 。
 
     ..note::
 
@@ -73,23 +73,24 @@ class TorchDataLoader(DataLoader):
           参数作为输入，batch 是一个 List 对象且 List 中的每一条数据都是 dataset 的
           一条数据；该 Callable 函数还应当返回一个对象。
 
-    :param dataset: 实现了 __getitem__() 和 __len__() 的对象。
+    :param dataset: 需要遍历的数据集，可以是 :class:`~fastNLP.core.dataset.\
+        DataSet`、pytorch 的 :class:`Dataset`、hugginface 的数据集对象，以及所有
+        实现了 :meth:`__getitem__` 和 :meth:`__len__` 函数的数据集对象。
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
-    :param non_train_batch_size: 非训练数据集的 ``TorchDataLoader`` 批次大小，默
-        认为 ``16`` 且当 ``batch_sampler`` 为 ``None`` 有效。
     :param shuffle: 是否打乱数据集，默认为 ``None``, 如果传入的 ``ds_or_db`` 可以
         判断出哪个是 ``'train'`` 则设置其 shuffle 为 ``True``，其它的为 False 。
-    :param sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方
-        法每次都会返回 dataset 的一个下标 index ，默认为 ``None``，当其不为
-        ``None`` 时，shuffle 参数无效。
-    :param non_train_sampler: 非训练数据集的的实现了 __len__() 和 __iter__() 的实
-        例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index ，默认为
-        None，当其不为 None 时，shuffle 参数无效。
-    :param batch_sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其
-        __iter__() 方法每次都会返回一个 List 对象，List中的值为 dataset 的下标
-        index ；默认为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``,
-        ``sampler``, ``shuffle`` 均失效。
-    :param num_workers: 当 ``num_workers > 0`` 时, ``TorchDataLoader`` 会开启
+    :param sampler: 数据的取样器，如 fastNLP 的 :class:`~fastNLP.core.samplers.\
+        ReproducibleSampler`、 pytorch 的 :class:`Sampler` 对象，以及所有实现了
+        :meth:`__len__` 和 :meth:`__iter__` 的对象。其 :meth:`__iter__` 方法每次
+        都会返回 dataset 的一个下标 index ，默认为 ``None``。其不为 ``None`` 时，
+        ``shuffle`` 参数无效。
+    :param batch_sampler: 批量取出数据的采样器，如 :class:`~fastNLP.core.\
+        samplers.ReproducibleBatchSampler`、pytorch 的 :class:`BatchSampler` 对
+        象，以及所有实现了 :meth:`__len__` 和 :meth:`__iter__` 的对象。其
+        :meth:`__iter__` 方法每次都会返回一个 List 对象，List 中的值为 dataset 的
+        下标 index ；默认为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``、
+        ``sampler``、``shuffle`` 均失效。
+    :param num_workers: 当 ``num_workers > 0`` 时，``TorchDataLoader`` 会开启
         ``num_workers`` 个子进程来处理数据，可以加快数据处理速度，但同时也消耗大量内
         存。当 ``num_workers=0`` 时，不开启子进程。默认为 ``0``。
     :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的
@@ -109,9 +110,9 @@ class TorchDataLoader(DataLoader):
           一条数据；该 Callable 函数还应当返回一个对象。
 
     :param pin_memory: 如果其为 ``True``, 那么 ``TorchDataLoader`` 会在返回数据张
-        量之前将其 copy 到 cud a的 pin memory 中。
+        量之前将其 copy 到 cuda 的 pin memory 中。
     :param drop_last: 当 ``drop_last=True`` 时，``TorchDataLoader`` 会扔掉最后一
-        个长度小于 ``batch_size`` 的 batch 数据；若 ``drop_last=False`` , 则会返
+        个长度小于 ``batch_size`` 的 batch 数据；若 ``drop_last=False`` ，则会返
         回该 batch 数据。默认为 ``False``。
     :param timeout: 子进程的输出队列获取数据的超时值
     :param worker_init_fn: init 函数，如果不设置为 ``None``，则将会在每个子进程初
@@ -211,9 +212,9 @@ class TorchDataLoader(DataLoader):
                 dtype=None,
                 backend=None,
                 pad_fn: Optional[Callable] = None) -> Collator:
-        """如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
+        r"""如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
-        :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.
+        :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.\
             __getitem__` 方法返回的是字典类型，则可以直接使用对应的 field 的 key 来
             表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b':
             1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.__getitem__` 返
@@ -226,10 +227,10 @@ class TorchDataLoader(DataLoader):
             果 ``backend`` 为 ``None``，该值无意义。
         :param dtype: 对于需要 pad 的 field ，该 field 数据的 ``dtype``。
         :param backend: 可选 ``['raw', 'numpy', 'torch', 'paddle', 'jittor',
-            'oneflow', 'auto']``，分别代表，输出为 :class:`list`, :class:`numpy.
+            'oneflow', 'auto']``，分别代表输出为 :class:`list`, :class:`numpy.\
             ndarray`, :class:`torch.Tensor`, :class:`paddle.Tensor`,
             :class:`jittor.Var`, :class:`oneflow.Tensor` 类型。若 ``pad_val``
-            为 ``None``，该值无意义 。
+            为 ``None``，该值无意义。
         :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 ``pad_val``,
             ``dtype``, ``backend`` 等参数失效。``pad_fn`` 的输入为当前 field 的
             batch 形式。collator 将自动 unbatch 数据，然后将各个 field 组成各自的
@@ -250,7 +251,7 @@ class TorchDataLoader(DataLoader):
                              'set_pad() is allowed.')
 
     def _get_collator(self):
-        """如果 collate_fn 是 Collator 对象，得到该对象。如果没有的话，返回 None.
+        """如果 collate_fn 是 Collator 对象，得到该对象。如果没有的话，返回 None。
 
         :return:
         """
@@ -268,12 +269,12 @@ class TorchDataLoader(DataLoader):
 
             dataloader.set_ignore('field1', 'field2')
 
-        :param field_names: field_name: 需要调整的 field 的名称。如果
-            :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
-            field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如
-            ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.
-            __getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表
-            示序列中第 **0** 个或第 **1** 个元素。
+        :param field_names: 需要调整的 field 的名称。如果 :meth:`Dataset.\
+            __getitem__` 方法返回的是字典类型，则可以直接使用对应的 field 的 key 来
+            表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b':
+            1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.__getitem__`
+            返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表示序列中第
+            **0** 个或第 **1** 个元素。
         :return: 使用的 collator
         """
         collator = self._get_collator()
@@ -311,12 +312,12 @@ def prepare_torch_dataloader(ds_or_db,
     r"""``prepare_torch_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为
     :class:`TorchDataLoader` 对象，详见 :class:`TorchDataLoader` 的说明。根据
     ds_or_db 的类型 ``[DataSet, DataBundle, Dict[name, Dataset]]`` 不同而有不同
-    返回结果, 具体如下:
+    返回结果，具体如下:
 
         * 当 ds_or_db 为 ``DataSet`` 时，``prepare_torch_dataloader`` 会将使用的
           除了 non_train_batch_size 和 non_train_sampler 以外的参数来帮你实例化一
-          个 :class:`TorchDataLoader` 对象并返回该对象。详见 :class:`~fastNLP.
-          core.dataloaders.TorchDataLoader`。
+          个 :class:`TorchDataLoader` 对象并返回。详见 :class:`TorchDataLoader`
+          的说明。
         * 当 ds_or_db 为 :class:`~fastNLP.io.DataBundle` 时，
           ``prepare_torch_dataloader`` 会遍历 ``DataBundle`` 的数据集的
           key-value 来创建不同的 :class:`TorchDataLoader` 对象；当 key 中包含
@@ -336,33 +337,40 @@ def prepare_torch_dataloader(ds_or_db,
 
     :param ds_or_db: 可以有以下三种取值，
 
-        * ds_or_db 为 :class:`~fastNLP.io.DataBundle`, 返回值为 ``Dict[str,
+        * ds_or_db 为 :class:`~fastNLP.io.DataBundle`，返回值为 ``Dict[str,
           TorchDataLoader]`` 的字典；
         * ds_or_db 为 ``Dict[str, DataSet]`` 字典，返回值为 ``Dict[str,
           TorchDataLoader]`` 的字典；
-        * ds_or_db 为实现了 __getitem__() 和 __len__() 的对象 ，返回值为
-          :class:`TorchDataLoader`；
+        * ds_or_db 为实现了 :meth:`__getitem__` 和 :meth:`__len__` 的对象，详细可
+          参考 :class:`TorchDataLoader` 中关于参数 ``dataset`` 的说明。返回值为
+          :class:`TorchDataLoader`
 
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
     :param non_train_batch_size: 非训练数据集的 :class:`TorchDataLoader` 批次大
         小，默认为 ``16`` 且当 ``batch_sampler`` 为 ``None`` 有效。
     :param shuffle: 是否打乱数据集，默认为 ``None``, 如果传入的 ``ds_or_db`` 可以
         判断出哪个是 ``'train'`` 则设置其 shuffle 为 ``True``，其它的为 False 。
-    :param sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其 __iter__() 方
-        法每次都会返回 dataset 的一个下标 index ，
-        默认为 ``None``，当其不为 ``None`` 时，shuffle 参数无效。
-    :param non_train_sampler: 非训练数据集的的实现了 __len__() 和 __iter__() 的实
-        例化对象，其 __iter__() 方法每次都会返回 dataset 的一个下标 index，默认为
-        None，当其不为 None 时，shuffle 参数无效。
-    :param batch_sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其
-        __iter__() 方法每次都会返回一个 List 对象，List 中的值为 dataset 的下标
-        index ；默认为 ``None``，当其不为 ``None`` 时，``bacth_size``,
-        ``sampler``, ``shuffle`` 参数均失效。
-    :param num_workers: 当 ``num_workers > 0`` 时, :class:`TorchDataLoader` 会
+    :param sampler: 数据的取样器，如 fastNLP 的 :class:`~fastNLP.core.samplers.\
+        ReproducibleSampler`、 pytorch 的 :class:`Sampler` 对象，以及所有实现了
+        :meth:`__len__` 和 :meth:`__iter__` 的对象。其 :meth:`__iter__` 方法每次
+        都会返回 dataset 的一个下标 index ，默认为 ``None``。其不为 ``None`` 时，
+        ``shuffle`` 参数无效。
+    :param non_train_sampler: 用于非训练数据集的取样器，如 :class:`~fastNLP.\
+        core.samplers.ReproducibleSampler`、pytorch 的 :class:`Sampler` 对象，
+        以及所有实现了 :meth:`__len__` 和 :meth:`__iter__` 方法的对象。其
+        :meth:`__iter__` 方法每次都会返回 dataset 的一个下标 index ，默认为
+        ``None``。当其不为 ``None`` 时，``shuffle`` 参数无效。
+    :param batch_sampler: 批量取出数据的采样器，如 :class:`~fastNLP.core.\
+        samplers.ReproducibleBatchSampler`、pytorch 的 :class:`BatchSampler` 对
+        象，以及所有实现了 :meth:`__len__` 和 :meth:`__iter__` 方法的对象。其
+        :meth:`__iter__` 方法每次都会返回一个 List 对象，List 中的值为 dataset 的
+        下标 index ；默认为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``、
+        ``sampler``、``shuffle`` 均失效。
+    :param num_workers: 当 ``num_workers > 0`` 时，:class:`TorchDataLoader` 会
         开启 ``num_workers`` 个子进程来处理数据，可以加快数据处理速度，但同时也消耗
         大量内存。当 ``num_workers=0`` 时，不开启子进程。默认为 ``0``。
     :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的
-        Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``.
+        Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``：
 
         * callate_fn 为 ``None`` 时，需要注意的是此时传进来的 dataset 类型不能为
           :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None``
@@ -371,7 +379,7 @@ def prepare_torch_dataloader(ds_or_db,
           :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
         * callate_fn 为 ``'auto'`` 时，:class:`TorchDataLoader` 使用
           :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。此
-          时可以配套使用 :class:`TorchDataLoader` 的 :meth:`TorchDataLoader.
+          时可以配套使用 :class:`TorchDataLoader` 的 :meth:`TorchDataLoader.\
           set_pad` 和 :meth:`TorchDataLoader.set_ignore` 方法来设置 pad_val 或忽
           略某个 field 的检测。
         * collate_fn 为 :class:`Callable` 时，该 Callable 函数应当接受一个 batch
@@ -379,7 +387,7 @@ def prepare_torch_dataloader(ds_or_db,
           一条数据；该 Callable 函数还应当返回一个对象。
 
     :param pin_memory: 如果其为 ``True``, 那么 :class:`TorchDataLoader` 会在返回
-        数据张量之前将其 copy 到 cud a的 pin memory 中。
+        数据张量之前将其 copy 到 cuda 的 pin memory 中。
     :param drop_last: 当 ``drop_last=True`` 时，:class:`TorchDataLoader` 会扔掉
         最后一个长度小于 ``batch_size`` 的 batch 数据；若 ``drop_last=False``，则
         会返回该 batch 数据。默认为 ``False``。
@@ -390,7 +398,7 @@ def prepare_torch_dataloader(ds_or_db,
     :param generator: 如果其不为 ``None``, 将会使用 RandomSampler 去生成随机的
         index 且会为每个子进程生成一个 ``base_seed``
     :param prefetch_factor: 每个 worker 提前装载的 samples 数量。``2`` 意味着在所
-        有的进程中会有 2*num_workers 的数据被预取。默认值为 ``2`` .
+        有的进程中会有 2*num_workers 的数据被预取。默认值为 ``2``。
     :param persistent_workers: 如果其为 ``True``, :class:`TorchDataLoader` 在迭
         代完一次 dataset 后不会关闭所有进程。默认为 ``False``
     """

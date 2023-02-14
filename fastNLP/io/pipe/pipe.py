@@ -9,7 +9,7 @@ class Pipe:
     r"""
     :class:`Pipe` 是 **fastNLP** 中用于处理 :class:`~fastNLP.io.DataBundle` 的
     类，但实际是处理其中的 :class:`~fastNLP.core.DataSet`。所有 ``Pipe`` 都会在其
-    :meth:`process` 函数的文档中指出该 ``Pipe`` 可处理的 :class:`~fastNLP.core.
+    :meth:`process` 函数的文档中指出该 ``Pipe`` 可处理的 :class:`~fastNLP.core.\
     DataSet` 应该具备怎样的格式；在 ``Pipe`` 文档中说明该 ``Pipe`` 返回后
     :class:`~fastNLP.core.DataSet` 的格式以及其 field 的信息；以及新增的
     :class:`~fastNLP.core.Vocabulary`的信息。
@@ -24,7 +24,7 @@ class Pipe:
     **Pipe** 中提供了两个方法：
 
         - :meth:`process` 函数，输入为 :class:`~fastNLP.io.DataBundle`
-        - :meth:`process_from_file` 函数，输入为对应 :meth:`fastNLP.io.Loader.
+        - :meth:`process_from_file` 函数，输入为对应 :func:`fastNLP.io.Loader.\
           load` 函数可接受的类型。
 
     """

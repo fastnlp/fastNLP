@@ -62,7 +62,7 @@ class StarTransformer(nn.Module):
         :return: 返回一个元组。
             第一个元素形状为 ``[batch_size, length, hidden]``，代表编码后的输出序
             列；
-            第二个元素形状为 ``[batch_size, hidden]``，表示全局 relay 节点, 详见论
+            第二个元素形状为 ``[batch_size, hidden]``，表示全局 relay 节点，详见论
             文。
         """
 

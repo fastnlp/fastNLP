@@ -40,7 +40,7 @@ class Backend:
         return value
 
     def get_scalar(self, tensor) -> float:
-        """``tensor`` 的 scalar 值.
+        """``tensor`` 的 scalar 值。
 
         :param tensor: 传入的张量;
         :return:
@@ -48,7 +48,7 @@ class Backend:
         return tensor
 
     def to_list(self, tensor) -> List:
-        """``tensor`` 的 value 值.
+        """``tensor`` 的 value 值。
 
         :param tensor: 传入的张量;
         :return:

@@ -154,7 +154,7 @@ def is_numpy_number_dtype(dtype):
 
 
 def is_numpy_generic_class(dtype):
-    """形如 np.int64，或者 np.zeros(1).dtype.type 的值.
+    """形如 np.int64，或者 np.zeros(1).dtype.type 的值。
 
     :param dtype:
     :return:

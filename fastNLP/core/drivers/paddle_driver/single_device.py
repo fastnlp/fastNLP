@@ -29,7 +29,7 @@ __all__ = [
 
 
 class PaddleSingleDriver(PaddleDriver):
-    """实现了 **PaddlePaddle** 框架下在单卡或 ``cpu`` 环境下训练功能的.
+    r"""实现了 **PaddlePaddle** 框架下在单卡或 ``cpu`` 环境下训练功能的。
 
     **Driver**。
 
@@ -37,7 +37,7 @@ class PaddleSingleDriver(PaddleDriver):
     :param device: 训练使用的设备
     :param fp16: 是否开启混合精度训练
     :param paddle_kwargs:
-        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`paddle.
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`paddle.\
           amp.GradScaler` 的参数。
     :kwargs:
         * *model_wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
@@ -45,8 +45,8 @@ class PaddleSingleDriver(PaddleDriver):
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
+            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
             core.utils.auto_param_call`。
     """
 

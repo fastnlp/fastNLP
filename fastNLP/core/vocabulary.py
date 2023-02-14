@@ -75,7 +75,7 @@ def _check_build_status(func):
 
 class Vocabulary(object):
     r"""
-    用于构建, 存储和使用 `str` 到 `int` 的一一映射::
+    用于构建， 存储和使用 `str` 到 `int` 的一一映射::
 
         from fastNLP.core import Vocabulary
         vocab = Vocabulary()
@@ -85,11 +85,11 @@ class Vocabulary(object):
         vocab["word"] # str to int
         vocab.to_word(5) # int to str
 
-    :param max_size: `Vocabulary` 的最大大小, 即能存储词的最大数量
+    :param max_size: `Vocabulary` 的最大大小， 即能存储词的最大数量
         若为 ``None`` , 则不限制大小。
-    :param min_freq: 能被记录下的词在文本中的最小出现频率, 应大于或等于 1。若小于该
-        频率, 词语将被视为 `unknown`. 若为 ``None`` , 所有文本中的词都被记录。
-    :param padding: padding的字符. 如果设置为 ``None``，则vocabulary中不考虑
+    :param min_freq: 能被记录下的词在文本中的最小出现频率， 应大于或等于 1。若小于该
+        频率， 词语将被视为 `unknown`. 若为 ``None`` , 所有文本中的词都被记录。
+    :param padding: padding的字符。如果设置为 ``None``，则vocabulary中不考虑
         padding, 也不计入词表大小，为 ``None`` 的情况多在为 label 建立 Vocabulary
         的情况。
     :param unknown: unknown的字符，所有未被记录的词在转为 :class:`int` 时将被视为
@@ -280,7 +280,7 @@ class Vocabulary(object):
 
     def build_reverse_vocab(self):
         r"""
-        基于 `word to index` dict, 构建 `index to word` dict.
+        基于 `word to index` dict，构建 `index to word` dict。
 
         """
         self._idx2word = {i: w for w, i in self._word2idx.items()}
@@ -351,7 +351,7 @@ class Vocabulary(object):
 
         def index_instance(field):
             r"""
-            有几种情况, str, 1d-list, 2d-list
+            有几种情况， str, 1d-list, 2d-list
             :param ins:
             :return:
             """
@@ -426,7 +426,7 @@ class Vocabulary(object):
         :param field_name: 构建词典所使用的 field(s), 支持一个或多个 field，若有多
             个 DataSet, 每个 DataSet 都必须有这些 field。目前支持的 field 结构有
             ``str`` 和 ``List[str]``
-        :param no_create_entry_dataset: 可以传入 :class:`~fastNLP.core.dataset.
+        :param no_create_entry_dataset: 可传入 :class:`~fastNLP.core.dataset.\
             DataSet`, :class:`List` [ :class:`~fastNLP.core.dataset.DataSet` ]
             或者 ``None`` （默认），建议直接将非训练数据都传入到这个参数。该选项用于
             接下来的模型会使用预训练的 embedding （包括 ``glove``, ``word2vec`` ,
@@ -532,7 +532,7 @@ class Vocabulary(object):
     @_check_build_vocab
     def unknown_idx(self):
         r"""
-        获得 ``unknown`` 对应的数字.
+        获得 ``unknown`` 对应的数字。
         """
         if self.unknown is None:
             return None
@@ -551,7 +551,7 @@ class Vocabulary(object):
     @_check_build_vocab
     def to_word(self, idx: int):
         r"""
-        给定一个数字, 将其转为对应的词.
+        给定一个数字， 将其转为对应的词。
 
         :param idx:
         :return: ``idx`` 对应的词

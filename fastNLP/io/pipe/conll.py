@@ -91,7 +91,7 @@ class Conll2003NERPipe(_NERPipe):
     **Conll2003** 的 **NER** 任务的处理 **Pipe**，该Pipe会：
 
         1. 复制 ``raw_words`` 列，并命名为 ``words``；
-        2. 在 ``words`` , ``target`` 列建立词表，即创建 :class:`~fastNLP.core.
+        2. 在 ``words`` , ``target`` 列建立词表，即创建 :class:`~fastNLP.core.\
            Vocabulary` 对象，所以在返回的 :class:`~fastNLP.io.DataBundle` 中将有'
            两个 ``Vocabulary``；
         3. 将 ``words`` , ``target`` 列根据相应的词表转换为 index。
@@ -446,7 +446,7 @@ class MsraNERPipe(_CNNERPipe):
 
 class PeopleDailyPipe(_CNNERPipe):
     r"""
-    处理 **People's Daily NER** 的 **ner** 的数据，处理之后 :class:`~fastNLP.
+    处理 **People's Daily NER** 的 **ner** 的数据，处理之后 :class:`~fastNLP.\
     core.DataSet` 中的内容如下：
 
     .. csv-table::

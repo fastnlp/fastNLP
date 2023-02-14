@@ -41,7 +41,7 @@ class TorchSingleDriver(TorchDriver):
           置为 ``None``
         * *non_blocking* -- 表示用于 :meth:`torch.Tensor.to` 方法的参数
           non_blocking
-        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.\
           amp.cuda.GradScaler` 的参数
     :kwargs:
         * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
@@ -49,8 +49,8 @@ class TorchSingleDriver(TorchDriver):
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
+            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
             core.utils.auto_param_call`。
     """
 

@@ -17,7 +17,7 @@ __all__ = []  # type: ignore
 
 # 记录各个进程信息
 class SubTrainer(object):
-    """用于统计节点内不同训练进程的信息，和 fastnlp 的 Triainer 没有关系."""
+    """用于统计节点内不同训练进程的信息，和 fastnlp 的 Triainer 没有关系。"""
 
     def __init__(self, endpoint=None, rank=None):
         self.devices = []
@@ -39,13 +39,13 @@ class FleetLauncher:
         self.setup()
 
     def setup(self):
-        """进行初始化设置的函数，根据传入的设备找到分布式训练使用的端口号."""
+        """进行初始化设置的函数，根据传入的设备找到分布式训练使用的端口号。"""
         self.set_endpoints()
         self.sub_trainers = self.get_process_info()
 
     def launch(self):
         r"""用于启动分布式进程。首先设置 PaddlePaddle 分布式训练需要设置的环境变量，
-        然后建立新的子进程."""
+        然后建立新的子进程。"""
         # 设置环境变量
         self.global_envs = self.get_global_env()
         self.open_subprocess()
@@ -117,7 +117,7 @@ class FleetLauncher:
         3. `PADDLE_TRAINER_ENDPOINTS` ：使用的所有地址及其端口
         4. `PADDLE_WORLD_DEVICE_IDS` ：使用的所有设备
         5. FASTNLP_DISTRIBUTED_CHECK：通过 fastNLP 建立子进程的标志，保存分布
-           式训练使用的设备.
+           式训练使用的设备。
         """
 
         global_envs = copy.copy(os.environ.copy())

@@ -1,6 +1,6 @@
 # isort: skip_file
 r"""
-用于 **IO** 的模块, 具体包括:
+用于 **IO** 的模块，具体包括:
 
 1. 用于读入 embedding 的 :mod:`EmbedLoader <fastNLP.io.embed_loader>` 类
 

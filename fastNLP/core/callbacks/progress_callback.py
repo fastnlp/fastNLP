@@ -16,7 +16,7 @@ __all__ = [
 
 
 class ExtraInfoStatistics:
-    """用于记录要显示的额外信息的统计工具类.
+    """用于记录要显示的额外信息的统计工具类。
 
     :param extra_show_keys: 要显示的额外信息的key
 
@@ -43,7 +43,7 @@ class ExtraInfoStatistics:
 
 
 class DefaultExtraInfoStatistics(ExtraInfoStatistics):
-    """用于记录要显示的额外信息的统计工具类.
+    """用于记录要显示的额外信息的统计工具类。
 
     :param extra_show_keys: 要显示的额外信息的key
 
@@ -95,7 +95,7 @@ class DefaultExtraInfoStatistics(ExtraInfoStatistics):
         return res
 
     def set_driver(self, driver):
-        """设置 Driver 对象，用于方便将 tensor 类型的数据转为数字.
+        """设置 Driver 对象，用于方便将 tensor 类型的数据转为数字。
 
         :param driver:
         :return:

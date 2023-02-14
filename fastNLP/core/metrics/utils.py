@@ -26,7 +26,7 @@ if _IS_TORCHEVAL_AVAILABLE:
 
 
 def _is_torchmetrics_metric(metric: Any) -> bool:
-    """检查输入的对象是否为torchmetrics对象.
+    """检查输入的对象是否为torchmetrics对象。
 
     :param metric:
     :return:
@@ -38,7 +38,7 @@ def _is_torchmetrics_metric(metric: Any) -> bool:
 
 
 def _is_allennlp_metric(metric: Any) -> bool:
-    """检查输入的对象是否为allennlp对象.
+    """检查输入的对象是否为allennlp对象。
 
     :param metric:
     :return:
@@ -50,7 +50,7 @@ def _is_allennlp_metric(metric: Any) -> bool:
 
 
 def _is_paddle_metric(metric: Any) -> bool:
-    """检查输入的对象是否为allennlp对象.
+    """检查输入的对象是否为allennlp对象。
 
     :param metric:
     :return:
@@ -62,7 +62,7 @@ def _is_paddle_metric(metric: Any) -> bool:
 
 
 def _is_torcheval_metric(metric: Any) -> bool:
-    """检查输入的对象是否为torcheval对象.
+    """检查输入的对象是否为torcheval对象。
 
     :param metric:
     :return:

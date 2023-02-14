@@ -111,7 +111,7 @@ class Seq2SeqModel(nn.Module):
 
     @classmethod
     def build_model(cls, *args, **kwargs):
-        """需要实现本方法来进行 :class:`Seq2SeqModel` 的初始化.
+        """需要实现本方法来进行 :class:`Seq2SeqModel` 的初始化。
 
         :return:
         """
@@ -121,8 +121,8 @@ class Seq2SeqModel(nn.Module):
 
 
 class TransformerSeq2SeqModel(Seq2SeqModel):
-    r"""Encoder 为 :class:`~fastNLP.modules.torch.encoder.
-    TransformerSeq2SeqEncoder`，decoder 为 :class:`~fastNLP.modules.torch.
+    r"""Encoder 为 :class:`~fastNLP.modules.torch.encoder.\
+    TransformerSeq2SeqEncoder`，decoder 为 :class:`~fastNLP.modules.torch.\
     decoder.TransformerSeq2SeqDecoder` 的 :class:`Seq2SeqModel`，通过
     :meth:`build_model` 方法初始化。
     """

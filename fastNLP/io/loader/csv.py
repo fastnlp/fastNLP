@@ -11,7 +11,7 @@ __all__ = [
 
 class CSVLoader(Loader):
     r"""
-    读取CSV格式的数据集, 返回 :class:`~fastNLP.core.DataSet`。
+    读取CSV格式的数据集，返回 :class:`~fastNLP.core.DataSet`。
 
     :param headers: CSV 文件的文件头，定义每一列的属性名称，即返回的
         :class:`~fastNLP.core.DataSet` 中 ``field`` 的名称。若为 ``None``，则将

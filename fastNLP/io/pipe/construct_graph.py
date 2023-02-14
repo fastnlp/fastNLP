@@ -88,7 +88,7 @@ def _count_pmi(windows_len, word_pair_count, word_window_freq, threshold):
     :param word_pair_count: 词共现频率字典
     :param word_window_freq: 词频率字典
     :param threshold: 阈值
-    :return: 词语 pmi 的 list 列表,其中元素为 [word1, word2, pmi]
+    :return: 词语 pmi 的 list 列表，其中元素为 [word1, word2, pmi]
     """
     word_pmi_lst = list()
     task_id = f_rich_progress.add_task(

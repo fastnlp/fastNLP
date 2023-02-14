@@ -219,7 +219,7 @@ def get_filepath(filepath):
 
 def get_cache_path():
     r"""
-    获取 **fastNLP** 默认 cache 的存放路径, 如果将 ``FASTNLP_CACHE_PATH`` 设置在
+    获取 **fastNLP** 默认 cache 的存放路径，如果将 ``FASTNLP_CACHE_PATH`` 设置在
     了环境变量中，将使用环境变量的值，使得不用每个用户都去下载。
     """
     if 'FASTNLP_CACHE_DIR' in os.environ:
@@ -264,7 +264,7 @@ def _get_embedding_url(embed_type, name):
     给定embedding类似和名称，返回下载url
 
     :param str embed_type: 支持static, bert, elmo。即embedding的类型
-    :param str name: embedding的名称, 例如en, cn, based等
+    :param str name: embedding的名称，例如en, cn, based等
     :return: str, 下载的url地址
     """
     #  从扩展中寻找下载的url
@@ -528,8 +528,8 @@ def ungzip_file(file: str, to: str, filename: str):
 
 def match_file(dir_name: str, cache_dir: Path) -> str:
     r"""
-    匹配的原则是: 在cache_dir下的文件与dir_name完全一致, 或除了后缀以外和dir_name完
-    全一致。如果找到了两个匹配的结果将报错. 如果找到了则返回匹配的文件的名称; 没有找到
+    匹配的原则是: 在cache_dir下的文件与dir_name完全一致，或除了后缀以外和dir_name完
+    全一致。如果找到了两个匹配的结果将报错。如果找到了则返回匹配的文件的名称; 没有找到
     返回空字符串
 
     :param dir_name: 需要匹配的名称
@@ -601,7 +601,7 @@ def _get_roberta_dir(model_dir_or_name: str = 'en'):
 
 def _get_file_name_base_on_postfix(dir_path, postfix):
     r"""
-    在dir_path中寻找后缀为postfix的文件.
+    在dir_path中寻找后缀为postfix的文件。
     :param dir_path: str, 文件夹
     :param postfix: 形如".bin", ".json"等
     :return: str，文件的路径

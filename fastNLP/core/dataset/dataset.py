@@ -1,6 +1,6 @@
 r"""
 :class:`~fastNLP.core.dataset.DataSet` 是 fastNLP 中用于承载数据的容器。可以将
-DataSet 看做是一个表格，每一行是一个 sample (在 fastNLP 中被称为 :mod:`~fastNLP.
+DataSet 看做是一个表格，每一行是一个 sample (在 fastNLP 中被称为 :mod:`~fastNLP.\
 core.dataset.instance` )，每一列是一个 feature (在 fastNLP 中称为
 :mod:`~fastNLP.core.dataset.field` )。
 
@@ -119,7 +119,7 @@ core.dataset.instance` )，每一列是一个 feature (在 fastNLP 中称为
             ]
         }
         dataset = DataSet(data)
-        # 将句子分成单词形式, 详见DataSet.apply()方法, 可以开启多进程来加快处理，
+        # 将句子分成单词形式，详见DataSet.apply()方法，可以开启多进程来加快处理，
         # 也可以更改展示的bar，目前支持 ``['rich', 'tqdm', None]``,
         # 详细内容可以见 :class:`~fastNLP.core.dataset.DataSet`, 需要注意的是匿名
         # 函数不支持多进程
@@ -215,7 +215,7 @@ def _apply_single(ds,
                   _apply_field=None,
                   progress_bar: Optional[str] = 'rich',
                   desc: Optional[str] = None) -> list:
-    """对数据集进行处理封装函数，以便多进程使用.
+    """对数据集进行处理封装函数，以便多进程使用。
 
     :param ds: 实现了 __getitem__() 和 __len__() 的对象
     :param _apply_field: 需要处理数据集的 field_name
@@ -252,7 +252,7 @@ def _apply_single(ds,
 
 
 def _multi_proc(ds, _apply_field, func, counter, queue):
-    """对数据集进行处理封装函数，以便多进程使用.
+    """对数据集进行处理封装函数，以便多进程使用。
 
     :param ds: 实现了 __getitem__() 和 __len__() 的对象
     :param _apply_field: 需要处理数据集的 field_name
@@ -307,7 +307,7 @@ class DataSet:
     :param data: 初始化的内容，其只能为两种类型，分别为 ``List[Instance]`` 和
         ``Dict[str, List[Any]]``。
 
-        * 当 data 为 ``List[Instance]`` 时,  每个 ``Instance`` 的 field_name 需
+        * 当 data 为 ``List[Instance]`` 时， 每个 ``Instance`` 的 field_name 需
           要保持一致。Instance 详见 :class:`~fastNLP.core.dataset.Instance`。
         * 当 data 为 ``Dict[str, List[Any]]`` 时，则每个 key 的 value 应该为等长
           的 list，否则不同 field 的长度不一致。
@@ -377,7 +377,7 @@ class DataSet:
         去 DataSet 的内容，根据 idx 类型不同有不同的返回值。包括四种类型 ``[int,
         slice, str, list]``
 
-            * 当 idx 为 ``int`` 时，idx 的值不能超过 ``DataSet`` 的长度, 会返回一
+            * 当 idx 为 ``int`` 时，idx 的值不能超过 ``DataSet`` 的长度，会返回一
               个 ``Instance``，详见 :class:`~fastNLP.core.dataset.Instance`
             * 当 idx 为 ``slice`` 时，会根据 slice 的内容创建一个新的 DataSet，其
               包含 slice 所有内容并返回。
@@ -505,7 +505,7 @@ class DataSet:
 
     def append(self, instance: Instance) -> None:
         r"""
-        将一个 ``instance`` 对象 append 到 DataSet 后面。详见 :class:`~fastNLP.
+        将一个 ``instance`` 对象 append 到 DataSet 后面。详见 :class:`~fastNLP.\
         core.dataset.Instance`
 
         :param instance: 若 DataSet 不为空，则 instance 应该拥有和 DataSet 完全一
@@ -535,10 +535,10 @@ class DataSet:
 
     def add_fieldarray(self, field_name: str, fieldarray: FieldArray) -> None:
         r"""
-        将 ``fieldarray`` 添加到 DataSet 中.
+        将 ``fieldarray`` 添加到 DataSet 中。
 
         :param field_name: 新加入的 field 的名称；
-        :param fieldarray: 需要加入 DataSet 的 field 的内容, 详见
+        :param fieldarray: 需要加入 DataSet 的 field 的内容，详见
             :class:`~fastNLP.core.dataset.FieldArray`；
         :return:
         """
@@ -636,7 +636,7 @@ class DataSet:
 
     def get_all_fields(self) -> dict:
         r"""
-        :return: 一个 dict，key 为 field_name, value为对应的 :class:`~fastNLP.
+        :return: 一个 dict，key 为 field_name, value为对应的 :class:`~fastNLP.\
             core.dataset.FieldArray` 对象。
         """
         return self.field_arrays
@@ -657,7 +657,7 @@ class DataSet:
 
     def rename_field(self, field_name: str, new_field_name: str):
         r"""
-        将某个 field 重新命名.
+        将某个 field 重新命名。
 
         :param field_name: 原来的 field 名称；
         :param new_field_name: 修改为 new_name；
@@ -733,7 +733,7 @@ class DataSet:
         ``func``，并获取它的返回值。``func`` 可以返回一个或多个 field 上的结果。
 
         .. note::
-            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :meth:`~fastNLP.
+            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :meth:`~fastNLP.\
             core.dataset.DataSet.apply_more` 中关于 ``apply_more`` 与 ``apply``
             区别的介绍。
 
@@ -1172,7 +1172,7 @@ class DataSet:
 
     @classmethod
     def from_pandas(cls, df):
-        """从 :class:`pandas.DataFrame` 中读取并数据转化为 DataSet.
+        """从 :class:`pandas.DataFrame` 中读取并数据转化为 DataSet。
 
         :param df: 使用 pandas 读取的数据
         :return:
@@ -1181,7 +1181,7 @@ class DataSet:
         return cls(df_dict)
 
     def to_pandas(self):
-        """将 DataSet 数据转为 :class:`pandas.DataFrame` 类型的数据.
+        """将 DataSet 数据转为 :class:`pandas.DataFrame` 类型的数据。
 
         :return:
         """
@@ -1193,7 +1193,7 @@ class DataSet:
         return pd.DataFrame.from_dict(dict_)
 
     def to_csv(self, path: str):
-        """将 DataSet 保存为 csv 文件.
+        """将 DataSet 保存为 csv 文件。
 
         :param path: 保存到路径
         :return:
@@ -1214,9 +1214,9 @@ class DataSet:
                 dtype=None,
                 backend=None,
                 pad_fn: Optional[Callable] = None) -> Collator:
-        """如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
+        r"""如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
-        :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.
+        :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.\
             __getitem__` 方法返回的是字典类型，则可以直接使用对应的 field 的 key 来
             表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b':
             1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.__getitem__` 返
@@ -1229,10 +1229,10 @@ class DataSet:
             果 ``backend`` 为 ``None``，该值无意义。
         :param dtype: 对于需要 pad 的 field ，该 field 数据的 ``dtype``。
         :param backend: 可选 ``['raw', 'numpy', 'torch', 'paddle', 'jittor',
-            'oneflow', 'auto']``，分别代表，输出为 :class:`list`, :class:`numpy.
+            'oneflow', 'auto']``，分别代表输出为 :class:`list`, :class:`numpy.\
             ndarray`, :class:`torch.Tensor`, :class:`paddle.Tensor`,
             :class:`jittor.Var`, :class:`oneflow.Tensor` 类型。若 ``pad_val``
-            为 ``None``，该值无意义 。
+            为 ``None``，该值无意义。
         :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 ``pad_val``,
             ``dtype``, ``backend`` 等参数失效。``pad_fn`` 的输入为当前 field 的
             batch 形式。Collator 将自动 unbatch 数据，然后将各个 field 组成各自的
@@ -1262,7 +1262,7 @@ class DataSet:
         :param field_names: field_name: 需要调整的 field 的名称。如果
             :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
             field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如
-            ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.
+            ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.\
             __getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表
             示序列中第 **0** 个和第 **1** 个元素。
         :return: 自身的 collator；
@@ -1276,7 +1276,7 @@ class DataSet:
 
     @classmethod
     def from_datasets(cls, dataset):
-        """将 Huggingface Dataset 转为 fastNLP 的 DataSet.
+        """将 Huggingface Dataset 转为 fastNLP 的 DataSet。
 
         :param dataset: 实例化好的 huggingface Dataset 对象
         """

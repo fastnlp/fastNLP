@@ -22,7 +22,7 @@ class TorchGradClipCallback(Callback):
         ``clip_value`` 应该为正数；
     :param clip_type: 应为 ``'norm'``, ``'value'`` 中的一个:
 
-        1. 为 ``'norm'`` 时, 将梯度的范数限制在 [-clip_value, clip_value] 之间；
+        1. 为 ``'norm'`` 时， 将梯度的范数限制在 [-clip_value, clip_value] 之间；
         2. 为 ``'value'`` 时，, 将梯度限制在 [-clip_value, clip_value] 之间，
            小于 ``-clip_value`` 的梯度被赋值为 ``-clip_value``，
            大于 ``clip_value`` 的梯度被赋值为 ``clip_value``；

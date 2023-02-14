@@ -30,7 +30,7 @@ def get_global_rank() -> int:
 
 def rank_zero_call(fn: Callable):
     r"""通过该函数包裹的函数，在单卡模式下该方法不影响任何东西，在多卡状态下仅会在
-    global rank 为 0 的进程下执行。使用方式有两种.
+    global rank 为 0 的进程下执行。使用方式有两种。
 
     使用方式1::
 

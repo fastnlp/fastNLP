@@ -104,7 +104,7 @@ class FRichProgress(Progress, metaclass=Singleton):
         return self
 
     def set_transient(self, transient: bool = True):
-        """设置是否在bar运行结束之后不关闭.
+        """设置是否在bar运行结束之后不关闭。
 
         :param transient:
         :return:

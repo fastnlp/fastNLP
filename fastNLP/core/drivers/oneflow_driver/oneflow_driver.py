@@ -86,12 +86,12 @@ class OneflowDriver(Driver):
         self.wo_auto_param_call = kwargs.get('model_wo_auto_param_call', False)
 
     def zero_grad(self):
-        """实现梯度置零的过程."""
+        """实现梯度置零的过程。"""
         for optimizer in self.optimizers:
             optimizer.zero_grad(self.set_grad_to_none)
 
     def backward(self, loss):
-        """对 ``loss`` 进行反向传播."""
+        """对 ``loss`` 进行反向传播。"""
         loss.backward()
         # self.grad_scaler.scale(loss).backward()
 

@@ -36,7 +36,7 @@ class NestedMappingPackerUnpacker:
     @staticmethod
     def unpack_batch(batch: Sequence[Mapping], ignore_fields: set,
                      input_fields: Dict) -> Dict:
-        """将 nested 的 dict 中的内容展开到一个 flat dict 中.
+        """将 nested 的 dict 中的内容展开到一个 flat dict 中。
 
         :param batch: 需要 unpack 的 batch 数据。
         :param ignore_fields: 需要忽略的 field 。
@@ -128,7 +128,7 @@ def _unpack_batch_nested_mapping(value, ignore_fields, stop_deep_fields,
 
 
 def pack_batch_nested_mapping(batch: Mapping) -> Dict:
-    """需要恢复出 nested 的 dict 原来的样式.
+    """需要恢复出 nested 的 dict 原来的样式。
 
     :param batch:
     :return:

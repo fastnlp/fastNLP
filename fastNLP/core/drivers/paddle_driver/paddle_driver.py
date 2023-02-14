@@ -84,12 +84,12 @@ class PaddleDriver(Driver):
         self.wo_auto_param_call = kwargs.get('model_wo_auto_param_call', False)
 
     def zero_grad(self):
-        """实现梯度置零的过程."""
+        """实现梯度置零的过程。"""
         for optimizer in self.optimizers:
             optimizer.clear_grad()
 
     def backward(self, loss):
-        """对 ``loss`` 进行反向传播."""
+        """对 ``loss`` 进行反向传播。"""
         self.grad_scaler.scale(loss).backward()
 
     def step(self):
@@ -124,7 +124,7 @@ class PaddleDriver(Driver):
     @staticmethod
     def _check_optimizer_legality(optimizers):
         r"""
-        对于用户传入 trainer 的每一个 optimizer检测其合法性，必须为`paddle.
+        对于用户传入 trainer 的每一个 optimizer检测其合法性，必须为`paddle.\
         optimizer.Optimizer`类型。
 
         :param optimizers: 需要检测的 `optimizers`。

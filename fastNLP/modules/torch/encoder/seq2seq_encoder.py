@@ -175,7 +175,7 @@ class LSTMSeq2SeqEncoder(Seq2SeqEncoder):
         - :class:`numpy.ndarray`，将使用传入的 ndarray 作为 Embedding 初始化；
         - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
     :param num_layers: LSTM 的层数
-    :param hidden_size: 隐藏层大小, 该值也被认为是 ``encoder`` 的输出维度大小
+    :param hidden_size: 隐藏层大小，该值也被认为是 ``encoder`` 的输出维度大小
     :param dropout: Dropout 的大小
     :param bidirectional: 是否使用双向
     """

@@ -14,9 +14,9 @@ class State:
     r"""每个 ``Decoder`` 都有对应的 :class:`State` 对象用来承载 ``encoder`` 的输
     出以及当前时刻之前的 ``decode`` 状态。
 
-    :param encoder_output: 如果不为 ``None``，内部元素需要为 :class:`torch.
+    :param encoder_output: 如果不为 ``None``，内部元素需要为 :class:`torch.\
         Tensor`，默认其中第一维是 ``batch_size`` 维度
-    :param encoder_mask: 如果部位 ``None``，内部元素需要为 :class:`torch.
+    :param encoder_mask: 如果部位 ``None``，内部元素需要为 :class:`torch.\
         Tensor`，默认其中第一维是 ``batch_size`` 维度
     :param kwargs:
     """

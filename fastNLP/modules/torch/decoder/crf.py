@@ -18,7 +18,7 @@ def allowed_transitions(
     给定一个 ``id`` 到 ``label`` 的映射表，返回所有可以跳转的 ``(from_tag_id,
     to_tag_id)`` 列表。
 
-    :param tag_vocab: 支持类型为 tag 或 tag-label。只有 tag 的,比如 ``"B"`` 、
+    :param tag_vocab: 支持类型为 tag 或 tag-label。只有 tag 的，比如 ``"B"`` 、
         ``"M"``，也可以是 ``"B-NN"`` 、 ``"M-NN"``，tag 和 label之间一定要用
         ``"-"`` 隔开。如果传入 :class:`dict`，格式形如 ``{0:"O", 1:"B-tag1"}``，
         即 **index 在前，tag 在后**。
@@ -346,7 +346,7 @@ class ConditionalRandomField(nn.Module):
                   :class:`int` ] 的长度是这个 sample 的有效长度。
         :return:  (paths, scores)。
 
-                - ``paths`` -- 解码后的路径, 其值参照 ``unpad`` 参数。
+                - ``paths`` -- 解码后的路径，其值参照 ``unpad`` 参数。
                 - ``scores`` -- :class:`torch.FloatTensor`，形状为
                   ``[batch_size,]``，对应每个最优路径的分数。
 

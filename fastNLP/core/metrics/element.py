@@ -29,7 +29,7 @@ def _wrap_cal_value(func):
 
 
 class Element:
-    """保存 :class:`~fastNLP.core.metrics.Metric` 中计算的元素值的对象.
+    r"""保存 :class:`~fastNLP.core.metrics.Metric` 中计算的元素值的对象。
 
     :param name: 名称
     :param value: 元素的值
@@ -42,9 +42,9 @@ class Element:
         * method 为 ``'min'`` 时，会将多张卡上聚合结果在维度 `0` 上取最小值。
 
     :param backend: 使用的 backend 。Element 的类型会根据 ``backend`` 进行实际的
-        初始化。例如 ``backend`` 为 ``'torch'`` 则该对象为 :class:`torch.
-        Tensor`；如果 ``'backend'`` 为 ``'paddle'`` 则该对象为 :class:`paddle.
-        Tensor`；如果 ``backend`` 为 ``'jittor'`` , 则该对象为 :class:`jittor.
+        初始化。例如 ``backend`` 为 ``'torch'`` 则该对象为 :class:`torch.\
+        Tensor`；如果 ``'backend'`` 为 ``'paddle'`` 则该对象为 :class:`paddle.\
+        Tensor`；如果 ``backend`` 为 ``'jittor'`` , 则该对象为 :class:`jittor.\
         Var`。一般情况下直接默认为 ``'auto'`` 就行了，**fastNLP** 会根据实际调用
         :meth`Metric.update` 函数时传入的参数进行合理的初始化，例如当传入的参数中只
         包含 :class:`torch.Tensor` 这一种 tensor 时（可以有其它非 tensor 类型的输
@@ -75,7 +75,7 @@ class Element:
         self.device = None
 
     def aggregate(self):
-        """自动 aggregate 对应的元素."""
+        """自动 aggregate 对应的元素。"""
         self._check_value_initialized()
         if self.aggregate_method is None:  # 如果没有 aggregate 则不进行聚合。
             return
@@ -119,17 +119,17 @@ class Element:
         return self._value
 
     def get_scalar(self) -> float:
-        """获取元素的 scalar 值."""
+        """获取元素的 scalar 值。"""
         self._check_value_initialized()
         return self.backend.get_scalar(self._value)
 
     def to_list(self) -> List:
-        """获取元素的 values 值."""
+        """获取元素的 values 值。"""
         self._check_value_initialized()
         return self.backend.to_list(self._value)
 
     def tensor2numpy(self) -> np.array:
-        """将 tensor 转为 numpy 值，主要是在 metric 计算中使用."""
+        """将 tensor 转为 numpy 值，主要是在 metric 计算中使用。"""
         self._check_value_initialized()
         return self.backend.tensor2numpy(self._value)
 
@@ -140,7 +140,7 @@ class Element:
         self._value = self.backend.fill_value(self._value, value)
 
     def to(self, device):
-        """将元素移到某个设备上.
+        """将元素移到某个设备上。
 
         :param device: 设备名，一般为 ``"cpu"``, ``"cuda:0"`` 等
         """
@@ -151,7 +151,7 @@ class Element:
         self.device = device
 
     def _check_value_initialized(self):
-        """检查 Element 的 value 是否初始化了."""
+        """检查 Element 的 value 是否初始化了。"""
         if self._value is None:
             assert self.backend.is_specified(), \
                 'Backend is not specified, please specify backend in the ' \
@@ -335,7 +335,7 @@ class Element:
 
     def __getattr__(self, item):
         r"""为 FDataLoader 提供 dataset 的方法和属性，实现该方法后，用户可以在
-        FDataLoader 实例化后使用 apply 等 dataset 的方法.
+        FDataLoader 实例化后使用 apply 等 dataset 的方法。
 
         :param item:
         :return:

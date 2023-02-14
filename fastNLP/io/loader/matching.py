@@ -167,11 +167,11 @@ class SNLILoader(JsonLoader):
     def load(  # type: ignore[override]
             self, paths: Optional[str] = None) -> DataBundle:
         r"""
-        从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.
+        从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.\
         DataBundle`。读取的 field 根据 :class:`SNLILoader` 初始化时传入的
         ``fields`` 决定。
 
-        :param str paths: 传入一个目录, 将在该目录下寻找 ``snli_1.0_train.
+        :param str paths: 传入一个目录，将在该目录下寻找 ``snli_1.0_train.
             jsonl``, ``snli_1.0_dev.jsonl`` 和 ``snli_1.0_test.jsonl`` 三个文
             件。
         :return:

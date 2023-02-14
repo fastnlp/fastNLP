@@ -183,7 +183,7 @@ def is_in_paddle_dist() -> bool:
 
 
 def is_in_fnlp_paddle_dist() -> bool:
-    """判断是否处于 **fastNLP** 拉起的 **paddle** 分布式进程中."""
+    """判断是否处于 **fastNLP** 拉起的 **paddle** 分布式进程中。"""
     return FASTNLP_DISTRIBUTED_CHECK in os.environ
 
 
@@ -194,7 +194,7 @@ def is_in_paddle_launch_dist() -> bool:
 
 
 def is_paddle_module(model) -> bool:
-    """判断传入的 ``model`` 是否是 :class:`paddle.nn.Layer` 类型.
+    """判断传入的 ``model`` 是否是 :class:`paddle.nn.Layer` 类型。
 
     :param model: 模型；
     :return: 当前模型是否为 ``paddle`` 的模型；

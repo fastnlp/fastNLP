@@ -35,7 +35,7 @@ __all__ = ['Evaluator']
 
 
 class Evaluator:
-    """用于评测模型性能好坏的评测器；
+    r"""用于评测模型性能好坏的评测器；
 
     .. note::
 
@@ -45,7 +45,7 @@ class Evaluator:
         息；详见 :class:`~fastNLP.core.controllers.trainer.Trainer`；
 
     :param model: 训练所需要的模型，例如 ``torch.nn.Module``，等价于 ``Trainer``
-        中的 ``model`` 参数；当 ``driver`` 参数传入为一个 :class:`~fastNLP.core.
+        中的 ``model`` 参数；当 ``driver`` 参数传入为一个 :class:`~fastNLP.core.\
         drivers.Driver`对象时，``model``参数将被忽略。
     :param dataloaders: 用于评测的数据集。如果为多个，您需要使用 ``dict`` 传入，即
         对每一个数据集标上用于标识它们的标签；也可以使用 evaluate_dataloaders作为参
@@ -54,7 +54,7 @@ class Evaluator:
         为一个 ``metric`` 的名称，``value`` 为具体的 ``Metric`` 对象。目前支持以
         下 metrics：
 
-        1. fastNLP 自己的 ``metric``：详见 :class:`~fastNLP.core.metrics.
+        1. fastNLP 自己的 ``metric``：详见 :class:`~fastNLP.core.metrics.\
            Metric`；
         2. torchmetrics；
         3. allennlp.training.metrics；
@@ -87,10 +87,10 @@ class Evaluator:
     :param device: 等价于 ``Trainer`` 中的 ``device`` 参数；
     :param evaluate_batch_step_fn: 您可以传入该参数来定制每次评测一个 batch 的数据
         时所执行的函数。该函数应接受的两个参数为 ``evaluator`` 和 ``batch``，
-        不需要有返回值；可以参考 :meth:`~fastNLP.core.controllers.loops.
+        不需要有返回值；可以参考 :meth:`~fastNLP.core.controllers.loops.\
         evaluate_batch_loop.EvaluateBatchLoop.batch_step_fn`；
     :param evaluate_fn: 用来控制 ``Evaluator`` 在评测的前向传播过程中调用的是哪一
-        个函数，例如对于 pytorch 而言，通过该参数确定使用的是 :meth:`model.
+        个函数，例如对于 pytorch 而言，通过该参数确定使用的是 :meth:`model.\
         evaluate_step` 还是 :meth:`model.forward` （不同训练框架所使用的的前向传播
         函数的方法名称不同）；
 

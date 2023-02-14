@@ -37,7 +37,7 @@ class _MixDataset:
     def __getitem__(
         self, idx: Union[int, List[int]]
     ) -> Union[Tuple[Instance, int], Tuple[DataSet, int]]:
-        """根据index索引获取数据，能够跟 idx 的范围定位属于哪个小数据并返回.
+        """根据index索引获取数据，能够跟 idx 的范围定位属于哪个小数据并返回。
 
         :param idx: 整数类型的index或者列表
         :return:
@@ -85,7 +85,7 @@ class _MixCollateFn:
 
     def __call__(self, ins_list: List) -> Dict:
         r"""调用一次该方法，我们将 ins_list 视为同一个数据集采样出来的，故 ds_index
-        只能为一种.
+        只能为一种。
 
         :param ins_list:
         :return:
@@ -125,7 +125,7 @@ class MixDataLoader(DataLoader):
         Callable 函数。其取值可以为 ``['auto', Callable, List[Callable],
         Dict[str, Callable]]``:
 
-        * collate_fn 为 ``'auto'`` 时, ``MixDataLoader`` datasets 序列或者 dict
+        * collate_fn 为 ``'auto'`` 时，``MixDataLoader`` datasets 序列或者 dict
           初始化一个 :class:`~fastNLP.core.collators.Collator`  作为其默认值，需
           要注意的是只有当 datasets 包含的所以 dataset 的数据都为 ``List`` 或者
           ``Dict`` 类型时才能使用。否则只能用户自己定义 collate_fn 。
@@ -154,7 +154,7 @@ class MixDataLoader(DataLoader):
           标。Dict 的 str 必须和 datasets 的 key 一致。也即是 ``Dict[str,
           Sampler]`` 为 datasets 字典的每个 dataset 初始化了一个 Sampler。
 
-    :param num_workers: 当 ``num_workers > 0`` 时, ``MixDataLoader`` 会开启
+    :param num_workers: 当 ``num_workers > 0`` 时，``MixDataLoader`` 会开启
         ``num_workers`` 个子进程来处理数据，可以加快数据处理速度，但同时也会消耗大量
         内存。当 ``num_workers=0`` 时，不开启子进程。默认为 ``0``。
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 ``None`` 有

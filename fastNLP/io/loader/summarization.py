@@ -35,15 +35,15 @@ class ExtCNNDMLoader(JsonLoader):
 
     def load(self, paths: Union[str, Dict[str, str], None] = None):
         r"""
-        从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.
+        从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.\
         DataBundle`。
 
         读取的 field 根据 :class:`ExtCNNDMLoader` 初始化时传入的 ``fields`` 决
         定。
 
-        :param paths: 传入一个目录, 将在该目录下寻找 ``train.label.jsonl``，
+        :param paths: 传入一个目录，将在该目录下寻找 ``train.label.jsonl``，
             ``dev.label.jsonl``，``test.label.jsonl`` 三个文件（该目录还应该需要
-            有一个名字为 ``vocab`` 的文件，在 :class:`~fastNLP.io.pipe.
+            有一个名字为 ``vocab`` 的文件，在 :class:`~fastNLP.io.pipe.\
             ExtCNNDMPipe` 当中需要用到）。
 
         :return: :class:`~fastNLP.io.DataBundle`

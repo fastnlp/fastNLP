@@ -187,7 +187,7 @@ class YelpFullPipe(CLSBasePipe):
 
 class YelpPolarityPipe(CLSBasePipe):
     r"""
-    处理 **Yelp Review Polarity** 的数据，处理之后 :class:`~fastNLP.core.
+    处理 **Yelp Review Polarity** 的数据，处理之后 :class:`~fastNLP.core.\
     DataSet` 中的内容如下：
 
     .. csv-table:: 下面是使用YelpFullPipe处理后的DataSet所具备的field

@@ -31,7 +31,7 @@ class Metric:
         如果您需要自定义自己的 :class:`Metric`，并且有分布式训练的需求，请确保：
 
             1. 调用 :meth:`~Metric.register_element` 函数来注册需要 gather 的张量
-            2. 或在 :meth:`~Metric.get_metric` 函数中调用 :meth:`~Metric.
+            2. 或在 :meth:`~Metric.get_metric` 函数中调用 :meth:`~Metric.\
                all_gather_object` 函数来手动收集不同设备上的数据。
 
     :param backend: 目前支持五种类型的 backend, ``['torch', 'paddle', 'jittor',
@@ -39,7 +39,7 @@ class Metric:
         数时传入的参数决定具体的 backend ，大部分情况下直接使用 ``'auto'`` 即可。
     :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相
         同的 element 的数字聚合后再得到 metric，当 ``backend`` 不支持分布式时，该参
-        数无意义。如果为 ``None``，将在 :class:`~fastNLP.core.controllers.
+        数无意义。如果为 ``None``，将在 :class:`~fastNLP.core.controllers.\
         Evaluator` 中根据 ``sampler`` 是否使用分布式进行自动设置。
     """
 
@@ -187,7 +187,7 @@ class Metric:
                 'registered as an Element!')
         object.__setattr__(self, key, value)
 
-    # 当调用 __getattribute__ 没有找到时才会触发这个, 保留这个的目的
+    # 当调用 __getattribute__ 没有找到时才会触发这个，保留这个的目的
     # 只是为了防止 ide 的 warning
     def __getattr__(self, name: str) -> Element:
         if 'elements' in self.__dict__:
@@ -209,7 +209,7 @@ class Metric:
         return _wrap_update
 
     def _wrap_check_get_metric(self, get_metric):
-        """统计 get_metric 函数中是否调用了 self.all_gather_object() 函数."""
+        """统计 get_metric 函数中是否调用了 self.all_gather_object() 函数。"""
 
         @functools.wraps(get_metric)
         def _wrapper(*args, **kwargs):
@@ -286,7 +286,7 @@ class Metric:
         return self.backend.tensor2numpy(tensor)
 
     def to(self, device):
-        """将所有的 element 变量移动到 ``device`` 设备上.
+        """将所有的 element 变量移动到 ``device`` 设备上。
 
         :param device:
         :return:

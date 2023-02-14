@@ -48,7 +48,7 @@ class _PaddleDataset(Dataset):
 
 class PaddleDataLoader(DataLoader):
     r"""``PaddleDataLoader`` 是专门提供给 ``paddle`` 框架的 ``DataLoader``，其集
-    成了 **fastNLP** 的 ``Collator`` （具体详见 :class:`~fastNLP.core.
+    成了 **fastNLP** 的 ``Collator`` （具体详见 :class:`~fastNLP.core.\
     collators.Collator`），并对 ``paddle`` 的 ``DataLoader`` 进行了 封装，使得其
     具备以下功能：
 
@@ -87,11 +87,13 @@ class PaddleDataLoader(DataLoader):
        参数作为输入，batch 是一个 List 对象且 List 中的每一条数据都是 dataset 的一
        条数据；该 Callable 函数还应当返回一个对象。
 
-    :param dataset: 实现了 __getitem__() 和 __len__() 的对象。
+    :param dataset: 需要遍历的数据集，可以是 :class:`~fastNLP.core.dataset.\
+        DataSet`、paddle 的 :class:`Dataset`、hugginface 的数据集对象，以及所有
+        实现了 :meth:`__getitem__` 和 :meth:`__len__` 函数的数据集对象。
     :param feed_list: feed Tensor list.
         这个张量能被 ``paddle.static.data`` 创建。如果 :attr:`return_list` 是
         ``False``, 那么 :attr:`feed_list` 应该被设置。默认为 ``None``。
-    :param places: 将数据放进的一个 list 的 place。:attr:`places` 能为 None.
+    :param places: 将数据放进的一个 list 的 place。:attr:`places` 能为 None。
         如果 :attr:`places` 为 None，默认放在 CPUPlace 或者 CUDAPlace(0) 设备
         上。如果 ``places`` 是一个 list 类型的 字符串，那么字符串可以是
         ``cpu`` , ``gpu:x`` 或者 ``gpu_pinned``，其中 ``x`` 是 gpu 的下标。
@@ -101,10 +103,12 @@ class PaddleDataLoader(DataLoader):
         :attr:`return_list=True`，每个设备上的返回值值为 list(Tensor)。
         :attr:`return_list` 只能在动态图情况下设置为 ``True``。默认值为
         ``True``。
-    :param batch_sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其
-        __iter__() 方法每次都会返回一个 List 对象，List中的值为 dataset 的下标
-        index ；默认为 ``None``，当其不为 ``None`` 时，``bacth_size``，
-        ``shuffle`` 参数均失效。
+    :param batch_sampler: 批量取出数据的采样器，如 :class:`~fastNLP.core.\
+        samplers.ReproducibleBatchSampler`、paddle 的 :class:`BatchSampler` 对
+        象，以及所有实现了 :meth:`__len__` 和 :meth:`__iter__` 的对象。其
+        :meth:`__iter__` 方法每次都会返回一个 List 对象，List 中的值为 dataset 的
+        下标 index ；默认为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``、
+        ``sampler``、``shuffle`` 均失效。
     :param batch_size: 批次大小，默认为 ``16`` 且当 ``batch_sampler`` 为 None 有
         效。
     :param shuffle: 是否打乱数据集，默认为 ``None``, 如果传入的 ``ds_or_db`` 可以
@@ -128,7 +132,7 @@ class PaddleDataLoader(DataLoader):
           参数作为输入，batch 是一个 List 对象且 List 中的每一条数据都是 dataset 的
           一条数据；该 Callable 函数还应当返回一个对象。
 
-    :param num_workers: 当 ``num_workers > 0`` 时, ``PaddleDataLoader`` 会开启
+    :param num_workers: 当 ``num_workers > 0`` 时， ``PaddleDataLoader`` 会开启
         ``num_workers`` 个子进程来处理数据，可以加快 数据处理速度，但同时也消耗大量
         内存。当 ``num_workers=0`` 时，不开启子进程。默认为 ``0``。
     :param use_buffer_reader: 是否开启 buffer_reader 。如果
@@ -240,7 +244,7 @@ class PaddleDataLoader(DataLoader):
                 pad_fn: Optional[Callable] = None) -> Collator:
         """如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
-        :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.
+        :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.\
             __getitem__` 方法返回的是字典类型，则可以直接使用对应的 field 的 key 来
             表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b':
             1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.__getitem__`
@@ -253,10 +257,10 @@ class PaddleDataLoader(DataLoader):
             ``None``。如果 ``backend`` 为 ``None``，该值无意义。
         :param dtype: 对于需要 pad 的 field ，该 field 数据的 ``dtype``。
         :param backend: 可选 ``['raw', 'numpy', 'torch', 'paddle', 'jittor',
-            'oneflow', 'auto']``，分别代表，输出为 :class:`list`,
-            :class:`numpy.ndarray`, :class:`torch.Tensor`, :class:`paddle.
-            Tensor`, :class:`jittor.Var`, :class:`oneflow.Tensor` 类型。若
-            ``pad_val`` 为 ``None``，该值无意义 。
+            'oneflow', 'auto']``，分别代表输出为 :class:`list`, :class:`numpy.\
+            ndarray`, :class:`torch.Tensor`, :class:`paddle.Tensor`,
+            :class:`jittor.Var`, :class:`oneflow.Tensor` 类型。若 ``pad_val``
+            为 ``None``，该值无意义。
         :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 ``pad_val``,
             ``dtype``, ``backend`` 等参数失效。``pad_fn`` 的输入为当前 field 的
             batch 形式。collator 将自动 unbatch 数据，然后将各个 field 组成各自
@@ -277,7 +281,7 @@ class PaddleDataLoader(DataLoader):
                              'set_pad() is allowed.')
 
     def _get_collator(self):
-        """如果 collate_fn 是 Collator 对象，得到该对象。如果没有的话，返回 None.
+        """如果 collate_fn 是 Collator 对象，得到该对象。如果没有的话，返回 None。
 
         :return:
         """
@@ -298,7 +302,7 @@ class PaddleDataLoader(DataLoader):
         :param field_names: field_name: 需要调整的 field 的名称。如果
             :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
             field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如
-            ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.
+            ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.\
             __getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表
             示序列中第 **0** 个和第 **1** 个元素。
         :return: 使用的 collator
@@ -339,7 +343,7 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
 
         * 当 ds_or_db 为 ``DataSet`` 时，``prepare_paddle_dataloader`` 会将除了
           non_train_batch_size 和 non_train_sampler 以外的参数来实例化一个
-          :class:`PaddleDataLoader` 对象并返回。详见 :class:`~fastNLP.core.
+          :class:`PaddleDataLoader` 对象并返回。详见 :class:`~fastNLP.core.\
           dataloaders.PaddleDataLoader`。
         * 当 ds_or_db 为 :class:`~fastNLP.io.DataBundle` 时，
           ``prepare_paddle_dataloader`` 会遍历 ``DataBundle`` 的数据集的
@@ -364,13 +368,14 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
           PaddleDataLoader]`` 的字典；
         * ds_or_db 为 ``Dict[str, DataSet]`` 字典，返回值为 ``Dict[str,
           PaddleDataLoader]`` 的字典；
-        * ds_or_db 为实现了 __getitem__() 和 __len__() 的对象 ，返回值为
-          :class:`PaddleDataLoader`；
+        * ds_or_db 为实现了 :meth:`__getitem__` 和 :meth:`__len__` 的对象，详细可
+          参考 :class:`PaddleDataLoader` 中关于参数 ``dataset`` 的说明。返回值为
+          :class:`PaddleDataLoader`
 
     :param feed_list: feed Tensor list. 这个张量能被 ``paddle.static.data`` 创
         建。如果 :attr:`return_list` 是 ``False``, 那么 :attr:`feed_list`
         应该被设置。默认为 ``None``。
-    :param places: 将数据放进的一个 list 的 place。:attr:`places` 能为 None.
+    :param places: 将数据放进的一个 list 的 place。:attr:`places` 能为 None.\
         如果 :attr:`places` 为 None，默认放在 CPUPlace 或者 CUDAPlace(0) 设备
         上。如果 ``places`` 是一个 list 类型的 字符串，那么字符串可以是
         ``cpu`` , ``gpu:x`` 或者 ``gpu_pinned``，其中 ``x`` 是 gpu 的下标。
@@ -380,10 +385,12 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         :attr:`return_list=True`，每个设备上的返回值值为 list(Tensor)。
         :attr:`return_list` 只能在动态图情况下设置为 ``True``。默认值为
         ``True``。
-    :param batch_sampler: 实现了 __len__() 和 __iter__() 的实例化对象，其
-        __iter__() 方法每次都会返回一个 List 对象，List中的值为 dataset 的下标
-        index ；默认为 ``None``，当其不为 ``None`` 时，``bacth_size``,
-        ``shuffle`` 参数均失效。
+    :param batch_sampler: 批量取出数据的采样器，如 :class:`~fastNLP.core.\
+        samplers.ReproducibleBatchSampler`、paddle 的 :class:`BatchSampler` 对
+        象，以及所有实现了 :meth:`__len__` 和 :meth:`__iter__` 方法的对象。其
+        :meth:`__iter__` 方法每次都会返回一个 List 对象，List 中的值为 dataset 的
+        下标 index ；默认为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``、
+        ``sampler``、``shuffle`` 均失效。
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
     :param shuffle: 是否打乱数据集，默认为 ``None``, 如果传入的 ``ds_or_db`` 可以
         判断出哪个是 ``'train'`` 则设置其 shuffle 为 ``True``，其它的为 False 。
@@ -400,14 +407,14 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
           :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
         * callate_fn 为 ``'auto'`` 时，:class:`PaddleDataLoader` 使用
           :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。此
-          时可以配套使用 :class:`PaddleDataLoader` 的 :meth:``PaddleDataLoader.
+          时可以配套使用 :class:`PaddleDataLoader` 的 :meth:``PaddleDataLoader.\
           set_pad` 和 :meth:``PaddleDataLoader.set_ignore` 方法来设置 pad_val
           或忽略某个 field 的检测。
         * collate_fn 为 :class:`Callable` 时，该 Callable 函数应当接受一个
           batch 参数作为输入，batch 是一个 List 对象且 List 中的每一条数据都是
           dataset 的一条数据；该 Callable 函数还应当返回一个对象。
 
-    :param num_workers: 当 ``num_workers > 0`` 时, :class:`PaddleDataLoader` 会
+    :param num_workers: 当 ``num_workers > 0`` 时，:class:`PaddleDataLoader` 会
         开启 ``num_workers`` 个子进程来处理数据，可以加快数据处理速度，但同时也消耗
         大量内存。当 ``num_workers=0`` 时，不开启子进程。默认为 ``0``。
     :param use_buffer_reader: 是否开启 buffer_reader 。如果为 ``True``，那么

@@ -16,7 +16,7 @@ class Loader:
     - :meth:`download` 函数：自动将该数据集下载到缓存地址，默认缓存地址为
       ``~/.fastNLP/datasets/``。由于版权等原因，不是所有的 ``Loader`` 都实现了该方
       法。该方法会返回下载后文件所处的缓存地址。
-    - :meth:`_load` 函数：从一个数据文件中读取数据，返回一个 :class:`~fastNLP.
+    - :meth:`_load` 函数：从一个数据文件中读取数据，返回一个 :class:`~fastNLP.\
       core.DataSet`。返回的 DataSet 的内容可以通过每个 ``Loader`` 的文档判断出。
     - :meth:`load` 函数：将文件分别读取为 :class:`~fastNLP.core.DataSet`，然后将
       多个 DataSet 放入到一个 :class:`~fastNLP.io.DataBundle` 中并返回
@@ -37,7 +37,7 @@ class Loader:
     def load(self,
              paths: Union[str, Dict[str, str], None] = None) -> DataBundle:
         r"""
-        从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.
+        从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.\
         DataBundle`。
 
         :param paths: 支持以下的几种输入方式：
@@ -70,7 +70,7 @@ class Loader:
 
             - 传入文件路径::
 
-                # 返回DataBundle对象, datasets中仅包含'train'
+                # 返回DataBundle对象，datasets中仅包含'train'
                 data_bundle = xxxLoader().load("/path/to/a/train.conll")
                 tr_data = data_bundle.get_dataset('train')  # 取出DataSet
 

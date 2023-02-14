@@ -43,7 +43,7 @@ def is_jittor_dataset(dataset) -> bool:
 
 
 def jittor_collate_wraps(func, auto_collator: Callable):
-    r"""对 ``jittor`` 的 ``collate_fn`` 进行 wrap 封装,。如果数据集为
+    r"""对 ``jittor`` 的 ``collate_fn`` 进行 wrap 封装，。如果数据集为
     :class:`Mapping` 类型，那么采用 ``auto_collator``，否则还是采用 ``jittor``
     的 ``collate_batch``。
 

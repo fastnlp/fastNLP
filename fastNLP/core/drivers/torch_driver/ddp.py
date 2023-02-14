@@ -283,7 +283,7 @@ class TorchDDPDriver(TorchDriver):
             通过运行 ``python -m torch.distributed.launch --nproc_per_node 2
             train.py`` 启动；
 
-        注意多机的启动强制要求用户在每一台机器上使用 ``python -m torch.
+        注意多机的启动强制要求用户在每一台机器上使用 ``python -m torch.\
         distributed.launch`` 启动；因此我们不会在 ``TorchDDPDriver`` 中保存
         任何当前有多少台机器的信息。
 
@@ -301,7 +301,7 @@ class TorchDDPDriver(TorchDriver):
           置为 ``None``
         * *non_blocking* -- 表示用于 :meth:`torch.Tensor.to` 方法的参数
           non_blocking
-        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.\
           amp.cuda.GradScaler` 的参数
     :kwargs:
         * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
@@ -309,8 +309,8 @@ class TorchDDPDriver(TorchDriver):
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
+            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
             core.utils.auto_param_call`。
 
         * *sync_bn* (``bool``) -- 是否要将模型中可能存在的 BatchNorm 层转换为可同

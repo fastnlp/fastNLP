@@ -44,7 +44,7 @@ class Callback:
     其它 callback 例如 **on_evaluate_begin(trainer)** / **on_evaluate_end
     (trainer, results)** / **on_save_model(trainer)** / **on_load_model
     (trainer)** / **on_save_checkpoint(trainer)** / **on_load_checkpoint
-    (trainer)** 将根据需要在 :meth:`Trainer.run <fastNLP.core.controllers.
+    (trainer)** 将根据需要在 :meth:`Trainer.run <fastNLP.core.controllers.\
     Trainer.run>` 中特定的时间调用。
     """
 
@@ -127,7 +127,7 @@ class Callback:
 
     def on_train_batch_begin(self, trainer, batch, indices):
         r"""
-        在取得数据，执行完 ``input_mapping`` (如果 :class:`~fastNLP.core.
+        在取得数据，执行完 ``input_mapping`` （如果 :class:`~fastNLP.core.\
         controllers.Trainer` 传有该参数），并且移动 ``batch`` 中的张量到了指定设备
         之后会被触发。
         其中 ``batch`` 中的数据格式要么是 ``Dataloader`` 返回的每个 ``batch`` 的格
@@ -136,7 +136,7 @@ class Callback:
         影响到输入模型的中的 ``batch`` 数据。
 
         :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
-        :param batch: batch 的数据，已经经过 ``input_mapping`` (如果有) 以及移动
+        :param batch: batch 的数据，已经经过 ``input_mapping``（如果有）以及移动
             到指定设备 。
         :param list[int] indices: 当前的 ``batch`` 是数据集中的哪些数据。仅在
             ``DataLoader`` 支持得到当前 ``batch index`` 的时候有值，其它时候为
@@ -166,7 +166,7 @@ class Callback:
 
     def on_save_model(self, trainer):
         r"""
-        当调用 :meth:`Trainer.save_model() <fastNLP.core.controllers.Trainer.
+        当调用 :meth:`Trainer.save_model() <fastNLP.core.controllers.Trainer.\
         save_model>` 时调用，此刻模型还未保存。
 
         :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
@@ -175,7 +175,7 @@ class Callback:
 
     def on_load_model(self, trainer):
         r"""
-        当调用 :meth:`Trainer.load_model() <fastNLP.core.controllers.Trainer.
+        当调用 :meth:`Trainer.load_model() <fastNLP.core.controllers.Trainer.\
         load_model>` 加载模型时调用，此刻模型还未加载。
 
         :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
@@ -184,9 +184,9 @@ class Callback:
 
     def on_save_checkpoint(self, trainer):
         r"""
-        当 Trainer 将要保存 checkpoint 的时候触发 (即调用 :meth:`Trainer.
+        当 Trainer 将要保存 checkpoint 的时候触发 （即调用 :meth:`Trainer.\
         save_checkpoint() <fastNLP.core.controllers.Trainer.save_checkpoint>`
-        函数时)，该函数用于保存当前 callback 在恢复时需要的相关数据。
+        函数时），该函数用于保存当前 callback 在恢复时需要的相关数据。
 
         :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
         """
@@ -194,9 +194,9 @@ class Callback:
 
     def on_load_checkpoint(self, trainer, states: Optional[Dict]):
         r"""
-        当 Trainer 要恢复 checkpoint 的时候触发（即调用 :meth:`Trainer.
+        当 Trainer 要恢复 checkpoint 的时候触发（即调用 :meth:`Trainer.\
         load_checkpoint() <fastNLP.core.controllers.Trainer.load_checkpoint>`
-        函数时, 此刻 Trainer 与 Driver 已经加载好自身的状态），参数 states 为
+        函数时， 此刻 Trainer 与 Driver 已经加载好自身的状态），参数 states 为
         Callback 在调用 :meth:`on_save_checkpoint` 的返回值。
 
         :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
@@ -230,7 +230,7 @@ class Callback:
         会受到 ``accumulation_steps`` 的影响。
 
         :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
-        :param optimizers: 优化器，内容为在 :class:`~fastNLP.core.controllers.
+        :param optimizers: 优化器，内容为在 :class:`~fastNLP.core.controllers.\
             Trainer` 初始化时传入的值。
         """
         pass
@@ -241,7 +241,7 @@ class Callback:
         会受到 ``accumulation_steps`` 的影响。
 
         :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
-        :param optimizers: 优化器，内容为在 :class:`~fastNLP.core.controllers.
+        :param optimizers: 优化器，内容为在 :class:`~fastNLP.core.controllers.\
             Trainer` 初始化时传入的值。
         """
         pass
@@ -252,7 +252,7 @@ class Callback:
         ``accumulation_steps`` 的影响。
 
         :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
-        :param optimizers: 优化器，内容为在 :class:`~fastNLP.core.controllers.
+        :param optimizers: 优化器，内容为在 :class:`~fastNLP.core.controllers.\
             Trainer` 初始化时传入的值。
         """
         pass
@@ -263,7 +263,7 @@ class Callback:
         ``accumulation_steps`` 的影响。
 
         :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
-        :param optimizers: 优化器，内容为在 :class:`~fastNLP.core.controllers.
+        :param optimizers: 优化器，内容为在 :class:`~fastNLP.core.controllers.\
             Trainer` 初始化时传入的值。
         """
         pass
@@ -309,8 +309,8 @@ class Callback:
 
 
 class _CallbackWrapper(Callback):
-    """对于用户使用函数修饰器加入的 callback 函数，使用该 _CallbackWrapper 类为其进 行定制，这一个类只保留用户的 这一个
-    callback 函数；"""
+    r"""对于用户使用函数修饰器加入的 callback 函数，使用该 _CallbackWrapper 类为其
+    进行定制，这一个类只保留用户的这一个 callback 函数；"""
 
     def __init__(self, event: Event, fn: Callable):
         r"""

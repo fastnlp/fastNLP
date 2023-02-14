@@ -82,7 +82,7 @@ class TorchDriver(Driver):
         self.wo_auto_param_call = kwargs.get('model_wo_auto_param_call', False)
 
     def zero_grad(self):
-        """实现梯度置零的过程."""
+        """实现梯度置零的过程。"""
         for optimizer in self.optimizers:
             self._clear_grad(optimizer, self.set_grad_to_none)
 
@@ -101,7 +101,7 @@ class TorchDriver(Driver):
                         p.grad.zero_()
 
     def backward(self, loss):
-        """对 ``loss`` 进行反向传播."""
+        """对 ``loss`` 进行反向传播。"""
         self.grad_scaler.scale(loss).backward()
 
     def step(self):
@@ -474,7 +474,7 @@ class TorchDriver(Driver):
             model.to(device)
 
     def move_data_to_device(self, batch):
-        """将一个 ``batch`` 的数据迁移到对应的设备上.
+        """将一个 ``batch`` 的数据迁移到对应的设备上。
 
         :param batch: 包含 :class:`torch.Tensor` 的数据集合，可以是 **List**、
             **Dict** 等嵌套类型

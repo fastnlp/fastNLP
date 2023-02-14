@@ -68,26 +68,26 @@ class Trainer(TrainerEventTrigger):
     :param driver: 训练模型所使用的具体的驱动模式，应当为以下中的一个：``["auto",
         "torch", "paddle", "jittor", "fairscale", "deepspeed", "oneflow"]``：
 
-        1. 值为 ``"auto"`` 时，**fastNLP** 会根据传入模型的类型自行判断使用哪一种模
-           式；
-        2. 其值为 ``"torch"`` 时，表示使用 :class:`~fastNLP.core.drivers.
-           TorchSingleDriver` 或者 :class:`~fastNLP.core.drivers.
-           TorchDDPDriver`；
-        3. 其值为 ``"torch_fsdp"`` 时，表示使用 :class:`~fastNLP.core.drivers.
-           TorchFSDPDriver`；
-        4. 其值为 ``"paddle"`` 时，表示使用 :class:`~fastNLP.core.drivers.
-           PaddleSingleDriver` 或者 :class:`~fastNLP.core.drivers.
-           PaddleFleetDriver`；
-        5. 其值为 ``"jittor"`` 时，表示使用 :class:`~fastNLP.core.drivers.
-           JittorSingleDriver` 或者 :class:`~fastNLP.core.drivers.
-           JittorMPIDriver`；
-        6. 其值为 ``"fairscale"`` 时，表示使用 :class:`~fastNLP.core.drivers.
-           FairScaleDriver`；
-        7. 其值为 ``"deepspeed"`` 时，表示使用 :class:`~fastNLP.core.drivers.
-           DeepSpeedDriver`；
-        8. 其值为 ``"oneflow"`` 时，表示使用 :class:`~fastNLP.core.drivers.
-           OneflowSingleDriver` 或者 :class:`~fastNLP.core.drivers.
-           OneflowDDPDriver`；
+        * 为 ``"auto"`` 时
+         **fastNLP** 会根据传入模型的类型自行判断使用哪一种模式；
+        * 为 ``"torch"`` 时
+         使用 :class:`~fastNLP.core.drivers.torch_driver.TorchSingleDriver`
+         或 :class:`~fastNLP.core.drivers.torch_driver.TorchDDPDriver`；
+        * 为 ``"torch_fsdp"`` 时
+         使用 :class:`~fastNLP.core.drivers.torch_driver.TorchFSDPDriver`；
+        * 为 ``"paddle"`` 时
+         使用 :class:`~fastNLP.core.drivers.paddle_driver.PaddleSingleDriver`
+         或 :class:`~fastNLP.core.drivers.paddle_driver.PaddleFleetDriver`；
+        * 为 ``"jittor"`` 时
+         使用 :class:`~fastNLP.core.drivers.jittor_driver.JittorSingleDriver`
+         或 :class:`~fastNLP.core.drivers.jittor_driver.JittorMPIDriver`；
+        * 为 ``"fairscale"`` 时
+         使用 :class:`~fastNLP.core.drivers.torch_driver.FairScaleDriver`；
+        * 为 ``"deepspeed"`` 时
+         使用 :class:`~fastNLP.core.drivers.torch_driver.DeepSpeedDriver`；
+        * 为 ``"oneflow"`` 时
+         使用 :class:`~fastNLP.core.drivers.oneflow_driver.OneflowSingleDriver`
+         或 :class:`~fastNLP.core.drivers.oneflow_driver.OneflowDDPDriver`；
 
         在指定了框架的情况下，具体使用哪一种取决于参数 ``device`` 的设置；
 
@@ -101,7 +101,7 @@ class Trainer(TrainerEventTrigger):
 
         .. note::
 
-            如果您选择使用 :mod:`deepspeed` 、:mod:`fairscale` 或 :mod:`torch.
+            如果您选择使用 :mod:`deepspeed` 、:mod:`fairscale` 或 :mod:`torch.\
             distributed.fsdp` 进行训练，请不要将 ``driver`` 设为 ``'auto'``。
 
     :param train_dataloader: 训练数据集，注意其必须是单独的一个数据集，不能是
@@ -174,7 +174,7 @@ class Trainer(TrainerEventTrigger):
             那么我们会将数据迁移到 ``data_device`` 上；如果其为 None，那么将数据迁
             移到正确设备上的处理应当由您自己来完成。
 
-            对于使用 ``TorchDDPDriver`` 的更多细节，请见 :class:`~fastNLP.core.
+            对于使用 ``TorchDDPDriver`` 的更多细节，请见 :class:`~fastNLP.core.\
             drivers.torch_driver.TorchDDPDriver`。
 
     :param n_epochs: 训练总共的 epoch 的数量，默认为 20；也可以通过 ``n_batches``
@@ -207,7 +207,7 @@ class Trainer(TrainerEventTrigger):
         传播中调用模型的哪一个函数，应当为 ``None`` 或者一个字符串；其使用方式和
         train_fn 类似；具体可见 :class:`~fastNLP.core.controllers.Evaluator`；
     :param callbacks: 训练当中触发的 callback 类，该参数应当为一个列表，其中的每一
-        个元素都应当继承 ``Callback`` 类；具体可见:class:`~fastNLP.core.
+        个元素都应当继承 ``Callback`` 类；具体可见:class:`~fastNLP.core.\
         callbacks.Callback`；
     :param metrics: 用于传给 ``Trainer`` 内部的 ``Evaluator`` 实例来进行训练过程中
         的验证。其应当为一个字典，其中 key 表示 monitor，value 表示一个 metric，例
@@ -215,7 +215,7 @@ class Trainer(TrainerEventTrigger):
 
         目前我们支持的 ``metric`` 的种类有以下几种：
 
-        1. fastNLP 自己的 ``metric``：详见 :class:`~fastNLP.core.metrics.
+        1. fastNLP 自己的 ``metric``：详见 :class:`~fastNLP.core.metrics.\
            Metric`；
         2. torchmetrics；
         3. allennlp.training.metrics；
@@ -308,13 +308,13 @@ class Trainer(TrainerEventTrigger):
         .. todo::
             之后链接上 参数匹配 的文档；
 
-        函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.
+        函数 ``auto_param_call`` 详见 :func:`fastNLP.core.utils.\
         auto_param_call`；
 
     :param accumulation_steps: 梯度累积的步数，表示每隔几个 batch 才让优化器迭代一
         次，默认为 1；
     :param fp16: 是否开启混合精度训练，默认为 False；
-    :param monitor: 对于一些特殊的 ``Callback``，例如 :class:`~fastNLP.core.
+    :param monitor: 对于一些特殊的 ``Callback``，例如 :class:`~fastNLP.core.\
         callbacks.CheckpointCallback`，它们需要使用参数 ``monitor`` 来从
         ``Evaluator`` 的验证结果中获取当前评测的值，从而来判断是否执行一些特殊的操
         作。例如，对于 :class:`~fastNLP.core.callbacks.CheckpointCallback` 而
@@ -491,8 +491,8 @@ class Trainer(TrainerEventTrigger):
           ``'auto'``。``'auto'`` 表示如果检测到当前 terminal 为交互型则使用
           :class:`~fastNLP.core.callback.RichCallback`，否则会使用
           :class:`~fastNLP.core.callbcak.RawTextCallback` 对象。如果
-          需要定制 progress bar 的参数，例如打印频率等，可以传入 :class:`~fastNLP.
-          core.callback.RichCallback`, :class:`~fastNLP.core.callback.
+          需要定制 progress bar 的参数，如打印频率等，可以传入 :class:`~fastNLP.\
+          core.callback.RichCallback`, :class:`~fastNLP.core.callback.\
           RawTextCallback` 等对象。
         * *train_input_mapping* -- 与 input_mapping 一致，但是只用于
           ``Trainer`` 中。与 input_mapping 互斥。
@@ -504,7 +504,7 @@ class Trainer(TrainerEventTrigger):
           ``Evaluator`` 中。与 output_mapping 互斥。
         * *check_dataloader_legality* -- 是否检查 ``DataLoader`` 是否合法，默认
           为 ``True``。
-        * *extra_show_keys* -- 目前支持 ``[str, List[str], :class:`~fastNLP.
+        * *extra_show_keys* -- 目前支持 ``[str, List[str], :class:`~fastNLP.\
           core.callbacks.ExtraInfoStatistics`]`` 用于在进度条中显示除``loss``以外
           的信息，如果传入 ``str`` 类型的数据，应当是 ``train_fn`` 返回的字典中包含
           的关键字。仅当没有手动传入 ``ProgressBarCallback`` 类型的 ``callback``
@@ -845,7 +845,7 @@ class Trainer(TrainerEventTrigger):
             fastNLP 将断点重训分为了 **保存状态** 和 **恢复断点重训** 两部分：
 
                 1. 您需要使用 ``CheckpointCallback`` 来保存训练过程中的
-                   ``Trainer`` 的状态；具体详见 :class:`~fastNLP.core.callbacks.
+                   ``Trainer`` 的状态，详见 :class:`~fastNLP.core.callbacks.\
                    CheckpointCallback`；``CheckpointCallback`` 会帮助您把
                    ``Trainer`` 的状态保存到一个具体的文件夹下，这个文件夹的名字由
                    ``CheckpointCallback`` 自己生成；
@@ -950,7 +950,7 @@ class Trainer(TrainerEventTrigger):
         r"""
         用于设定训练过程中 ``Evaluator`` 进行验证时所实际验证的 batch 的数量；
 
-        :param num_eval_batch_per_dl: 等价于 :meth:`~fastNLP.core.controllers.
+        :param num_eval_batch_per_dl: 等价于 :meth:`~fastNLP.core.controllers.\
             Trainer.run` 中的参数 ``num_eval_batch_per_dl``；
         """
 
@@ -997,7 +997,7 @@ class Trainer(TrainerEventTrigger):
         注意这一函数应当交给具体的 trainer 实例去做，因此不需要 `mark` 参数；
 
         :param event: 特定的 callback 时机，用户需要为该 callback 函数指定其属于哪
-            一个 callback 时机；具体有哪些时机详见 :class:`~fastNLP.core.
+            一个 callback 时机；具体有哪些时机详见 :class:`~fastNLP.core.\
             callbacks.Event`；
         :param fn: 具体的 callback 函数；
 
@@ -1105,13 +1105,13 @@ class Trainer(TrainerEventTrigger):
 
         .. note::
 
-            对于 event 的解释，建议先阅读 :meth:`~fastNLP.core.controllers.
+            对于 event 的解释，建议先阅读 :meth:`~fastNLP.core.controllers.\
             Trainer.add_callback_fn` 的文档；
 
             当实例化一个具体的 ``Event`` 时，可以指定 ``every、once、filter_fn``
             这三个参数来控制您的 callback 函数的调用频率，例如当您指定 ``Event.
             on_train_epoch_begin(every=3)`` 时，其表示每隔三个 epoch 运行一次您
-            的 callback 函数；对于这三个参数的更具体的解释，请见 :class:`~fastNLP.
+            的 callback 函数；对于这三个参数的更具体的解释请见 :class:`~fastNLP.\
             core.callbacks.Event`；
 
         Example1::
@@ -1163,7 +1163,7 @@ class Trainer(TrainerEventTrigger):
         注意如果您使用该函数修饰器来为您的训练添加 callback，请务必保证您加入
         callback 函数的代码在实例化 `Trainer` 之前；
 
-        补充性的解释见 :meth:`~fastNLP.core.controllers.Trainer.
+        补充性的解释见 :meth:`~fastNLP.core.controllers.Trainer.\
         add_callback_fn`；
 
         :param event: 特定的 callback 时机，用户需要为该 callback 函数指定其属于哪
@@ -1389,7 +1389,7 @@ class Trainer(TrainerEventTrigger):
 
             注意如果您需要在训练的过程中保存模型，如果没有特别复杂的逻辑，强烈您使用
             我们专门为保存模型以及断点重训功能定制的 ``CheckpointCallback``；
-            ``CheckpointCallback`` 的使用具体见 :class:`~fastNLP.core.callbacks.
+            ``CheckpointCallback`` 的使用详见 :class:`~fastNLP.core.callbacks.\
             checkpoint_callback.CheckpointCallback`；
 
             这意味着在大多数时刻您并不需要自己主动地调用该函数来保存模型；当然您可以
@@ -1513,7 +1513,7 @@ class Trainer(TrainerEventTrigger):
 
             注意如果您需要在训练的过程中使用断点重训功能，您可以直接使用
             ``CheckpointCallback``；``CheckpointCallback`` 的使用具体见
-            :class:`~fastNLP.core.callbacks.checkpoint_callback.
+            :class:`~fastNLP.core.callbacks.checkpoint_callback.\
             CheckpointCallback`；
 
             这意味着在大多数时刻您并不需要自己主动地调用该函数来保存 ``Trainer`` 的
@@ -1533,13 +1533,13 @@ class Trainer(TrainerEventTrigger):
 
             1. 各个 ``callback`` 的状态，这主要涉及到一些带有运行状态的
                ``callback``；
-            2. 控制训练流程的变量 ``trainer_state``，具体详见 :class:`~fastNLP.
+            2. 控制训练流程的变量 ``trainer_state``，具体详见 :class:`~fastNLP.\
                core.controllers.utils.state.TrainerState`；
             3. 一个特殊的变量 ``num_consumed_batches``，表示在这次训练过程中总共训
                练了多少个 batch 的数据；您不需要关心这个变量；
             4. sampler 的状态，为了支持断点重训功能，我们会在 trainer 初始化的时
                候，将您的 ``trainer_dataloader`` 的 ``sampler`` 替换为我们专门用
-               于断点重训功能的 ``ReproducibleSampler``，详见 :class:`~fastNLP.
+               于断点重训功能的 ``ReproducibleSampler``，详见 :class:`~fastNLP.\
                core.samplers.reproducible_sampler.ReproducibleSampler`；
             5. model 的状态，即模型参数；
             6. optimizers 的状态，即优化器的状态；
@@ -1724,7 +1724,7 @@ class Trainer(TrainerEventTrigger):
 
             该函数的提供是为了您能够更方便地定制自己的 ``train_batch_step_fn`` 来替
             换原本的 ``train_batch_loop.batch_step_fn``；更具体的细节请见
-            :meth:`~fastNLP.core.controllers.loops.train_batch_loop.
+            :meth:`~fastNLP.core.controllers.loops.train_batch_loop.\
             TrainBatchLoop.batch_step_fn`；
 
             ``trainer.backward / zero_grad / step`` 函数的作用类似；

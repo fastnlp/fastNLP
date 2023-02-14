@@ -33,7 +33,7 @@ class NumConsumedSamplesArray:
 
     def __init__(self, buffer_size=2000, num_consumed_samples=0):
         r"""保留 buffer_size 个 num_consumed_samples 数据，可以索引得到某个 index
-        下的 num_consumed_samples 多少.
+        下的 num_consumed_samples 多少。
 
         Example::
 

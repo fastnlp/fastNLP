@@ -11,14 +11,14 @@ __all__ = ['Accuracy', 'TransformersAccuracy']
 
 
 class Accuracy(Metric):
-    """计算 准确率 的 metric 。
+    r"""计算 准确率 的 metric 。
 
     :param backend: 目前支持五种类型的backend, ``['auto', 'torch', 'paddle',
         'jittor', 'oneflow']``。其中 ``'auto'`` 表示根据实际调用 :meth:`update`
         函数时传入的参数决定具体的 backend ，一般情况下直接使用 ``'auto'`` 即可。
     :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相
         同的 element 的数字聚合后再得到 metric，当 ``backend`` 不支持分布式时，该参
-        数无意义。如果为 ``None``，将在 :class:`~fastNLP.core.controllers.
+        数无意义。如果为 ``None``，将在 :class:`~fastNLP.core.controllers.\
         Evaluator` 中根据 ``sampler`` 是否使用分布式进行自动设置。
     """
 
@@ -57,7 +57,7 @@ class Accuracy(Metric):
             n_classes]``、``[B, max_len]`` 或 ``[B, max_len, n_classes]``
         :param target: 真实值的 tensor, tensor 的形状可以是 ``[B,]````[B,]``、
             ``[B, max_len]`` 或 ``[B, max_len]``
-        :param seq_len: 序列长度标记, 标记的形状可以是 ``None``，或者 ``[B]``。
+        :param seq_len: 序列长度标记，标记的形状可以是 ``None``，或者 ``[B]``。
             如果 mask 也被传进来的话 ``seq_len`` 会被忽略
         """
         # 为了兼容不同框架，我们将输入变量全部转为numpy类型来进行计算。

@@ -31,7 +31,7 @@ class AutoBackend(Backend):
             self._convert_backend(backend)
 
     def _convert_backend(self, backend):
-        """将 AutoBackend 转换为合适的 Backend 对象.
+        """将 AutoBackend 转换为合适的 Backend 对象。
 
         :param backend: 传入的 backend 值。
 

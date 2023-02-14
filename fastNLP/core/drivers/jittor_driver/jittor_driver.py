@@ -108,12 +108,12 @@ class JittorDriver(Driver):
             optimizer.step()
 
     def backward(self, loss):
-        """对 ``loss`` 进行反向传播."""
+        """对 ``loss`` 进行反向传播。"""
         for optimizer in self.optimizers:
             optimizer.backward(loss)
 
     def zero_grad(self):
-        """实现梯度置零的过程."""
+        """实现梯度置零的过程。"""
         for optimizer in self.optimizers:
             optimizer.zero_grad()
 

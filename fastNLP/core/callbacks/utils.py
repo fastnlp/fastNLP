@@ -48,7 +48,7 @@ def _get_monitor_value(monitor: Union[Callable,
 
 
 def _match_length(a: str, b: str) -> int:
-    """需要把长度短的放在前面.
+    """需要把长度短的放在前面。
 
     :param a:
     :param b:

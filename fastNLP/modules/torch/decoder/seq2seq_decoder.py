@@ -53,9 +53,9 @@ class Seq2SeqDecoder(nn.Module):
         r"""初始化一个 :class:`~fastNLP.modules.torch.decoder.State` 对象，用来
         记录 ``encoder`` 的输出以及 ``decode`` 已经完成的部分。
 
-        :param encoder_output: 如果不为 ``None``，内部元素需要为 :class:`torch.
+        :param encoder_output: 如果不为 ``None``，内部元素需要为 :class:`torch.\
             Tensor`，默认其中第一维是 batch_size 维度
-        :param encoder_mask: 如果不为 ``None``，内部元素需要为 :class:`torch.
+        :param encoder_mask: 如果不为 ``None``，内部元素需要为 :class:`torch.\
             Tensor`，默认其中第一维是 batch_size 维度
         :return: 一个 :class:`~fastNLP.modules.torch.decoder.State` 对象，记录
             了 ``encoder`` 的输出
@@ -130,7 +130,7 @@ class LSTMSeq2SeqDecoder(Seq2SeqDecoder):
               化；
             - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
     :param num_layers: LSTM 的层数
-    :param hidden_size: 隐藏层大小, 该值也被认为是 ``encoder`` 的输出维度大小
+    :param hidden_size: 隐藏层大小，该值也被认为是 ``encoder`` 的输出维度大小
     :param dropout: Dropout 的大小
     :param bind_decoder_input_output_embed: ``decoder`` 的输出 embedding 是否与
         其输入 embedding 是一样的权重（即为同一个），若 ``embed`` 为

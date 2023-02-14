@@ -12,7 +12,7 @@ __all__ = ['CheckpointCallback']
 
 
 class CheckpointCallback(Callback):
-    """保存 checkpoint 的  callback ，其保存的文件目录以及文件名命名规则如下::
+    r"""保存 checkpoint 的  callback ，其保存的文件目录以及文件名命名规则如下::
 
         - folder/
             - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
@@ -65,8 +65,8 @@ class CheckpointCallback(Callback):
         过 :meth:`Trainer.load_checkpoint` 加载该断点继续进行训练。如果保存的是
         ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
     :param save_evaluate_results: 是否保存 evaluate 的结果。如果为 ``True``，
-        在保存 topk 模型的 folder 中还将额外保存一个 ``fastnlp_evaluate_results.
-        json`` 文件，记录当前的 results。仅在设置了 ``topk`` 的场景下有用，默认为
+        在保存 topk 模型的文件夹中将额外保存一个 ``fastnlp_evaluate_results.json``
+        文件，记录当前的 results。仅在设置了 ``topk`` 的场景下有用，默认为
         ``True``。
     :param kwargs:
         * *use_timestamp_folder* (``bool``) 类型 -- 是否创建以脚本的启动时间命名的

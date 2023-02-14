@@ -27,7 +27,7 @@ __all__ = [
 
 
 class DeepSpeedDriver(TorchDDPDriver):
-    """实现 ``deepspeed`` 分布式训练的 ``Driver``。
+    r"""实现 ``deepspeed`` 分布式训练的 ``Driver``。
 
     .. note::
 
@@ -93,8 +93,7 @@ class DeepSpeedDriver(TorchDDPDriver):
 
     :param model: 传入给 ``Trainer`` 的 ``model`` 参数。
     :param parallel_device: 用于分布式训练的 ``gpu`` 设备。
-    :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``python -m
-        torch.distributed.launch`` 启动的。
+    :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``deepspeed`` 启动的。
     :param fp16: 是否开启 fp16 训练。
     :param deepspeed_kwargs:
         * *strategy* -- 使用 ZeRO 优化的策略，默认为 ``deepspeed``；目前仅支持以下
@@ -119,10 +118,10 @@ class DeepSpeedDriver(TorchDDPDriver):
         * *config* -- ``deepspeed`` 的各项设置；**FastNLP** 允许用户传入自己的设置
           以增强灵活性，但这会使参数中的 ``optimizer`` 、``strategy`` 、 ``fp16``
           等失效，即当这个参数存在时，**FastNLP** 会用该参数覆盖其它的设置。
-        * *accumulation_steps* -- 即在 :class:`~fastNLP.core.controllers.
+        * *accumulation_steps* -- 即在 :class:`~fastNLP.core.controllers.\
           Trainer` 传入的 ``accumulation_steps``。deepspeed 会将 ``config`` 的
           ``gradient_accumulation_steps`` 设置为该值。
-        * *train_dataloader* -- 即在 :class:`~fastNLP.core.controllers.
+        * *train_dataloader* -- 即在 :class:`~fastNLP.core.controllers.\
           Trainer` 传入的 ``train_dataloader``。``deepspeed`` 需要通过它来获取数
           据的 ``batch_size`` 用于设置 ``train_micro_batch_size_per_gpu``。如果
           没有传入的话，则会设置为 **1**。
@@ -132,8 +131,8 @@ class DeepSpeedDriver(TorchDDPDriver):
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
+            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
             core.utils.auto_param_call`。
 
         * *output_from_new_proc* (``str``) -- 应当为一个字符串，表示在多进程的
@@ -459,11 +458,11 @@ class DeepSpeedDriver(TorchDDPDriver):
         pass
 
     def backward(self, loss):
-        """对 ``loss`` 进行反向传播."""
+        """对 ``loss`` 进行反向传播。"""
         self.model.backward(loss)
 
     def step(self):
-        """更新模型的参数."""
+        """更新模型的参数。"""
         self.model.step()
 
     def get_model_no_sync_context(self):
@@ -635,6 +634,6 @@ class DeepSpeedDriver(TorchDDPDriver):
 
     @property
     def stage_3(self) -> bool:
-        """判断是否为第三阶段的 ZeRO 优化."""
+        """判断是否为第三阶段的 ZeRO 优化。"""
         return self.config.get('zero_optimization') and self.config.get(
             'zero_optimization').get('stage') == 3

@@ -27,8 +27,8 @@ __all__ = [
 
 class Embedding(Module):
     r"""
-    词向量嵌入，支持输入多种方式初始化. 可以通过 ``self.num_embeddings`` 获取词表大
-    小; ``self.embedding_dim`` 获取 ``embedding`` 的维度.
+    词向量嵌入，支持输入多种方式初始化。可以通过 ``self.num_embeddings`` 获取词表大
+    小; ``self.embedding_dim`` 获取 ``embedding`` 的维度。
 
     Example::
 
@@ -43,7 +43,7 @@ class Embedding(Module):
 
             1. 传入 tuple(int, int)，第一个 int 为 ``vocab_size``, 第二个 int
                ``为embed_dim``；
-            2. 传入 :class:`Tensor`, :class:`Embedding`, :class:`numpy.
+            2. 传入 :class:`Tensor`, :class:`Embedding`, :class:`numpy.\
                ndarray` 等则直接使用该值初始化 Embedding；
 
     :param word_dropout: 按照一定概率随机将 word 设置为 ``unk_index``，这样可以使

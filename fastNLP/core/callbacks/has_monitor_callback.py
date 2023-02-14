@@ -115,7 +115,7 @@ class ResultsMonitor:
     def is_better_monitor_value(self,
                                 monitor_value: float,
                                 keep_if_better=True):
-        """检测 ``monitor_value`` 是否是更好的.
+        """检测 ``monitor_value`` 是否是更好的。
 
         :param monitor_value: 待检查的 ``monitor_value``。如果为 ``None``，返
             回 False；
@@ -190,7 +190,7 @@ class ResultsMonitor:
 
     @property
     def log_name(self) -> str:
-        """内部用于打印当前类别信息使用.
+        """内部用于打印当前类别信息使用。
 
         :return:
         """

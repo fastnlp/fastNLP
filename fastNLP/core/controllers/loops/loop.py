@@ -4,9 +4,9 @@ r"""
 象，``Loop`` 表示的是在训练或者评测的过程中针对单独一个 ``dataloader`` 的一个
 ``epoch`` 的运算过程；
 
-更为具体的使用详见 :class:`~fastNLP.core.controllers.loops.train_batch_loop.
-TrainBatchLoop` 和 :class:`~fastNLP.core.controllers.loops.evaluate_batch_loop.
-EvaluateBatchLoop`
+更为具体的使用详见 :class:`~fastNLP.core.controllers.loops.train_batch_loop.\
+TrainBatchLoop` 和 :class:`~fastNLP.core.controllers.loops.\
+evaluate_batch_loop.EvaluateBatchLoop`
 """
 
 __all__ = ['Loop']
@@ -28,7 +28,7 @@ class Loop:
             函数，例如 ``Trainer.train_step``，``Trainer.backward`` 等；
 
             在定制您自己的 ``TrainBatchLoop`` 时，请务必记得在正确的时机调用对应的
-            callback 函数，详见 :class:`~fastNLP.core.controllers.loops.
+            callback 函数，详见 :class:`~fastNLP.core.controllers.loops.\
             train_batch_loop.TrainBatchLoop` 中对于 callback 函数的调用；
 
         """

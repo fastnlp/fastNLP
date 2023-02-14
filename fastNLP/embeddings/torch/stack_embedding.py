@@ -32,7 +32,7 @@ class StackEmbedding(TokenEmbedding):
         >>> embed_2 = StaticEmbedding(vocab, model_dir_or_name='en-word2vec-300', requires_grad=True)
         >>> embed = StackEmbedding([embed_1, embed_2])
 
-    :param embeds: 一个由若干个 :class:`~fastNLP.embeddings.torch.embedding.
+    :param embeds: 一个由若干个 :class:`~fastNLP.embeddings.torch.embedding.\
         TokenEmbedding` 组成的 :class:`list`，要求每一个 ``TokenEmbedding`` 的词
         表都保持一致
     :param word_dropout: 按照一定概率随机将 word 设置为 ``unk_index``，这样可以使

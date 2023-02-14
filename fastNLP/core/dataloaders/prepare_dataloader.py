@@ -22,8 +22,8 @@ def prepare_dataloader(dataset,
     r"""
     自动创建合适的 ``DataLoader`` 对象。例如，检测当当前环境是 ``torch`` 的，则返
     回 ``TorchDataLoader`` ，是 ``paddle`` 的则返回 ``PaddleDataLoader``。如果有
-    更多需要定制的参数，请直接使用对应的 ``prepare`` 函数，例如 :func:`~fastNLP.
-    core.dataloaders.prepare_torch_dataloader` 或 :func:`~fastNLP.core.
+    更多需要定制的参数，请直接使用对应的 ``prepare`` 函数，例如 :func:`~fastNLP.\
+    core.dataloaders.prepare_torch_dataloader` 或 :func:`~fastNLP.core.\
     dataloaders.prepare_paddle_dataloader` 等。
 
     :param dataset: 实现 __getitem__() 和 __len__() 的对象；或这种对象的序列；或字
@@ -54,13 +54,13 @@ def prepare_dataloader(dataset,
           有设置则通过当前 :mod:`sys.modules` 中已经 import 的 ``backend`` 进行判
           定。如果以上均无法判定，则报错。如果找到了 ``backend``，则按照下述的方式处
           理。
-        * 为 ``torch`` 时，使用 :func:`~fastNLP.core.dataloaders.
+        * 为 ``torch`` 时，使用 :func:`~fastNLP.core.dataloaders.\
             prepare_torch_dataloader`。
-        * 为 ``paddle`` 时，使用 :func:`~fastNLP.core.dataloaders.
+        * 为 ``paddle`` 时，使用 :func:`~fastNLP.core.dataloaders.\
             prepare_paddle_dataloader`。
-        * 为 ``jittor`` 时，使用 :func:`~fastNLP.core.dataloaders.
+        * 为 ``jittor`` 时，使用 :func:`~fastNLP.core.dataloaders.\
             prepare_jittor_dataloader`。
-        * 为 ``oneflow`` 时，使用 :func:`~fastNLP.core.dataloaders.
+        * 为 ``oneflow`` 时，使用 :func:`~fastNLP.core.dataloaders.\
           prepare_oneflow_dataloader`。
 
     :return
@@ -106,7 +106,7 @@ def prepare_dataloader(dataset,
 
 
 def _check_module(module):
-    """检查该 module 是否含有 某个 backend 的特征.
+    """检查该 module 是否含有 某个 backend 的特征。
 
     :param module: module 对象
     :return:

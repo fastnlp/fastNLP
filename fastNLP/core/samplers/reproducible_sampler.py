@@ -5,9 +5,8 @@ r"""
 
 .. note::
 
-    DataLoader 中只要存在 :class:`ReproducibleSampler` 或 :class:`~fastNLP.core.
-    samplers.reproducible_batch_sampler.ReproducibleBatchSampler` 中的一个便可以
-    实现断点重训复现的功能。
+    DataLoader 中只要存在 :class:`ReproducibleSampler` 或 :class:`~fastNLP.\
+    core.samplers.reproducible_batch_sampler.ReproducibleBatchSampler` 中的一个便可以实现断点重训复现的功能。
 
 """
 
@@ -162,7 +161,7 @@ class RandomSampler(ReproducibleSampler):
         self.num_consumed_samples = 0
 
     def generate_indices(self) -> List[int]:
-        """生成随机序列."""
+        """生成随机序列。"""
         if self.shuffle:
             indices = list(range(self.num_samples))
             seed = self.seed + self.epoch
@@ -249,14 +248,14 @@ class RandomSampler(ReproducibleSampler):
 
     @property
     def num_left_samples(self):
-        """当前迭代还有多少个 sample 结束。表示的是 **当前 rank** 的还剩多少."""
+        """当前迭代还有多少个 sample 结束。表示的是 **当前 rank** 的还剩多少。"""
         num_consumed_samples = self.num_consumed_samples
         return math.ceil((self.num_samples - num_consumed_samples) / self.num_replicas) if \
             self.pad else math.floor(((self.num_samples - num_consumed_samples) / self.num_replicas))
 
     @property
     def num_samples(self):
-        """样本的总数."""
+        """样本的总数。"""
         total_len = getattr(self.dataset, 'total_len', None)
         if not isinstance(total_len, int):
             total_len = len(self.dataset)
@@ -308,7 +307,7 @@ class SequentialSampler(RandomSampler):
         self.num_consumed_samples = 0
 
     def generate_indices(self) -> List[int]:
-        """生成随机序列.
+        """生成随机序列。
 
         :return:
         """

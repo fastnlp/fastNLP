@@ -82,7 +82,7 @@ def _compare_version(package: str,
 
 
 def get_gpu_count() -> int:
-    """利用命令行获取 ``gpu`` 数目的函数.
+    """利用命令行获取 ``gpu`` 数目的函数。
 
     :return: 显卡数目，如果没有显卡设备则为-1
     """

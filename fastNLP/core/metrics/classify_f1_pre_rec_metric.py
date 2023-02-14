@@ -14,7 +14,7 @@ __all__ = ['ClassifyFPreRecMetric']
 
 
 class ClassifyFPreRecMetric(Metric):
-    """计算分类结果 **F值** 的 **Metric**。
+    r"""计算分类结果 **F值** 的 **Metric**。
 
     :param tag_vocab: 标签的 :class:`~fastNLP.core.Vocabulary`。默认值为
         ``None``。若为 ``None`` 则使用数字来作为标签内容，否则使用 vocab 来作为标签
@@ -45,7 +45,7 @@ class ClassifyFPreRecMetric(Metric):
         函数时传入的参数决定具体的 backend ，大部分情况下直接使用 ``'auto'`` 即可。
     :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相
         同的 element 的数字聚合后再得到 metric，当 ``backend`` 不支持分布式时，该参
-        数无意义。如果为 ``None``，将在 :class:`~fastNLP.core.controllers.
+        数无意义。如果为 ``None``，将在 :class:`~fastNLP.core.controllers.\
         Evaluator` 中根据 ``sampler`` 是否使用分布式进行自动设置。
     """
 
@@ -82,7 +82,7 @@ class ClassifyFPreRecMetric(Metric):
         self._fn: Counter = Counter()
 
     def reset(self):
-        """重置 ``tp``, ``fp``, ``fn`` 的值."""
+        """重置 ``tp``, ``fp``, ``fn`` 的值。"""
         # 由于不是 element 了，需要自己手动清零一下
         self._tp.clear()
         self._fp.clear()
@@ -161,7 +161,7 @@ class ClassifyFPreRecMetric(Metric):
             n_classes]``、``[B, max_len]`` 或 ``[B, max_len, n_classes]``
         :param target: 真实值的 tensor, tensor 的形状可以是 ``[B,]``、``[B,]``、
             ``[B, max_len]`` 或 ``[B, max_len]``
-        :param seq_len: 序列长度标记, 标记的形状可以是 ``None``,  或者 ``[B]``
+        :param seq_len: 序列长度标记，标记的形状可以是 ``None``,  或者 ``[B]``
 
         """
         pred = self.tensor2numpy(pred)

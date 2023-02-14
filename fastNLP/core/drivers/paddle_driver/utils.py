@@ -98,7 +98,7 @@ class _FleetWrappingModel(Layer):
 
 
 class DummyGradScaler:
-    """用于仿造的 **GradScaler** 对象，防止重复写大量的if判断."""
+    """用于仿造的 **GradScaler** 对象，防止重复写大量的if判断。"""
 
     def __init__(self, *args, **kwargs):
         pass
@@ -143,7 +143,7 @@ def _build_fp16_env(dummy=False):
 
 
 def find_free_ports(num):
-    """在空闲的端口中找到 ``num`` 个端口."""
+    """在空闲的端口中找到 ``num`` 个端口。"""
 
     def __free_port():
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:

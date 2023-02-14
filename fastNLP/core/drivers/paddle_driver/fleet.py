@@ -6,12 +6,12 @@ r"""
 
     在 **PaddlePaddle** 框架中，使用分布式训练的方式可以参见 **PaddlePaddle** 的
     `官方文档 <https://www.paddlepaddle.org.cn/documentation/docs/zh/guides/06_distributed_training/cluster_quick_start_cn.html>`_ 。
-    简言之，分布式训练的过程可以概括为：导入 ``fleet`` 包 -> 使用 :func:`fleet.
+    简言之，分布式训练的过程可以概括为：导入 ``fleet`` 包 -> 使用 :func:`fleet.\
     init` 初始化分布式环境 -> 初始化模型，转换为并行模型开始训练。
 
 **fastNLP** 支持三种启动分布式训练的方式（假设执行训练的文件名为 ``train.py``）：
 
-    A. 用户自己不进行分布式的任何操作，直接使用我们的 :class:`~fastNLP.core.
+    A. 用户自己不进行分布式的任何操作，直接使用我们的 :class:`~fastNLP.core.\
        Trainer` 进行训练，此时将参数 ``device`` 设置为一个列表，然后使用 ``python
        train.py`` 的方式开始训练；
     B. 用户自己不进行分布式的任何操作，但是使用
@@ -123,19 +123,19 @@ __all__ = [
 
 
 class PaddleFleetDriver(PaddleDriver):
-    """
+    r"""
 
     :param model: 训练使用的模型。
 
         * 如果不想自己初始化分布式环境，类型应为 :class:`paddle.nn.Layer`；
-        * 如果已经在外面初始化了分布式环境，类型应为 :class:`paddle.
+        * 如果已经在外面初始化了分布式环境，类型应为 :class:`paddle.\
           DataParallel`；
 
     :param parallel_device: 多卡训练时使用的设备，必须是一个列表。
         当使用 ``python -m paddle.distributed.launch`` 启动时，该参数无效。
     :param is_pull_by_paddle_run: 标记当前进程是否为通过 ``python -m
-        paddle.distributed.launch`` 启动的。这个参数仅在 :class:`~fastNLP.core.
-        Trainer` 中初始化 driver 时使用
+        paddle.distributed.launch`` 启动的。这个参数仅在 :class:`~fastNLP.core.\
+        controllers.Trainer` 中初始化 driver 时使用
     :param fp16: 是否开启混合精度训练
     :param paddle_kwargs:
         * *fleet_kwargs* -- 用于在使用 ``PaddleFleetDriver`` 时指定
@@ -146,7 +146,7 @@ class PaddleFleetDriver(PaddleDriver):
             * *role_maker* -- 初始化 ``fleet`` 分布式训练 API 时使用的
               ``RoleMaker``。
             * 其它用于初始化 ``DataParallel`` 的参数。
-        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`paddle.
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`paddle.\
           amp.GradScaler` 的参数
 
     :kwargs:
@@ -155,8 +155,8 @@ class PaddleFleetDriver(PaddleDriver):
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
+            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
             core.utils.auto_param_call`。
 
         * *output_from_new_proc* (``str``) -- 应当为一个字符串，表示在多进程的
@@ -339,7 +339,7 @@ class PaddleFleetDriver(PaddleDriver):
         self._pids = self.tensor_to_numeric(self._pids)
 
     def _init_fleet_and_set(self):
-        """使用 FleetLauncher 拉起子进程."""
+        """使用 FleetLauncher 拉起子进程。"""
         if self.local_rank == 0:
             logger._set_distributed()
             # 是 rank0 的话，则拉起其它子进程
@@ -568,7 +568,7 @@ class PaddleFleetDriver(PaddleDriver):
         return self.model.no_sync
 
     def unwrap_model(self) -> 'paddle.nn.Layer':
-        r"""获得 driver 最原始的模型。该函数可以取出被 :class:`paddle.
+        r"""获得 driver 最原始的模型。该函数可以取出被 :class:`paddle.\
         DataParallel` 包裹起来的模型。"""
         _layers = self.model._layers
         if isinstance(_layers, _FleetWrappingModel):

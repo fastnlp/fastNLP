@@ -11,7 +11,7 @@ class JsonLoader(Loader):
     r"""
     读取 *json* 格式数据，数据必须按行存储，每行是一个包含各类属性的 json 对象。
 
-    :param fields: 需要读入的 json 属性名称，和读入后在 :class:`~fastNLP.core.
+    :param fields: 需要读入的 json 属性名称，和读入后在 :class:`~fastNLP.core.\
         DataSet` 中存储的 `field_name`。``fields`` 的 `key` 必须是 json 对象的
         **属性名**，``fields`` 的 `value` 为读入后在 ``DataSet`` 存储的
         `field_name`，`value` 也可为 ``None``，这时读入后的  `field_name` 与

@@ -63,9 +63,9 @@ if _module_available('regex'):
 
 
 class _BaseTokenizer:
-    """sacre_bleu中tokenzier的基类 。
+    """sacre_bleu 中 tokenzier 的基类 。
 
-    :param lowercase: 在设定tokenizer时是否将字母小写处理。
+    :param lowercase: 在设定 tokenizer 时是否将字母小写处理。
     """
 
     def __init__(self, lowercase: bool = False) -> None:
@@ -74,10 +74,9 @@ class _BaseTokenizer:
     @classmethod
     def _tokenize_regex(cls, line: str) -> str:
         r"""
-       ``13a``和``zh``的通用后处理tokenizer。
+       ``13a`` 和 ``zh`` 的通用后处理 tokenizer。
 
        :param line: 要标记的的输入。
-
        :return: 被正则化后的输入。
        """
         for (_re, repl) in _REGEX:
@@ -87,10 +86,9 @@ class _BaseTokenizer:
     @classmethod
     def _tokenize_base(cls, line: str) -> str:
         r"""
-       使用tokenizer对于输入行进行分词。
+       使用 tokenizer 对于输入行进行分词。
 
        :param line: 要标记的的输入。
-
        :return: 返回处理过的输入。
        """
         return line
@@ -98,11 +96,10 @@ class _BaseTokenizer:
     @staticmethod
     def _lower(line: str, lowercase: bool) -> str:
         r"""
-       使用tokenizer对于输入行进行分词。
+       使用 tokenizer 对于输入行进行分词。
 
        :param line: 要标记的的输入。
-       :param lowercase: 在设定tokenizer时是否将字母小写处理。
-
+       :param lowercase: 在设定 tokenizer 时是否将字母小写处理。
        :return: 返回处理过的输入。
        """
         if lowercase:
@@ -115,9 +112,9 @@ class _BaseTokenizer:
 
 
 class _13aTokenizer(_BaseTokenizer):
-    """sacre_bleu中实现``13a``的tokenizer 。
+    """sacre_bleu 中实现 ``13a`` 的 tokenizer 。
 
-    :param lowercase: 在设定tokenizer时是否将字母小写处理。
+    :param lowercase: 在设定 tokenizer 时是否将字母小写处理。
     """
 
     def __init__(self, lowercase: bool = False):
@@ -126,10 +123,9 @@ class _13aTokenizer(_BaseTokenizer):
     @classmethod
     def _tokenize_13a(cls, line: str) -> str:
         r"""
-       使用相对最小的tokenizer对输入行进行标记化，参照mteval-v13a，WMT使用。
+       使用相对最小的 tokenizer 对输入行进行标记化，参照 mteval-v13a，WMT 使用。
 
        :param line: 要标记的的输入。
-
        :return: 返回处理过的输入。
        """
         line = line.replace('<skipped>', '')
@@ -150,9 +146,9 @@ class _13aTokenizer(_BaseTokenizer):
 
 
 class _zhTokenizer(_BaseTokenizer):
-    """sacre_bleu中实现``zh``的tokenizer 。
+    """sacre_bleu 中实现 ``zh`` 的 tokenizer 。
 
-    :param lowercase: 在设定tokenizer时是否将字母小写处理。
+    :param lowercase: 在设定 tokenizer 时是否将字母小写处理。
     """
 
     def __init__(self, lowercase: bool = False):
@@ -163,8 +159,7 @@ class _zhTokenizer(_BaseTokenizer):
         r"""
        判断是否中文。
 
-       :param uchar: unicode中的输入字符。
-
+       :param uchar: unicode 中的输入字符。
        :return: 返回是否中文的bool值。
        """
         for start, end in CHINESE_UCODE_RANGES:
@@ -175,11 +170,11 @@ class _zhTokenizer(_BaseTokenizer):
     @classmethod
     def _tokenize_zh(cls, line: str) -> str:
         r"""
-       使用相对最小的tokenizer对输入行进行标记化，参照mteval-v13a，WMT使用。
-       其中，中文部分就是直接在中文汉字前后加入空格，其他还是按照13a中的标准进行分词。
+        使用相对最小的 tokenizer 对输入行进行标记化，参 照mteval-v13a，WMT 使用。
+        其中，中文部分就是直接在中文汉字前后加入空格，其他还是按照 13a 中的标准进行分
+        词。
 
        :param line: 要标记的的输入。
-
        :return: 返回处理过的输入。
        """
         line = line.strip()
@@ -201,9 +196,9 @@ class _zhTokenizer(_BaseTokenizer):
 
 
 class _intlTokenizer(_BaseTokenizer):
-    """sacre_bleu中实现``international``的tokenizer 。
+    """sacre_bleu 中实现 ``international`` 的 tokenizer 。
 
-    :param lowercase: 在设定tokenizer时是否将字母小写处理。
+    :param lowercase: 在设定 tokenizer 时是否将字母小写处理。
     """
 
     def __init__(self, lowercase: bool = False):
@@ -212,10 +207,9 @@ class _intlTokenizer(_BaseTokenizer):
     @classmethod
     def _tokenize_international(cls, line: str) -> str:
         r"""
-       应用国际标记化并模仿Moses的脚本mteval-v14
+       应用国际标记化并模仿 Moses 的脚本 mteval-v14
 
        :param line: 要标记的的输入。
-
        :return: 返回处理过的输入。
        """
         for (_re, repl) in _INT_REGEX:
@@ -229,9 +223,9 @@ class _intlTokenizer(_BaseTokenizer):
 
 
 class _charTokenizer(_BaseTokenizer):
-    """sacre_bleu中实现``char``的tokenizer 。
+    """sacre_bleu 中实现 ``char`` 的 tokenizer 。
 
-    :param lowercase: 在设定tokenizer时是否将字母小写处理。
+    :param lowercase: 在设定 tokenizer 时是否将字母小写处理。
     """
 
     def __init__(self, lowercase: bool = False):
@@ -243,7 +237,6 @@ class _charTokenizer(_BaseTokenizer):
        用于与语言无关的字符级标记化。
 
        :param line: 要标记的的输入。
-
        :return: 返回处理过的输入。
        """
         return ' '.join(char for char in line)
@@ -274,9 +267,8 @@ def get_tokenizer(tokenizer: str, lowercase: bool):
     elif tokenizer == 'char':
         tokenizer_fn = _charTokenizer(lowercase)
     else:
-        raise ValueError(
-            "Right now, `tokenizer_fn` only supports pre-defined 'none', '13a', 'intl', 'char', 'zh'."
-        )
+        raise ValueError('Right now, `tokenizer_fn` only supports pre-defined '
+                         "'none', '13a', 'intl', 'char', 'zh'.")
     return tokenizer_fn
 
 
@@ -289,106 +281,114 @@ def _get_brevity_penalty(pred_len: float, references_len: float) -> float:
 
 
 class BLEU(Metric):
-    """计算 bleu 的 metric 。
+    r"""计算 bleu 的 metric 。
 
-    :param n_gram: Gram的范围是[1,4]
-    :param smooth: 是否选择smoothing计算
-    :param ngram_weights: 用来控制各个i-gram所计算结果的权重，sum(nrgam_weights)的结果为 1
-    :param backend: 目前支持五种类型的backend, ``['auto', 'torch', 'paddle', 'jittor', 'oneflow']``。
-        其中 ``'auto'`` 表示根据实际调用。
-        :meth:`update` 函数时传入的参数决定具体的 backend ，一般情况下直接使用 ``'auto'`` 即可。
-    :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相同的 element 的数字
-        聚合后再得到 metric，当 ``backend`` 不支持分布式时，该参数无意义。
-        如果为 ``None`` ，将在 :class:`~fastNLP.core.controllers.Evaluator`
-        中根据 ``sampler`` 是否使用分布式进行自动设置。
-    :param tokenizer: 用户可以传入Callable函数进行分词
-        如果是``str``，则按照传入的str选择对应的tokenizer，默认选项有['none','13a','zh', 'char', 'intl'],
+    :param n_gram: Gram 的范围是 ``[1, 4]``
+    :param smooth: 是否选择 **smoothing** 计算
+    :param ngram_weights: 用来控制各个 i-gram 所计算结果的权重，需要满足
+        sum(nrgam_weights) 为 **1**。
+    :param backend: 目前支持五种类型的backend, ``['auto', 'torch', 'paddle',
+        'jittor', 'oneflow']``。其中 ``'auto'`` 表示根据实际调用。:meth:`update`
+        函数时传入的参数决定具体的 backend ，一般情况下直接使用 ``'auto'`` 即可。
+    :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相
+        同的 element 的数字聚合后再得到 metric，当 ``backend`` 不支持分布式时，该参
+        数无意义。如果为 ``None``，将在 :class:`~fastNLP.core.controllers.\
+        Evaluator` 中根据 ``sampler`` 是否使用分布式进行自动设置。
+    :param tokenizer: 用户可以传入 Callable 函数进行分词。如果是 ``str``，则按照传
+        入的 str 选择对应的 tokenizer，默认选项有 ``['none','13a','zh', 'char',
+        'intl']``：
 
         * 值为 ``"none"`` 时
-         tokenizer将只进行分词处理，不进行其他处理。
+         tokenizer 将只进行分词处理，不进行其他处理。
         * 值为 ``"13a"`` 时
-         将对于句子中的特殊符号，标点数字进行正则化再进行分词，模仿的是``Moses``的``mteval-v13a``。
+         将对于句子中的特殊符号，标点数字进行正则化再进行分词，模仿的是 ``Moses`` 的
+         ``mteval-v13a``。
         * 值为 ``"zh"`` 时
-         输入的数据为中文句子，tokenizer为在每一个汉字前后加入空格，以做切分。
+         输入的数据为中文句子，tokenizer 为在每一个汉字前后加入空格，以做切分。
         * 值为 ``"char"`` 时
-         tokenizer会在输入句子的每一个char前后加入空格，以char为单位进行切分。
+         tokenizer 会在输入句子的每一个 char 前后加入空格，以 char 为单位进行切分。
         * 值为 ``"intl"`` 时
-         使用国际化进行词语切分，规则仿照于``13a``。
-        如果是``Callable``,则选择用户自定义的tokenizer。
-        如果是``None``，则会再第一次update时选择第一个sample的语言进行选择。
-    :param lowercase: 在设定tokenizer时是否将字母小写处理。
+         使用国际化进行词语切分，规则仿照于 ``13a``。
+         如果是 ``Callable``，则选择用户自定义的 tokenizer。
+         如果是 ``None``，则会再第一次 update 时选择第一个 sample 的语言进行选择。
+    :param lowercase: 在设定 tokenizer 时是否将字母小写处理。
     """
 
     def __init__(
-            self,
-            n_gram: int = 4,
-            smooth: bool = False,
-            ngram_weights: Optional[Sequence[float]] = None,
-            backend: Union[str, Backend, None] = 'auto',
-            aggregate_when_get_metric: bool = None,
-            tokenizer_fn: Union[Callable, str] = None,
-            lowercase: bool = False,
-            **kwargs: Any,
+        self,
+        n_gram: int = 4,
+        smooth: bool = False,
+        ngram_weights: Optional[Sequence[float]] = None,
+        backend: Union[str, Backend, None] = 'auto',
+        aggregate_when_get_metric: Optional[bool] = None,
+        tokenizer_fn: Optional[Union[Callable, str]] = None,
+        lowercase: bool = False,
+        **kwargs: Any,
     ):
-        super().__init__(backend=backend,
-                         aggregate_when_get_metric=aggregate_when_get_metric)
+        super().__init__(
+            backend=backend,
+            aggregate_when_get_metric=aggregate_when_get_metric)
         self.n_gram = n_gram
         self.smooth = smooth
         if ngram_weights is not None and len(ngram_weights) != n_gram:
             raise ValueError(
-                f'The number of weights in weights is different from n_gram: {len(ngram_weights)} != {n_gram}'
-            )
-        self.ngram_weights = ngram_weights if ngram_weights is not None else [
-                                                                                 1.0 / n_gram
-                                                                             ] * n_gram
+                'The number of weights in weights is different from n_gram: '
+                f'{len(ngram_weights)} != {n_gram}')
+        if ngram_weights is not None:
+            self.ngram_weights = ngram_weights
+        else:
+            self.ngram_weights = [1.0 / n_gram] * n_gram
 
-        self.register_element(name='pred_len',
-                              value=0,
-                              aggregate_method='sum',
-                              backend=backend)
-        self.register_element(name='references_len',
-                              value=0,
-                              aggregate_method='sum',
-                              backend=backend)
-        self.register_element(name='precision_matches',
-                              value=[0 for _ in range(self.n_gram)],
-                              aggregate_method='sum',
-                              backend=backend)
-        self.register_element(name='precision_total',
-                              value=[0 for _ in range(self.n_gram)],
-                              aggregate_method='sum',
-                              backend=backend)
+        self.register_element(
+            name='pred_len', value=0, aggregate_method='sum', backend=backend)
+        self.register_element(
+            name='references_len',
+            value=0,
+            aggregate_method='sum',
+            backend=backend)
+        self.register_element(
+            name='precision_matches',
+            value=[0 for _ in range(self.n_gram)],
+            aggregate_method='sum',
+            backend=backend)
+        self.register_element(
+            name='precision_total',
+            value=[0 for _ in range(self.n_gram)],
+            aggregate_method='sum',
+            backend=backend)
 
         if tokenizer_fn is None:
             tokenizer_fn = 'none'
         if tokenizer_fn == 'intl' and not _module_available('regex'):
             raise ValueError(
-                f'`intl` needs regex package, please make sure you have already installed it`'
-            )
+                '`intl` needs regex package, please make sure you have '
+                'already installed it`')
         if callable(tokenizer_fn):
-            _check_valid_parameters_number(tokenizer_fn,
-                                           ['text'])  # 检查是否一定是吃进去一个参数
-            self.tokenizer_fn = tokenizer_fn
+            # 检查是否一定是吃进去一个参数
+            _check_valid_parameters_number(tokenizer_fn, ['text'])
+            self.tokenizer_fn: Optional[Callable] = tokenizer_fn
         elif isinstance(tokenizer_fn, str):
             self.tokenizer_fn = get_tokenizer(tokenizer_fn, lowercase)
         else:
-            raise ValueError(
-                f'`tokenizer_fn` supports Callable, str or None, but not `{type(tokenizer_fn)}`'
-            )
+            raise ValueError('`tokenizer_fn` supports Callable, str or None, '
+                             f'but not `{type(tokenizer_fn)}`')
 
     def update(
-            self, predictions: Union[str, Sequence[str]],
-            references: Union[str, Sequence[str],
-                              Sequence[Sequence[str]]]) -> None:
+        self, predictions: Union[str, Sequence[str]],
+        references: Union[str, Sequence[str],
+                          Sequence[Sequence[str]]]) -> None:
         r"""
-       :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
-       :param predictions: 预测的 ``sentence``, type为``Sequence``，长度可变，假设为 ``L``
-           * predictions可以为str类型，也可以为list类型。
-       :param references: 答案译文，type为``Sequence``，长度必须也为``L``，
-           保持和``predictions``一致，每一个元素也是一个``Sequence``。
-           * references可以为str类型，但是该情况下predictions也必须为str类型。
-           * references可以为list[str]类型，如果predictions只有一条数据，references数量不受限制，
-                如果predictions数量超过一条，references的长度必须匹配predictions的数量。
+        :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
+
+        :param predictions: 预测的 ``sentence``，类型为``Sequence``，长度可变，假
+            设为 ``L``。可以为 :class:`str` 类型，也可以为 :class:`list` 类型。
+        :param references: 答案译文，type为``Sequence``，长度必须也为``L``，保持和
+            ``predictions`` 一致，每一个元素也是一个``Sequence``。
+            * references 可以为 :class:`str` 类型，但是该情况下 predictions 也必
+              须为 :class:`str` 类型。
+            * references 可以为 :class:`list[str]` 类型，如果 predictions 只有一
+              条数据，references 数量不受限制；如果 predictions 数量超过一条，
+              references 的长度必须匹配 predictions 的数量。
        """
 
         if isinstance(references, list) and all(
@@ -411,10 +411,13 @@ class BLEU(Metric):
         ), 'The number of predictions and references must be equal'
 
         references_token: Sequence[Sequence[Sequence[str]]] = [
-            [self.tokenizer_fn(line) for line in r] for r in references
+            [
+                self.tokenizer_fn(line)  # type: ignore
+                for line in r
+            ] for r in references
         ]
         predictions_token: Sequence[Sequence[str]] = [
-            self.tokenizer_fn(line) for line in predictions
+            self.tokenizer_fn(line) for line in predictions  # type: ignore
         ]
         for prediction, references in zip(predictions_token, references_token):
             self.pred_len += len(prediction)
@@ -434,7 +437,8 @@ class BLEU(Metric):
 
     def get_metric(self) -> dict:
         r"""
-        :meth:`get_metric` 函数将根据 :meth:`update` 函数累计的评价指标统计量来计算最终的评价结果。
+        :meth:`get_metric` 函数将根据 :meth:`update` 函数累计的评价指标统计量来计
+        算最终的评价结果。
 
         :return: 包含以下内容的字典：``{"bleu": float}``；
         """

@@ -180,7 +180,7 @@ class AttentionLayer(nn.Module):
 
     :param int input_size: 输入的大小
     :param int key_dim: 一般就是 encoder_output 输出的维度
-    :param int value_dim: 输出的大小维度, 一般就是 decoder hidden 的大小
+    :param int value_dim: 输出的大小维度，一般就是 decoder hidden 的大小
     :param bias:
     """
 

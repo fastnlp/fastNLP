@@ -69,7 +69,7 @@ def get_func_calls(tree):
 
 
 def truncate_start_blanks(source: str) -> str:
-    """将source中的每一行按照第一行的indent删掉多余的空格.
+    """将source中的每一行按照第一行的indent删掉多余的空格。
 
     :param source:
     :return:
@@ -158,7 +158,7 @@ def _get_func_and_its_called_func_source_code(func) -> List[str]:
 
 def _prepare_cache_filepath(filepath: str):
     r"""
-    检查filepath是否可以作为合理的cache文件. 如果可以的话，会自动创造路径
+    检查filepath是否可以作为合理的cache文件。如果可以的话，会自动创造路径
 
     :param filepath: str.
     :return: None, if not, this function will raise error

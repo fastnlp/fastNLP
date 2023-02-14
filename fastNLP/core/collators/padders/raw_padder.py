@@ -55,7 +55,7 @@ class RawSequencePadder(Padder):
     pad 多重嵌套的数据。
 
     :param pad_val: pad 的值；
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`np.
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`np.\
         array` 类型；
     :param dtype: 输出的数据的 dtype ；
     """
@@ -82,7 +82,7 @@ class RawTensorPadder(Padder):
     pad 多重嵌套的数据。
 
     :param pad_val: pad 的值；
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`np.
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`np.\
         array` 类型；
     :param dtype: 输出的数据的 dtype ；
     """

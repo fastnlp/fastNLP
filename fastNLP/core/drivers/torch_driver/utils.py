@@ -136,7 +136,7 @@ class _DeepSpeedWrappingModel(_DDPWrappingModel):
 
 
 class DummyGradScaler:
-    """用于Dummy pytorch的GradScaler对象，防止重复写大量的if判断."""
+    """用于Dummy pytorch的GradScaler对象，防止重复写大量的if判断。"""
 
     def __init__(self, *args, **kwargs):
         pass

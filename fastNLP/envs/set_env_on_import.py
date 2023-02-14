@@ -72,7 +72,7 @@ def set_env_on_import_oneflow():
 
 
 def set_env_on_import():
-    """设置环境变量.
+    """设置环境变量。
 
     :return:
     """

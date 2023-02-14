@@ -11,7 +11,7 @@ from fastNLP.core.samplers.unrepeated_sampler import (
 def conversion_between_reproducible_and_unrepeated_sampler(sampler):
     r"""将 ``sampler`` 替换成其对应的 reproducible 版本或 unrepeated 版本。如果输
     入是 :class:`~fastNLP.core.samplers.unrepeated_sampler.UnrepeatedSampler`
-    但是没找到对应的 :class:`~fastNLP.core.samplers.reproducible_sampler.
+    但是没找到对应的 :class:`~fastNLP.core.samplers.reproducible_sampler.\
     ReproducibleSampler` 则会报错。
 
     :param sampler: 需要转换的 ``sampler``；

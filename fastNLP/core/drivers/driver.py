@@ -17,11 +17,11 @@ __all__ = ['Driver']
 class Driver(ABC):
     r"""
     用来初始化 `Driver` 的基类，所有定制的 `driver` 都需要继承此类；
-    **fastNLP** 提供的 driver 实例都会同时被 :class:`~fastNLP.core.controllers.
+    **fastNLP** 提供的 driver 实例都会同时被 :class:`~fastNLP.core.controllers.\
     Trainer` 和 :class:`~fastNLP.core.controllers.Evaluator` 调用。
 
     :param model: 训练或者评测的模型，需要注意该模型可能为用户已经使用类似
-        :class:`torch.nn.DataParallel` 或者 :class:`torch.nn.parallel.
+        :class:`torch.nn.DataParallel` 或者 :class:`torch.nn.parallel.\
         DistributedDataParallel` 包裹过的模型。
     """
 
@@ -51,26 +51,26 @@ class Driver(ABC):
         :param dataloader: 根据 ``dataloader`` 设置其对应的分布式版本以及可复现版
             本。
         :param dist: 应当为一个字符串，其值应当为以下之一：``[None, "dist",
-            "unrepeatdist"]``，并且根据在 :class:`~fastNLP.core.controllers.
+            "unrepeatdist"]``，并且根据在 :class:`~fastNLP.core.controllers.\
             Trainer` 和 :class:`~fastNLP.core.controllers.Evaluator` 中
             *kwargs* 的参数 ``use_dist_sampler`` 和调用时机不同，对应不同的值：
 
-            * 当 ``use_dist_sampler`` 为 ``False``，且在 :class:`~fastNLP.core.
-              controllers.Trainer` 或 :class:`~fastNLP.core.controllers.
+            * 当 ``use_dist_sampler`` 为 ``False``，且在 :class:`~fastNLP.\
+              core.controllers.Trainer` 或 :class:`~fastNLP.core.controllers.\
               Evaluator` **初始化** 中被调用时，参数值为 ``None``，表示不需要考虑
               当前 ``dataloader`` 切换为分布式状态；
-            * 当 ``use_dist_sampler`` 为 ``True``，且在 :class:`~fastNLP.core.
+            * 当 ``use_dist_sampler`` 为 ``True``，且在 :class:`~fastNLP.core.\
               controllers.Trainer` **初始化** 中被调用时，参数值为 ``"dist"``，表
               示该 ``dataloader`` 应该保证每个 gpu 上返回的 batch 的数量是一样多
               的，允许出现少量 sample 在不同 gpu 上出现重复；
-            * 当 ``use_dist_sampler`` 为 ``True``，且在 :class:`~fastNLP.core.
+            * 当 ``use_dist_sampler`` 为 ``True``，且在 :class:`~fastNLP.core.\
               controllers.Evaluator` **初始化** 中被调用时，参数值为
               ``"unrepeatdist"``，表示该 ``dataloader`` 应该保证所有 gpu 上迭代出
               来的数据合并起来应该刚好等于原始的数据，允许不同 gpu 上 batch 的数量不
               一致；
             * 当 **断点重训加载** 中调用 :meth:`load_checkpoint` 时，该函数也会被
-              调用，且 ``dist`` 值为 :class:`~fastNLP.core.samplers.
-              ReproducibleSampler` 或 :class:`~fastNLP.core.samplers.
+              调用，且 ``dist`` 值为 :class:`~fastNLP.core.samplers.\
+              ReproducibleSampler` 或 :class:`~fastNLP.core.samplers.\
               ReproducibleBatchSampler`，此时表示需要用 ``dist`` 代表的 sampler
               或 batch_sampler 重新实例化一个新的 dataloader；
 
@@ -79,8 +79,8 @@ class Driver(ABC):
             全新的 dataloader 中然后恢复其状态。
         :return: 应当返回一个被替换 sampler 后的 **新的** dataloader 对象 (注意此
             处一定需要返回一个新的 dataloader 对象) ；此外，如果传入的
-            ``dataloader`` 中是 :class:`~fastNLP.core.samplers.
-            ReproducibleSampler` 或者 :class:`~fastNLP.core.samplers.
+            ``dataloader`` 中是 :class:`~fastNLP.core.samplers.\
+            ReproducibleSampler` 或者 :class:`~fastNLP.core.samplers.\
             ReproducibleBatchSampler` 需要 **重新初始化** 一个放入返回的
             dataloader 中。如果 ``dist`` 为空，且 ``reproducible`` 为
             ``False``，可直接返回原对象。
@@ -114,7 +114,7 @@ class Driver(ABC):
                    signature_fn: Optional[Callable]) -> Dict:
         r"""
         通过调用 ``fn`` 来实现训练时的前向传播过程；
-        注意 :class:`~fastNLP.core.controllers.Trainer` 和 :class:`~fastNLP.
+        注意 :class:`~fastNLP.core.controllers.Trainer` 和 :class:`~fastNLP.\
         core.controllers.Evaluator` 会调用该函数来实现网络的前向传播过程，其中传入
         该函数的参数 ``fn`` 是函数 :meth:`get_model_call_fn` 所返回的函数。
 
@@ -139,7 +139,7 @@ class Driver(ABC):
         该函数会接受 :class:`~fastNLP.core.controllers.Trainer` 的 ``train_fn``
         或者 :class:`~fastNLP.core.controllers.Evaluator` 的 ``evaluate_fn``，
         返回一个实际用于调用 :meth:`model_call` 时传入的函数参数；该函数会由
-        :class:`~fastNLP.core.controllers.Trainer` 和 :class:`~fastNLP.core.
+        :class:`~fastNLP.core.controllers.Trainer` 和 :class:`~fastNLP.core.\
         controllers.Evaluator` 在 :func:`driver.setup` 函数之后调用。
 
         之所以设置该函数的目的在于希望将具体的 model_call function 从 driver 中抽离
@@ -150,7 +150,7 @@ class Driver(ABC):
         定具体的 ``train step fn`` 和 ``evaluate step fn`` 的逻辑放在每一个
         driver 的初始化的时候（因此在 ``Trainer`` 初始化第一个 driver 时，
         ``Evaluator`` 还没有初始化，但是 ``evaluate step fn`` 的确定却需要
-        Evaluator 的初始化），因此我们将这一逻辑抽象到这一函数当中.
+        Evaluator 的初始化），因此我们将这一逻辑抽象到这一函数当中。
 
         这一函数应当通过参数 ``fn`` 来判断应当返回的实际的调用的函数，具体逻辑如下所
         示：
@@ -161,12 +161,12 @@ class Driver(ABC):
             2. 如果 ``fn`` 是其他字符串，那么如果模型没有定义方法 ``fn`` 则直接报
                错；
 
-        注意不同的 driver 需要做额外的检测处理，例如在 :class:`~fastNLP.core.
+        注意不同的 driver 需要做额外的检测处理，例如在 :class:`~fastNLP.core.\
         drivers.torch_driver.TorchDDPDriver` 中，当传入的模型本身就是
         :class:`DistributedDataParallel` 时，我们只能调用模型的 :meth:`forward`
         函数，因此需要额外的 warning；这一点特别需要注意的问题在于 driver 自己在
-        setup 时也会对模型进行改变（ :class:`~fastNLP.core.drivers.torch_driver.
-        TorchDDPDriver` ），因此可能需要额外标记最初传入 driver 的模型是哪种形式的.
+        setup 时也会对模型进行改变（:class:`~fastNLP.core.drivers.torch_driver.\
+        TorchDDPDriver`），因此可能需要额外标记最初传入 driver 的模型是哪种形式的。
 
         :param fn: 一个字符串，该函数通过该字符串判断要返回模型的哪种方法
         :return: 一个元组，包含两个函数，用于在调用 :meth:`model_call` 时传入
@@ -454,7 +454,7 @@ class Driver(ABC):
         保证用户拿到的模型一定是最原始的模型；
         注意因为我们把保存模型的主要逻辑和代码移到了 `Driver` 中，因此在
         :meth:`save_model` 函数中，一定要先调用此函数来保证我们保存的模型一定是
-        最为原始的模型；需要注意用户本身传入的模型就是经过类似 :class:`torch.nn.
+        最为原始的模型；需要注意用户本身传入的模型就是经过类似 :class:`torch.nn.\
         DataParallel` 或者 :class:`torch.nn.parallel.DistributedDataParallel`
         包裹的模型，因此在该函数内需要先判断模型的类别。
 

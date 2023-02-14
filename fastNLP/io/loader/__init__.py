@@ -4,15 +4,15 @@ r"""
 :class:`~fastNLP.io.DataBundle` 中。所有的 ``Loader`` 都支持以下的三个方法：
 ``__init__`` ， ``_load`` , ``loads`` . 其中 ``__init__(...)`` 用于申明读取参数，
 以及说明该 ``Loader`` 支持的数据格式，读取后 :class:`~fastNLP.core.DataSet` 中的
-`field` ； ``_load(path)`` 方法传入文件路径读取单个文件，并返回 :class:`~fastNLP.
-core.DataSet` ；``load(paths)`` 用于读取文件夹下的文件，并返回 :class:`~fastNLP.
+`field` ； ``_load(path)`` 方法传入文件路径读取单个文件，并返回 :class:`~fastNLP.\
+core.DataSet` ；``load(paths)`` 用于读取文件夹下的文件，并返回 :class:`~fastNLP.\
 io.DataBundle` 类型的对象 ， load()方法支持以下几种类型的参数:
 
 0.传入None
     将尝试自动下载数据集并缓存。但不是所有的数据都可以直接下载。
 
 1.传入一个文件的 path
-    返回的 `data_bundle` 包含一个名为 `train` 的 dataset ,可以通过 ``data_bundle.
+    返回的 `data_bundle` 包含一个名为 `train` 的 dataset，可以通过 ``data_bundle.
     get_dataset('train')`` 获取
 
 2.传入一个文件夹目录

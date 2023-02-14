@@ -447,7 +447,7 @@ class StaticEmbedding(TokenEmbedding):
 
     def save(self, folder: str):
         r"""将 embedding 存储到 ``folder`` 下，之后可以通过使用 :meth:`load` 方法
-        读取.
+        读取。
 
         :param folder: 会在该 ``folder`` 下生成三个文件：
 

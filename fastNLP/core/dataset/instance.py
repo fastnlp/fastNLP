@@ -13,7 +13,7 @@ __all__ = ['Instance']
 class Instance(Mapping):
     r"""
     Instance 是 fastNLP 中对应一个 sample 的类。每个 sample 在 fastNLP 中是一个
-    Instance 对象。Instance 一般与 :class:`~fastNLP.DataSet` 一起使用, Instance
+    Instance 对象。Instance 一般与 :class:`~fastNLP.DataSet` 一起使用，Instance
     的初始化如下面的代码所示:
 
         >>> instance = Instance(input="this is a demo sentence", label='good')

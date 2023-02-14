@@ -310,7 +310,7 @@ class LSTMCharEmbedding(TokenEmbedding):
         self.register_buffer('word_lengths', torch.zeros(len(vocab)).long())
         for word, index in vocab:
             # if index!=vocab.padding_idx:
-            # # 如果是pad的话，直接就为pad_value了. 修改为不区分pad与否
+            # # 如果是pad的话，直接就为pad_value了。修改为不区分pad与否
             if include_word_start_end:
                 word = ['<bow>'] + list(word) + ['<eow>']
             self.words_to_chars_embedding[index, :len(word)] = \

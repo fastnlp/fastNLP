@@ -8,9 +8,9 @@ __all__ = ['MoreEvaluateCallback']
 
 
 class MoreEvaluateCallback(HasMonitorCallback):
-    r"""当评测时需要调用不同的 ``evaluate_fn`` （例如在大部分生成任务中，一般使用训
-    练 loss 作为训练过程中的 evaluate；但同时在训练到一定 epoch 数量之后，会让模型生
-    成的完整的数据评测 bleu 等。此刻就可能需要两种不同的``evaluate_fn`` ），只使用
+    r"""当评测时需要调用不同的 ``evaluate_fn``（例如在大部分生成任务中，一般使用训练
+    loss 作为训练过程中的 evaluate；但同时在训练到一定 epoch 数量之后，会让模型生成
+    的完整的数据评测 bleu 等。此刻就可能需要两种不同的``evaluate_fn`` ），只使用
     Trainer 无法满足需求，可以通过调用本 callback 进行。如果需要根据本 callback 中
     的评测结果进行模型保存，请传入 ``topk`` 以及 ``topk_monitor`` 等相关参数。可以
     通过 ``evaluate_every`` 或 ``watch_monitor`` 控制触发进行 evaluate 的条件。
@@ -63,7 +63,7 @@ class MoreEvaluateCallback(HasMonitorCallback):
         数，例如是 :meth:`model.evaluate_step` 还是 :meth:`model.forward`：
 
         1. 如果该值是 ``None``，那么我们会默认使用 :meth:`model.evaluate_step` 当
-           做前向传播的函数，如果在模型中没有找到该方法，则使用 :meth:`model.
+           做前向传播的函数，如果在模型中没有找到该方法，则使用 :meth:`model.\
            forward` 函数；
         2. 如果为 ``str`` 类型，则尝试从 model 中寻找该方法，找不到则报错；
     :param num_eval_sanity_batch: 在初始化 Evaluator 后运行多少个 sanity check
@@ -92,8 +92,8 @@ class MoreEvaluateCallback(HasMonitorCallback):
         函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运
         行该函数。
     :param save_evaluate_results: 是否保存 evaluate 的结果。如果为 ``True``，
-        在保存 topk 模型的 folder 中还将额外保存一个 ``fastnlp_evaluate_results.
-        json`` 文件，记录当前的 results。仅在设置了 ``topk`` 的场景下有用，默认为
+        在保存 topk 模型的文件夹中将额外保存一个 ``fastnlp_evaluate_results.json``
+        文件，记录当前的 results。仅在设置了 ``topk`` 的场景下有用，默认为
         ``True``。
     :param save_kwargs: 一个字典，表示更多的保存相关的参数。
     :param kwargs: 其它与 :class:`~fastNLP.core.controllers.Evaluator` 相关的初

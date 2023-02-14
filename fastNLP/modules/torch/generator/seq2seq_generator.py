@@ -31,11 +31,13 @@ def _get_model_device(model):
 
 
 class SequenceGenerator:
-    r"""给定一个 :class:`~fastNLP.modules.torch.decoder.Seq2SeqDecoder`，decode出句子。输入的 decoder 对象需要有 :meth:`decode` 函数，接受的第一个参数为 decode 的到目前位置的所有输出，第二个参数为 state :class:`SequenceGenerator`
+    r"""给定一个 :class:`~fastNLP.modules.torch.decoder.Seq2SeqDecoder`，decode
+    出句子。输入的 decoder 对象需要有 :meth:`decode` 函数，接受的第一个参数为
+    decode 的到目前位置的所有输出，第二个参数为 state :class:`SequenceGenerator`
     不会对 state 进行任何操作。
 
     :param decoder: Decoder对象
-    :param max_length: 生成句子的最大长度, 每句话的 decode 长度为 ``max_length +
+    :param max_length: 生成句子的最大长度，每句话的 decode 长度为 ``max_length +
         max_len_a * src_len``
     :param max_len_a: 每句话的 decode 长度为 ``max_length + max_len_a *
         src_len``。如果不为 0，需要保证 State 中包含 encoder_mask
@@ -109,7 +111,7 @@ class SequenceGenerator:
     def generate(self, state: State, tokens: 'torch.LongTensor' = None):
         """
 
-        :param state: ``encoder`` 结果的 :class:`~fastNLP.modules.torch.
+        :param state: ``encoder`` 结果的 :class:`~fastNLP.modules.torch.\
             decoder.State`，是与 ``Decoder`` 配套使用的
         :param tokens: 开始的 token，形状为 ``[batch_size, length]``。如果为
             ``None``，则默认添加 ``bos_token`` 作为开头的 token 进行生成。
@@ -133,13 +135,13 @@ def greedy_generate(decoder,
                     pad_token_id=0,
                     repetition_penalty=1,
                     length_penalty=1.0):
-    """贪婪地搜索句子.
+    """贪婪地搜索句子。
 
     :param Decoder decoder: Decoder对象
     :param torch.LongTensor tokens: batch_size, len, decode的输入值，如果为
         None，则自动从 bos_token_id 开始生成
     :param State state: 应该包含encoder的一些输出。
-    :param int max_length: 生成句子的最大长度, 每句话的 decode 长度为 max_length
+    :param int max_length: 生成句子的最大长度，每句话的 decode 长度为 max_length
         + max_len_a * src_len
     :param float max_len_a: 每句话的 decode 长度为max_length + max_len_a *
         src_len。如果不为 0，需要保证 State 中包含 encoder_mask
@@ -205,13 +207,13 @@ def sample_generate(decoder,
                     pad_token_id=0,
                     repetition_penalty=1.0,
                     length_penalty=1.0):
-    """使用采样的方法生成句子.
+    """使用采样的方法生成句子。
 
     :param Decoder decoder: Decoder对象
     :param torch.LongTensor tokens: batch_size, len, decode的输入值，如果为
         None，则自动从 bos_token_id 开始生成
     :param State state: 应该包含 encoder 的一些输出。
-    :param int max_length: 生成句子的最大长度, 每句话的 decode 长度为 max_length
+    :param int max_length: 生成句子的最大长度，每句话的 decode 长度为 max_length
         + max_len_a * src_len
     :param float max_len_a: 每句话的 decode 长度为 max_length + max_len_a *
         src_len。如果不为0，需要保证 State 中包含 encoder_mask

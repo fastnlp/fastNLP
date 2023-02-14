@@ -76,7 +76,7 @@ def torch_move_data_to_device(batch: Any,
 
 
 def is_torch_module(model) -> bool:
-    """判断传入的 ``model`` 是否是 :class:`torch.nn.Module` 类型.
+    """判断传入的 ``model`` 是否是 :class:`torch.nn.Module` 类型。
 
     :param model: 模型；
     :return: 当前模型是否为 ``torch`` 的模型；

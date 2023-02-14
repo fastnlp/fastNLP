@@ -13,7 +13,7 @@ from .progress_callback import (ExtraInfoStatistics, ProgressCallback,
 
 def _transfer(func):
     r"""
-    装饰器，将对 CallbackManager 的调用转发到各个 Callback 子类.
+    装饰器，将对 CallbackManager 的调用转发到各个 Callback 子类。
     需要注意这里的 wrapper 内的函数不会运行 `func` 本身，因此如果有什么需要直接在
     callback 函数内运行的代码，请放在 TrainerCallback 内；
     """

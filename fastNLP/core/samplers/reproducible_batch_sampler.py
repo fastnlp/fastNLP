@@ -5,7 +5,7 @@ r"""
 
 .. note::
 
-    DataLoader 中只要存在 :class:`~fastNLP.core.samplers.reproducible_sampler.
+    DataLoader 中只要存在 :class:`~fastNLP.core.samplers.reproducible_sampler.\
     ReproducibleSampler` 或 :class:`ReproducibleBatchSampler` 中的一个便可以实现
     断点重训复现的功能。
 
@@ -347,7 +347,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
             self.epoch -= 1
 
     def batchify(self, indices, batch_size, seed) -> List[List[int]]:
-        """将 ``indices`` 分为 batches.
+        """将 ``indices`` 分为 batches。
 
         :param indices: List[int]
         :param batch_size: int
@@ -392,14 +392,14 @@ class RandomBatchSampler(ReproducibleBatchSampler):
 
     @property
     def num_samples(self):
-        """样本的总数."""
+        """样本的总数。"""
         total_len = getattr(self.dataset, 'total_len', None)
         if not isinstance(total_len, int):
             total_len = len(self.dataset)
         return total_len
 
     def __len__(self) -> int:
-        """返回当前 sampler 还会返回多少个 batch 的数据.
+        """返回当前 sampler 还会返回多少个 batch 的数据。
 
         :return:
         """
@@ -459,7 +459,7 @@ class RandomBatchSampler(ReproducibleBatchSampler):
 class BucketedBatchSampler(ReproducibleBatchSampler):
     r"""首先按 ``sample`` 的长度排序，然后按照 *batch_size*num_batch_per_bucket*
     为一个桶的大小，``sample`` 只会在这个桶内进行组 合，这样每个 ``batch`` 中的
-    ``padding`` 数量会比较少.
+    ``padding`` 数量会比较少。
 
     （因为桶内的数据的长度都接近）。
 
@@ -589,14 +589,14 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
 
     @property
     def num_samples(self):
-        """样本的总数."""
+        """样本的总数。"""
         total_len = getattr(self.dataset, 'total_len', None)
         if not isinstance(total_len, int):
             total_len = len(self.dataset)
         return total_len
 
     def __len__(self) -> int:
-        """返回当前 sampler 还会返回多少个 batch 的数据.
+        """返回当前 sampler 还会返回多少个 batch 的数据。
 
         :return:
         """
@@ -700,7 +700,7 @@ class BucketedBatchSampler(ReproducibleBatchSampler):
 
     def bucketerize(self, sorted_indices, batch_size, num_batch_per_bucket,
                     seed) -> List[List[int]]:
-        """将 ``indices`` 分桶.
+        """将 ``indices`` 分桶。
 
         :param sorted_indices: List[int]
         :param batch_size: int

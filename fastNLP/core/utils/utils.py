@@ -158,7 +158,7 @@ def auto_param_call(fn: Callable,
 
 
 def _get_keys(args: List[Dict]) -> List[List[str]]:
-    """返回每个 dict 的 keys.
+    """返回每个 dict 的 keys。
 
     :param args:
     :return:
@@ -275,10 +275,10 @@ def match_and_substitute_params(mapping: Optional[Union[Callable,
     用来实现将输入的 **batch** 或者输出的 **outputs** 通过 ``mapping`` 将键值进行
     更换的功能；该函数应用于 ``input_mapping`` 和 ``output_mapping``；
 
-    * 对于 ``input_mapping``，该函数会在 :class:`~fastNLP.core.controllers.
+    * 对于 ``input_mapping``，该函数会在 :class:`~fastNLP.core.controllers.\
       TrainBatchLoop` 中取完数据后立刻被调用；
     * 对于 ``output_mapping``，该函数会在 :class:`~fastNLP.core.Trainer` 的
-      :meth:`~fastNLP.core.Trainer.train_step` 以及 :class:`~fastNLP.core.
+      :meth:`~fastNLP.core.Trainer.train_step` 以及 :class:`~fastNLP.core.\
       Evaluator` 的 :meth:`~fastNLP.core.Evaluator.train_step` 中得到结果后立刻
       被调用；
 
@@ -290,7 +290,7 @@ def match_and_substitute_params(mapping: Optional[Union[Callable,
 
         * 如果 ``data`` 是 **Dict**，那么该函数会将 ``data`` 的 ``key`` 替换为
           **mapping[key]**；
-        * 如果 ``data`` 是 **dataclass**，那么该函数会先使用 :func:`dataclasses.
+        * 如果 ``data`` 是 **dataclass**，那么该函数会先使用 :func:`dataclasses.\
           asdict` 函数将其转换为 **Dict**，然后进行转换；
         * 如果 ``data`` 是 **Sequence**，那么该函数会先将其转换成一个对应的字典::
 
@@ -470,7 +470,7 @@ def sub_column(string: str, c: int, c_size: int, title: str) -> str:
 
     :param string: 要被截断的字符串；
     :param c: 命令行列数；
-    :param c_size: :class:`~fastNLP.core.Instance` 或 :class:`~fastNLP.core.
+    :param c_size: :class:`~fastNLP.core.Instance` 或 :class:`~fastNLP.core.\
         DataSet` 的 ``field`` 数目；
     :param title: 列名；
     :return: 对一个过长的列进行截断的结果；
@@ -617,7 +617,7 @@ def deprecated(help_message: Optional[str] = None):
 
 
 def wait_filepath(path, exist=True):
-    """等待当 path 的存在状态为 {exist} 时返回.
+    """等待当 path 的存在状态为 {exist} 时返回。
 
     :param path: 待检测的 path
     :param exist: 为 True 时表明检测这个 path 存在就返回; 为 False 表明检测到这个
@@ -640,7 +640,7 @@ def wait_filepath(path, exist=True):
 
 
 def get_class_that_defined_method(method):
-    """给定一个method，返回这个 method 的 class 的对象.
+    """给定一个method，返回这个 method 的 class 的对象。
 
     :param method:
     :return:
@@ -667,7 +667,7 @@ def get_class_that_defined_method(method):
 
 
 def is_notebook():
-    """检查当前运行环境是否为 jupyter.
+    """检查当前运行环境是否为 jupyter。
 
     :return:
     """

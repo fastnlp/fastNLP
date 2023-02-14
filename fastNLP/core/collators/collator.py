@@ -36,7 +36,7 @@ def _get_backend() -> str:
     """
 
     def _check_module(module):
-        """检查该 module 是否含有 某个 backend 的特征.
+        """检查该 module 是否含有 某个 backend 的特征。
 
         :param module: module 对象
         :return:
@@ -111,9 +111,9 @@ class Collator:
 
         补充 code example 。
 
-    如果需要将某个本可以 pad 的 field 设置为不可 pad ，则可以通过 :meth:`~fastNLP.
+    若需要将某个本可以 pad 的 field 设置为不可 pad ，则可以通过 :meth:`~fastNLP.\
     Collator.set_pad` 的 ``pad_val`` 设置为 ``None`` 实现。
-    如果需要某些 field 不要包含在 pad 之后的结果中，可以使用 :meth:`~fastNLP.
+    如果需要某些 field 不要包含在 pad 之后的结果中，可以使用 :meth:`~fastNLP.\
     Collator.set_ignore` 进行设置。
 
     Collator 在第一次进行 pad 的时候自动根据设置以及数据情况，为每个 field 获取一个
@@ -234,12 +234,12 @@ class Collator:
                 dtype=None,
                 backend='auto',
                 pad_fn: Optional[Callable] = None) -> 'Collator':
-        """如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
+        r"""如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
-        :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.
+        :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.\
             __getitem__` 方法返回的是字典类型，则可以直接使用对应的 field 的 key
             来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a':
-            {'b': 1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.
+            {'b': 1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.\
             __getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表
             示序列中第 **0** 或 **1** 个元素。如果该 field 在数据中没有找到，则报
             错；如果 :meth:`Dataset.__getitem__` 返回的是就是整体内容，请使用
@@ -250,8 +250,8 @@ class Collator:
             如果 ``backend`` 为 ``None``，该值无意义。
         :param dtype: 对于需要 pad 的 field ，该 field 数据的 ``dtype``。
         :param backend: 可选 ``['raw', 'numpy', 'torch', 'paddle', 'jittor',
-            'oneflow', 'auto']``，分别代表，输出为 :class:`list`,
-            :class:`numpy.ndarray`, :class:`torch.Tensor`, :class:`paddle.
+            'oneflow', 'auto']``，分别代表输出为 :class:`list`,
+            :class:`numpy.ndarray`, :class:`torch.Tensor`, :class:`paddle.\
             Tensor`, :class:`jittor.Var`, :class:`oneflow.Tensor` 类型。若
             ``pad_val`` 为 ``None``，该值无意义 。
         :param pad_fn: 指定当前 field 的 pad 函数，传入该函数则 ``pad_val``,
@@ -359,7 +359,7 @@ class Collator:
         :param field_names: field_name: 需要调整的 field 的名称。如果
             :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
             field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如
-            ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.
+            ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.\
             __getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表
             示序列中第 **0** 或 **1** 个元素。
         :return: Collator 自身；
@@ -407,7 +407,7 @@ def _compare_tuple(t1, t2):
     例如 (1, ) 和 (2, ) 关系为 None，表示完全不同 例如 (1, 2, 3) 和 (1, ) 关系为
     2，表示前者比后者长 2 位 但 例如 (1, 2, 3) 和 (2, ) 关系为 None，因为它们从前往
     后的key 不一样 例如 (1, 2, 3) 和 (1, 3) 关系为 None，因为它们从前往后的key 不一
-    样.
+    样。
 
     例如 (1, ) 和 (1, 2, 3) 关系为 -2，表示后者比前者长 2 位
     但 例如 (2, ) 和 (1, 2, 3) 关系为 None，因为它们从前往后的key 不一样

@@ -68,7 +68,7 @@ class FieldArray:
         根据给定的 ``indices`` 返回内容。
 
         :param indices: 获取 ``indices`` 对应的内容。
-        :return: 根据给定的 ``indices`` 返回的内容，可能是单个值 或 :class:`numpy.
+        :return: 根据给定的 ``indices`` 返回的内容，可能是单个值或 :class:`numpy.\
             ndarray`
         """
         if isinstance(indices, int):

@@ -120,7 +120,7 @@ class FastNLPLogger(logging.Logger, metaclass=LoggerSingleton):
             self._log(WARNING, msg, args, **kwargs)
 
     def warning_once(self, msg, *args, **kwargs):
-        """相同的 warning 内容只会 warning 一次.
+        """相同的 warning 内容只会 warning 一次。
 
         :param msg:
         :param args:
@@ -194,7 +194,7 @@ class FastNLPLogger(logging.Logger, metaclass=LoggerSingleton):
         return kwargs
 
     def setLevel(self, level) -> None:
-        """设置当前 logger 以及其 handler 的 log 级别.
+        """设置当前 logger 以及其 handler 的 log 级别。
 
         :param level:
         :return:
@@ -206,7 +206,7 @@ class FastNLPLogger(logging.Logger, metaclass=LoggerSingleton):
             handler.setLevel(level)
 
     def _set_distributed(self):
-        """在 fastNLP 拉起进程的时候，调用一下这个方法，使得能够输出 rank 信息.
+        """在 fastNLP 拉起进程的时候，调用一下这个方法，使得能够输出 rank 信息。
 
         :return:
         """

@@ -111,7 +111,7 @@ def _match_param(fun, call_fn: Callable, fn_name: Optional[str] = None):
 
 
 class HasLenGetitemType(ABC):
-    """判断是否实现了 __len__ 和 __getitem__ 方法的类."""
+    """判断是否实现了 __len__ 和 __getitem__ 方法的类。"""
 
     @classmethod
     def __subclasshook__(cls, subclass: Any) -> Union[bool, Any]:

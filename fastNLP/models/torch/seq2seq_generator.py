@@ -19,7 +19,7 @@ class SequenceGeneratorModel(nn.Module):
     :param seq2seq_model: 序列到序列模型
     :param bos_token_id: 句子开头的 token id
     :param eos_token_id: 句子结束的 token id
-    :param max_length: 生成句子的最大长度, 每句话的 decode 长度为 ``max_length +
+    :param max_length: 生成句子的最大长度，每句话的 decode 长度为 ``max_length +
         max_len_a * src_len``
     :param max_len_a: 每句话的 decode 长度为 ``max_length + max_len_a *
         src_len``。如果不为 0，需要保证 State 中包含 encoder_mask

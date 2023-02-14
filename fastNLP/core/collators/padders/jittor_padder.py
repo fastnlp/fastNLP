@@ -41,7 +41,7 @@ def is_jittor_tensor(dtype):
 
 
 def is_jittor_dtype_str(dtype):
-    """判断数据类型是否为 jittor 使用的字符串类型.
+    """判断数据类型是否为 jittor 使用的字符串类型。
 
     :param: dtype 数据类型
     """
@@ -88,10 +88,10 @@ def _get_dtype(ele_dtype, dtype, class_name):
 
 
 class JittorNumberPadder(Padder):
-    """可以将形如 ``[1, 2, 3]`` 这类的数据转为 ``jittor.Var([1, 2, 3])``
+    r"""可以将形如 ``[1, 2, 3]`` 这类的数据转为 ``jittor.Var([1, 2, 3])``
 
     :param pad_val: 该值无意义
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`jittor.
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`jittor.\
         Var` 类型；
     :param dtype: 输出的数据的 dtype 是什么。如 :class:`jittor.long`,
         :class:`jittor.float32`, :class:`int`, :class:`float` 等；
@@ -114,10 +114,10 @@ class JittorNumberPadder(Padder):
 
 
 class JittorSequencePadder(Padder):
-    """可以将形如 ``[[1], [1, 2]]`` 这类的数据转为 ``jittor.Var([[1], [1, 2]])``
+    r"""可以将形如 ``[[1], [1, 2]]`` 这类的数据转为 ``jittor.Var([[1], [1, 2]])``
 
     :param pad_val: 该值无意义
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`jittor.
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`jittor.\
         Var` 类型；
     :param dtype: 输出的数据的 dtype 是什么。如 :class:`jittor.long`,
         :class:`jittor.float32`, :class:`int`, :class:`float` 等；

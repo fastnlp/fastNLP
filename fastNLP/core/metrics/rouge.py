@@ -29,7 +29,7 @@ def _normalize_and_tokenize(
     r"""对``sentence``使用Porter stemmer用于去除单词后缀以改进匹配。并规范化句子以
     及进行分词。
 
-    :param text: 一个输入的句子.
+    :param text: 一个输入的句子。
     :param stemmer: Porter-stemmer实例来去除单词后缀以改进匹配。
     :param normalizer: 用户自己的规范化函数。
         如果这值是``None``，则默认使用空格替换任何非字母数字字符。
@@ -72,8 +72,8 @@ def _rougeL_score(pred: Sequence[str],
                   reference: Sequence[str]) -> Dict[str, float]:
     """计算Rouge-L metric的精度、召回率和F1得分值。
 
-    :param pred: 一个预测句子的序列.
-    :param reference: 一个标准译文句子的序列.
+    :param pred: 一个预测句子的序列。
+    :param reference: 一个标准译文句子的序列。
     """
     pred_len, reference_len = len(pred), len(reference)
     if 0 in (pred_len, reference_len):
@@ -90,9 +90,9 @@ def _rougeN_score(pred: Sequence[str], reference: Sequence[str],
                   n_gram: int) -> Dict[str, float]:
     """计算Rouge-N metric的精度、召回率和F1得分值。
 
-    :param pred: 一个预测句子的序列.
-    :param reference: 一个标准译文句子的序列.
-    :param n_gram: ``N-gram``值.
+    :param pred: 一个预测句子的序列。
+    :param reference: 一个标准译文句子的序列。
+    :param n_gram: ``N-gram``值。
     """
 
     def get_n_gram(tokens: Sequence[str], n: int) -> Counter:
@@ -119,15 +119,15 @@ class ROUGE(Metric):
     """计算ROUGE的Metric。
 
     :param rouge_keys (Union[List, Tuple,int,str]): 该参数包括要计算的各种类型的
-        ROUGE的名称。包括 ``L`` 和 ``1`` 到 ``9``。默认值是 (1,2,``L``).
+        ROUGE的名称。包括 ``L`` 和 ``1`` 到 ``9``。默认值是 (1,2,``L``)。
     :param use_stemmer: 使用Porter词干器去除单词后缀以提高匹配。
     :param normalizer: 用户自己的规范化函数。
         如果这值是``None``，则默认使用空格替换任何非字母数字字符。
-        这个函数必须输入一个 ``str`` 并且返回 ``str``.
+        这个函数必须输入一个 ``str`` 并且返回 ``str``。
     :param tokenizer: 用户可以传入 Callable 函数进行分词。
         如果是``str``，则按照传入的语言进行分词，默认选项有['en','cn','zh']，``en``
         代表英语，其他代表中文。如果是 ``None``，则会在第一次 update 时选择第一个
-        sample 的语言进行选择
+        sample 的语言进行选择。
     :param accumulate: 该参数在多 references 场景下使用。
         - ``avg`` 获取与预测相关的所有引用的平均值。
         - ``best`` 采用预测和多个对应参考之间获得的最佳fmmeasure得分。

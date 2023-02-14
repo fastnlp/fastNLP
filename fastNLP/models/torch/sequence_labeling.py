@@ -20,8 +20,9 @@ __all__ = ['SeqLabeling', 'AdvSeqLabel', 'BiLSTMCRF']
 
 class BiLSTMCRF(nn.Module):
     r"""
-    结构为 ``Embedding`` + :class:`BiLSTM <fastNLP.modules.torch.encoder.
-    LSTM>` + ``FC`` + ``Dropout`` + :class:`CRF <fastNLP.modules.torch.decoder.
+    结构为
+    ``Embedding`` + :class:`BiLSTM <fastNLP.modules.torch.encoder.LSTM>` +
+    ``FC`` + ``Dropout`` + :class:`CRF <fastNLP.modules.torch.decoder.\
     ConditionalRandomField>`。
 
     :param embed: 支持以下几种输入类型：
@@ -231,7 +232,7 @@ class AdvSeqLabel(nn.Module):
     r"""
     更复杂的 Sequence Labelling 模型。结构为 ``Embedding``, ``LayerNorm``,
     :class:`BiLSTM <fastNLP.modules.torch.encoder.LSTM>` （两层），``FC``，
-    ``LayerNorm``，``Dropout``，``FC``，:class:`CRF <fastNLP.modules.torch.
+    ``LayerNorm``，``Dropout``，``FC``，:class:`CRF <fastNLP.modules.torch.\
     decoder.ConditionalRandomField>`。
 
     :param embed: 支持以下几种输入类型：
@@ -360,7 +361,8 @@ class AdvSeqLabel(nn.Module):
         :param words: 句子中 word 的 index，形状为 ``[batch_size, seq_len]``
         :param target: 每个 sample 的目标值
         :param seq_len: 每个句子的长度，形状为 ``[batch,]``
-        :return: 如果 ``target`` 为 ``None``，则返回预测结果 ``{'pred': torch.Tensor}``，否则返回 loss ``{'loss': torch.Tensor}``
+        :return: 如果 ``target`` 为 ``None``，则返回预测结果 ``{'pred':
+            torch.Tensor}``，否则返回 loss ``{'loss': torch.Tensor}``
         """
         return self(words, target=target, seq_len=seq_len)
 

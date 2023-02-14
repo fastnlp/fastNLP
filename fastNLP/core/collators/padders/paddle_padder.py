@@ -48,7 +48,7 @@ def is_paddle_tensor(dtype):
 
 
 def is_paddle_dtype_str(dtype):
-    """判断 dtype 是 str 类型 且属于 paddle 支持的 str 类型.
+    """判断 dtype 是 str 类型 且属于 paddle 支持的 str 类型。
 
     :param dtype 数据的 dtype 类型
     """
@@ -105,7 +105,7 @@ class PaddleNumberPadder(Padder):
     """可以将形如 ``[1, 2, 3]`` 这类的数据转为 ``paddle.Tensor([1, 2, 3])``
 
     :param pad_val: 该值无意义；
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`paddle.
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`paddle.\
         Tensor` 类型；
     :param dtype: 输出的数据的 dtype 是什么。如 :class:`int`, :class:`float`,
         :class:`int32` 等；
@@ -134,7 +134,7 @@ class PaddleSequencePadder(Padder):
     2]])`` 可以 pad 多重嵌套的数据。
 
     :param pad_val: pad 的值。
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`paddle.
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`paddle.\
         Tensor` 类型；
     :param dtype: 输出的数据的 dtype 是什么。如 :class:`int`, :class:`float`,
         :class:`int32` 等；
@@ -170,7 +170,7 @@ class PaddleTensorPadder(Padder):
         tensor([[   3,    4],
                 [   1, -100]])
     :param pad_val: pad 的值。
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`paddle.
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`paddle.\
         Tensor` 类型；
     :param dtype: 输出的数据的 dtype 是什么。如 :class:`int`, :class:`float`,
         :class:`int32` 等；

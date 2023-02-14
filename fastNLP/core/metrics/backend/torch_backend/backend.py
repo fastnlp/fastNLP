@@ -22,7 +22,7 @@ class TorchBackend(Backend):
         self._specified = True
 
     def aggregate(self, tensor, method: str):
-        """聚集结果，并根据 method 计算后，返回结果.
+        """聚集结果，并根据 method 计算后，返回结果。
 
         :param tensor: 需要聚合的张量
         :param method: 聚合的方法，目前支持 ``['sum', 'mean', 'max', 'min']``:
@@ -58,7 +58,7 @@ class TorchBackend(Backend):
         return tensor
 
     def create_tensor(self, value: Union[float, List]):
-        """创建 tensor，并且填入 value 作为值.
+        """创建 tensor，并且填入 value 作为值。
 
         :param value: 创建张量的初始值
         """
@@ -75,14 +75,14 @@ class TorchBackend(Backend):
         return tensor
 
     def get_scalar(self, tensor) -> float:
-        """获取 tensor 的 scalar 值.
+        """获取 tensor 的 scalar 值。
 
         :param tensor: 传入的张量
         """
         return tensor.item()
 
     def to_list(self, tensor) -> List:
-        """``tensor`` 的 value 值.
+        """``tensor`` 的 value 值。
 
         :param tensor: 传入的张量;
         :return:
@@ -90,7 +90,7 @@ class TorchBackend(Backend):
         return tensor.tolist()
 
     def tensor2numpy(self, tensor) -> np.array:
-        """将 tensor 转为 numpy 值，主要是在 metric 计算中使用.
+        """将 tensor 转为 numpy 值，主要是在 metric 计算中使用。
 
         :param tensor: 传入的张量
         """
@@ -105,14 +105,14 @@ class TorchBackend(Backend):
 
     @staticmethod
     def is_distributed() -> bool:
-        """判断是否为 ddp 状态.
+        """判断是否为 ddp 状态。
 
         :return:
         """
         return dist.is_available() and dist.is_initialized()
 
     def move_tensor_to_device(self, tensor, device):
-        """将张量移到设备上.
+        """将张量移到设备上。
 
         :param tensor: 需要移动的张量
         :param device: 设备名，一般为 "cpu", "cuda:0"等字符串

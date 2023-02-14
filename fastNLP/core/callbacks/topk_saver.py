@@ -14,7 +14,7 @@ __all__ = ['TopkSaver']
 
 
 class Saver:
-    """
+    r"""
     执行保存的对象。保存的文件组织结构为::
 
         - folder  # 当前初始化的参数
@@ -34,7 +34,7 @@ class Saver:
         函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运
         行该函数。
     :kwargs: 包含以下额外参数，以及更多需要传递给 :meth:`Trainer.save_checkpoint
-        <fastNLP.core.Trainer.save_checkpoint>` 或者  :meth:`Trainer.
+        <fastNLP.core.Trainer.save_checkpoint>` 或者  :meth:`Trainer.\
         save_model <fastNLP.core.Trainer.save_model>` 接口的参数。
 
         * *use_timestamp_folder* (``bool``) -- 是否创建以脚本的启动时间命名的文件
@@ -102,7 +102,7 @@ class Saver:
 
     @rank_zero_call
     def save_json(self, results, path):
-        """以 json 格式保存 results 到 path 中.
+        """以 json 格式保存 results 到 path 中。
 
         :param results: 一般是评测后的结果。
         :param path: 保存的文件名
@@ -113,7 +113,7 @@ class Saver:
 
     @rank_zero_call
     def rm(self, folder_name):
-        r"""移除 folder/timestamp/folder_name 。其中 folder 为用户在初始化指定,
+        r"""移除 folder/timestamp/folder_name 。其中 folder 为用户在初始化指定，
         timestamp 为当前脚本的启动时间。
 
         :param folder_name: 需要移除的路径。
@@ -203,7 +203,7 @@ class TopkQueue:
 
 
 class TopkSaver(ResultsMonitor, Saver):
-    """用来识别 topk 模型并保存，也可以仅当一个保存 Saver 使用。保存路径为::
+    r"""用来识别 topk 模型并保存，也可以仅当一个保存 Saver 使用。保存路径为::
 
         - folder/
             - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
@@ -238,7 +238,7 @@ class TopkSaver(ResultsMonitor, Saver):
         函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运
         行该函数。
     :kwargs: 包含以下额外参数，以及更多需要传递给 :meth:`Trainer.save_checkpoint
-        <fastNLP.core.Trainer.save_checkpoint>` 或者  :meth:`Trainer.
+        <fastNLP.core.Trainer.save_checkpoint>` 或者  :meth:`Trainer.\
         save_model <fastNLP.core.Trainer.save_model>` 接口的参数。
 
         * *use_timestamp_folder* (``bool``) -- 是否创建以脚本的启动时间命名的文件

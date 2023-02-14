@@ -61,8 +61,8 @@ class OneflowDDPDriver(OneflowDriver):
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
+            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
             core.utils.auto_param_call`。
 
         * *output_from_new_proc* (``str``) -- 应当为一个字符串，表示在多进程的
@@ -194,7 +194,7 @@ class OneflowDDPDriver(OneflowDriver):
 
     @property
     def data_device(self):
-        r"""数据所在的设备。由于 **oneflow** 可以通过 :func:`oneflow.cuda.
+        r"""数据所在的设备。由于 **oneflow** 可以通过 :func:`oneflow.cuda.\
         current_device` 获取当前进程的设备，因此该属性和 ``model_device`` 表现相
         同。"""
         return self._data_device

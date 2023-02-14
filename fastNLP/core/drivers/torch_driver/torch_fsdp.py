@@ -40,7 +40,7 @@ class TorchFSDPDriver(TorchDDPDriver):
     .. note::
 
         ``TorchFSDPDriver`` 大部分行为与 ``TorchDDPDriver`` 相同，如果您不了解
-        ``TorchDDPDriver``，您可以先阅读 :class:`~fastNLP.core.drivers.
+        ``TorchDDPDriver``，您可以先阅读 :class:`~fastNLP.core.drivers.\
         TorchDDPDriver`；
 
     .. warning::
@@ -68,7 +68,7 @@ class TorchFSDPDriver(TorchDDPDriver):
           置为 ``None``
         * *non_blocking* -- 表示用于 :meth:`torch.Tensor.to` 方法的参数
           non_blocking
-        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.
+        * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.\
           amp.cuda.GradScaler` 的参数
     :kwargs:
         * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
@@ -76,8 +76,8 @@ class TorchFSDPDriver(TorchDDPDriver):
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.
+            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
+            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
             core.utils.auto_param_call`。
 
         * *output_from_new_proc* (``str``) -- 应当为一个字符串，表示在多进程的

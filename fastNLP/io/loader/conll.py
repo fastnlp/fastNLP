@@ -318,7 +318,7 @@ class OntoNotesNERLoader(ConllLoader):
 
 class CTBLoader(Loader):
     r"""
-    **CTB** 数据集的 **Loader**。支持加载的数据应该具备以下格式, 其中第二列为
+    **CTB** 数据集的 **Loader**。支持加载的数据应该具备以下格式，其中第二列为
     **词语**，第四列为 **pos tag**，第七列为 **依赖树的 head**，第八列为 **依赖
     树的 label**。
 

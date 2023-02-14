@@ -18,7 +18,7 @@ class JittorBackend(Backend):
         self._specified = True
 
     def aggregate(self, tensor, method: str):
-        """聚集结果，并根据 method 计算后，返回结果."""
+        """聚集结果，并根据 method 计算后，返回结果。"""
         return tensor
 
     def create_tensor(self, value: Union[float, List]):
@@ -35,7 +35,7 @@ class JittorBackend(Backend):
         return tensor
 
     def get_scalar(self, tensor) -> float:
-        """tensor 的 scalar 值.
+        """tensor 的 scalar 值。
 
         :param tensor:
         :return:
@@ -43,7 +43,7 @@ class JittorBackend(Backend):
         return tensor.item()
 
     def to_list(self, tensor) -> List:
-        """``tensor`` 的 value 值.
+        """``tensor`` 的 value 值。
 
         :param tensor: 传入的张量;
         :return:
@@ -71,5 +71,5 @@ class JittorBackend(Backend):
             raise ValueError(f'tensor: {tensor} can not convert to ndarray!')
 
     def move_tensor_to_device(self, tensor, device):
-        """jittor 的没有转移设备的函数，因此该函数实际上无效."""
+        """jittor 的没有转移设备的函数，因此该函数实际上无效。"""
         return tensor

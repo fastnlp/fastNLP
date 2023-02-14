@@ -18,7 +18,7 @@ def choose_driver(model, driver: Union[str, Driver],
         ``["auto", "torch", "paddle", "jittor", "fairscale", "deepspeed",
         "oneflow", "torch_fsdp"]``，分别对应各种框架。值为 ``'auto'`` 时，将会根据
         模型的类型进行选择。
-    :param device: 训练使用的设备。详细的格式可以查阅 :class:`~fastNLP.core.
+    :param device: 训练使用的设备。详细的格式可以查阅 :class:`~fastNLP.core.\
         controllers.Trainer` 中的说明。
     :param kwargs: 其余的传给 `Driver` 的参数。
     """

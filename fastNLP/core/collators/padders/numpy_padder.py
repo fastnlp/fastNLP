@@ -31,7 +31,7 @@ def _get_dtype(ele_dtype, dtype, class_name):
 
 
 class NumpyNumberPadder(Padder):
-    """可以将形如 ``[1, 2, 3]`` 这类的数据转为 ``np.array([1, 2, 3])``。
+    r"""可以将形如 ``[1, 2, 3]`` 这类的数据转为 ``np.array([1, 2, 3])``。
     可以通过:
 
         >>> NumpyNumberPadder.pad([1, 2, 3])
@@ -39,7 +39,7 @@ class NumpyNumberPadder(Padder):
     使用。
 
     :param pad_val: 该值无意义；
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`np.
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`np.\
         array` 类型；
     :param dtype: 输出的数据的 dtype ；
     """
@@ -68,7 +68,7 @@ class NumpySequencePadder(Padder):
          [   1.    2.]]
 
     :param pad_val: pad 的值是多少；
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`np.
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`np.\
         array` 类型；
     :param dtype: 输出的数据的 dtype ；
     """
@@ -90,15 +90,15 @@ class NumpySequencePadder(Padder):
 
 
 class NumpyTensorPadder(Padder):
-    """pad 类似于 ``[np.array([3, 4]), np.array([1])]`` 的 field 。若内部元素不为
-    :class:`np.ndarray`，则必须含有 :meth:`tolist` 方法。
+    r"""pad 类似于 ``[np.array([3, 4]), np.array([1])]`` 的 field 。若内部元素不
+    为 :class:`np.ndarray`，则必须含有 :meth:`tolist` 方法。
 
         >>> NumpyTensorPadder.pad([np.array([3, 4]), np.array([1])], pad_val=-100)
         [[   3.    4.]
          [   1. -100.]]
 
     :param pad_val: pad 的值是多少。
-    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`np.
+    :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`np.\
         array` 类型。
     :param dtype: 输出的数据的 dtype 是什么
     """

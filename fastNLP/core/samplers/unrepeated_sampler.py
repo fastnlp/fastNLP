@@ -61,7 +61,7 @@ class UnrepeatedRandomSampler(UnrepeatedSampler):
             yield index
 
     def generate_indices(self) -> List[int]:
-        """生成随机序列.
+        """生成随机序列。
 
         :return:
         """
@@ -102,7 +102,7 @@ class UnrepeatedRandomSampler(UnrepeatedSampler):
 
     @property
     def num_samples(self):
-        """样本的总数."""
+        """样本的总数。"""
         return getattr(self.dataset, 'total_len', len(self.dataset))
 
 

@@ -1,5 +1,5 @@
 r"""
-**Biaffine Dependency Parser** 的 Pytorch 实现.
+**Biaffine Dependency Parser** 的 Pytorch 实现。
 """
 from collections import defaultdict
 
@@ -176,7 +176,7 @@ class GraphParser(nn.Module):
 
 class ArcBiaffine(nn.Module):
     r"""
-    Biaffine Dependency Parser 的子模块, 用于构建预测边的图
+    Biaffine Dependency Parser 的子模块，用于构建预测边的图
 
     """
 
@@ -212,7 +212,7 @@ class ArcBiaffine(nn.Module):
 
 class LabelBilinear(nn.Module):
     r"""
-    Biaffine Dependency Parser 的子模块, 用于构建预测边类别的图
+    Biaffine Dependency Parser 的子模块，用于构建预测边类别的图
 
     """
 
@@ -369,7 +369,7 @@ class BiaffineParser(GraphParser):
         :param words2: 输入 pos 序列，形状为 ``[batch_size, seq_len]``
         :param seq_len: 输入序列长度，形状为 ``[batch_size, seq_len]``
         :param target1: 输入真实标注的 heads ，形状为 ``[batch_size, seq_len]``，
-            仅在训练阶段有效，用于训练 label 分类器. 若为 ``None``，则使用预测的
+            仅在训练阶段有效，用于训练 label 分类器。若为 ``None``，则使用预测的
             heads 输入到 label 分类器。
         :return: 类型为字典的 parsing 结果，各个键的含义为：
 
@@ -457,7 +457,7 @@ class BiaffineParser(GraphParser):
         :param words1: 输入 word 序列，形状为 ``[batch_size, seq_len]``
         :param words2: 输入 pos 序列，形状为 ``[batch_size, seq_len]``
         :param target1: 输入真实标注的 heads ，形状为 ``[batch_size, seq_len]``，
-            仅在训练阶段有效，用于训练 label 分类器. 若为 ``None``，则使用预测的
+            仅在训练阶段有效，用于训练 label 分类器。若为 ``None``，则使用预测的
             heads 输入到 label 分类器。
         :param target2: 真实类别的标注，形状为 ``[batch_size, seq_len]``
         :param seq_len: 输入序列长度，形状为 ``[batch_size, seq_len]``
