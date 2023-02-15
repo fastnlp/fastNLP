@@ -1,7 +1,46 @@
 import pytest
 
 from fastNLP.core.dataset import DataSet
+from fastNLP.core.vocabulary import Vocabulary
 from fastNLP.io.data_bundle import DataBundle
+
+
+def test_init():
+    dataset1 = DataSet(
+        {'x': [[0, 1, 2], [5, 3, 2, 3], [5, 21, 5, 10], [3, 6, 8, 1]]})
+    dataset2 = {
+        'x': [[0, 1, 2, 3, 4], [5, 3, 2, 3], [5, 20, 45, 1, 98],
+              [3, 6, 8, 3, 6, 31]]
+    }
+    dataset3 = DataSet({'x': [[0, 1, 2, 7, 5, 2], [5, 3], [0], [3, 6, 8]]})
+    with pytest.raises(TypeError):
+        DataBundle(datasets={
+            'dataset1': dataset1,
+            'dataset2': dataset2,
+            'dataset3': dataset3,
+        })
+
+    vocab1 = Vocabulary(100, 2)
+    vocab1.add('test')
+    vocab2 = Vocabulary()
+    vocab2.add('test')
+    vocab3 = {0: '<unk>', 1: '<pad>', 2: 'test'}
+    with pytest.raises(TypeError):
+        DataBundle(vocabs={
+            'vocab1': vocab1,
+            'vocab2': vocab2,
+            'vocab3': vocab3,
+        })
+
+    DataBundle(
+        datasets={
+            'dataset1': dataset1,
+            'dataset3': dataset3,
+        },
+        vocabs={
+            'vocab1': vocab1,
+            'vocab2': vocab2,
+        })
 
 
 def test_add_seq_len():

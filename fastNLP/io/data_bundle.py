@@ -35,8 +35,20 @@ class DataBundle:
     """
 
     def __init__(self, vocabs=None, datasets=None):
-        self._vocabs = vocabs or {}
-        self._datasets = datasets or {}
+        self._vocabs: dict = vocabs or {}
+        self._datasets: dict = datasets or {}
+        for vocab_name, vocab in self._vocabs.items():
+            if not isinstance(vocab, Vocabulary):
+                raise TypeError(
+                    'Every vocabulary must be of `fastNLP.Vocabulary` type, '
+                    'but vocabulary named \'{}\' is of {} type.'.format(
+                        vocab_name, type(vocab)))
+        for ds_name, ds in self._datasets.items():
+            if not isinstance(ds, DataSet):
+                raise TypeError(
+                    'Every dataset must be of `fastNLP.DataSet` type, '
+                    'but dataset named \'{}\' is of {} type.'.format(
+                        ds_name, type(ds_name)))
 
     @property
     def datasets(self) -> Dict:
@@ -542,6 +554,25 @@ class DataBundle:
         for _, ds in self.iter_datasets():
             ds.collator.set_ignore(*field_names)
         return self
+
+    @classmethod
+    def from_datasets(self, datasets):
+        r"""
+        从 :mod:`datasets` 包的 :class:`DatasetDict` 中构建一个 `DataBundle`。
+
+        :param datasets: :mod:`huggingface datasets` 包的 :class:`DatasetDict`
+            类型，通常是函数 :func:`load_dataset` 的返回值。
+        :return: 从 datasets 中构建的 `DataBundle`。
+        """
+        from datasets.dataset_dict import DatasetDict
+        assert isinstance(datasets, DatasetDict), \
+            f'Cannot build DataBundle from {type(datasets)}.'
+
+        _datasets = {}
+        for key, dataset in datasets.items():
+            _datasets[key] = DataSet.from_datasets(dataset)
+
+        return DataBundle(datasets=_datasets)
 
     def __repr__(self) -> str:
         _str = ''
