@@ -14,7 +14,7 @@ from typing import (Any, AnyStr, Callable, Dict, List, Mapping, Optional,
                     Sequence, Tuple, Union)
 
 from prettytable import PrettyTable
-
+from fastNLP.envs.env import FASTNLP_LAUNCH_TIME
 from fastNLP.core.log import logger
 
 __all__ = [
@@ -741,3 +741,12 @@ def _flat_nest_dict(d: Mapping, parent_key: Tuple, compress_none_key: bool):
             flat_d[_key] = v
 
     return flat_d
+
+
+def get_launch_time() -> str:
+    """
+    返回当前程序的运行时间，这个时间戳也是保存模型时用的保存时间戳。
+
+    :return:
+    """
+    return os.getenv(FASTNLP_LAUNCH_TIME, '')
