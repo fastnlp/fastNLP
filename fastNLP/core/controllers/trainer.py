@@ -67,26 +67,26 @@ class Trainer(TrainerEventTrigger):
     :param driver: 训练模型所使用的具体的驱动模式，应当为以下中的一个：``["auto",
         "torch", "paddle", "jittor", "fairscale", "deepspeed", "oneflow"]``：
 
-        * 为 ``"auto"`` 时
-         **fastNLP** 会根据传入模型的类型自行判断使用哪一种模式；
-        * 为 ``"torch"`` 时
-         使用 :class:`~fastNLP.core.drivers.torch_driver.TorchSingleDriver`
-         或 :class:`~fastNLP.core.drivers.torch_driver.TorchDDPDriver`；
-        * 为 ``"torch_fsdp"`` 时
-         使用 :class:`~fastNLP.core.drivers.torch_driver.TorchFSDPDriver`；
-        * 为 ``"paddle"`` 时
-         使用 :class:`~fastNLP.core.drivers.paddle_driver.PaddleSingleDriver`
-         或 :class:`~fastNLP.core.drivers.paddle_driver.PaddleFleetDriver`；
-        * 为 ``"jittor"`` 时
-         使用 :class:`~fastNLP.core.drivers.jittor_driver.JittorSingleDriver`
-         或 :class:`~fastNLP.core.drivers.jittor_driver.JittorMPIDriver`；
-        * 为 ``"fairscale"`` 时
-         使用 :class:`~fastNLP.core.drivers.torch_driver.FairScaleDriver`；
-        * 为 ``"deepspeed"`` 时
-         使用 :class:`~fastNLP.core.drivers.torch_driver.DeepSpeedDriver`；
-        * 为 ``"oneflow"`` 时
-         使用 :class:`~fastNLP.core.drivers.oneflow_driver.OneflowSingleDriver`
-         或 :class:`~fastNLP.core.drivers.oneflow_driver.OneflowDDPDriver`；
+        * 为 ``"auto"`` 时，
+          **fastNLP** 会根据传入模型的类型自行判断使用哪一种模式；
+        * 为 ``"torch"`` 时，使用
+          :class:`~fastNLP.core.drivers.torch_driver.TorchSingleDriver`
+          或 :class:`~fastNLP.core.drivers.torch_driver.TorchDDPDriver`；
+        * 为 ``"torch_fsdp"`` 时，使用
+          :class:`~fastNLP.core.drivers.torch_driver.TorchFSDPDriver`；
+        * 为 ``"paddle"`` 时，使用
+          :class:`~fastNLP.core.drivers.paddle_driver.PaddleSingleDriver`
+          或 :class:`~fastNLP.core.drivers.paddle_driver.PaddleFleetDriver`；
+        * 为 ``"jittor"`` 时，使用
+          :class:`~fastNLP.core.drivers.jittor_driver.JittorSingleDriver`
+          或 :class:`~fastNLP.core.drivers.jittor_driver.JittorMPIDriver`；
+        * 为 ``"fairscale"`` 时，使用
+          :class:`~fastNLP.core.drivers.torch_driver.FairScaleDriver`；
+        * 为 ``"deepspeed"`` 时，使用
+          :class:`~fastNLP.core.drivers.torch_driver.DeepSpeedDriver`；
+        * 为 ``"oneflow"`` 时，使用
+          :class:`~fastNLP.core.drivers.oneflow_driver.OneflowSingleDriver`
+          或 :class:`~fastNLP.core.drivers.oneflow_driver.OneflowDDPDriver`；
 
         在指定了框架的情况下，具体使用哪一种取决于参数 ``device`` 的设置；
 
@@ -1085,11 +1085,13 @@ class Trainer(TrainerEventTrigger):
                             on_train_batch_begin(trainer, batch, indices)
                             on_before_backward(trainer, outputs)  # 其中 outputs 是经过 output_mapping（如果设置了） 后的，否则即为 model 的输出。
                             on_after_backward(trainer)
-                            on_before_zero_grad(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
-                            on_after_zero_grad(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
                             on_before_optimizers_step(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
                             on_after_optimizers_step(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                            on_before_zero_grad(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                            on_after_zero_grad(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                            batch_idx_in_epoch += 1
                             on_train_batch_end(trainer)
+                        cur_epoch_idx += 1
                         on_train_epoch_end(trainer)
                 except BaseException:
                     self.on_exception(trainer, exception)
@@ -1121,10 +1123,10 @@ class Trainer(TrainerEventTrigger):
                 # do something
             # 以上函数会在 Trainer 保存模型时执行。
 
-            @Trainer.on(Event.on_save_model(once=True))
+            @Trainer.on(Event.on_save_model(once=2))
             def do_something_2(trainer):
                 # do something
-            # 以上函数会在 Trainer 保存模型时执行，但只执行一次。
+            # 以上函数会在 Trainer 保存模型时执行，但只在第二次保存时执行。
 
             @Trainer.on(Event.on_train_batch_begin(every=2))
             def do_something_3(trainer, batch, indices):

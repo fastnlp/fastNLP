@@ -13,7 +13,7 @@ __all__ = ['FitlogCallback']
 
 class FitlogCallback(HasMonitorCallback):
     r"""自动记录 ``evaluation`` 结果到 ``fitlog`` 中。会自动记录每次 ``evaluate``
-    后的结果；同时会根据``monitor`` 记录最好的结果。另外，会自动将非 ``rank 0`` 上
+    后的结果；同时会根据 ``monitor`` 记录最好的结果。另外，会自动将非 ``rank 0`` 上
     的 ``fitlog`` 设置为 ``debug`` 状态。同时还会在 ``fitlog`` 的 ``other`` 列中
     记录 一个 ``launch_time``，可以通过这个数值找到当前这个脚本的在 save_folder
     （如果有使用其它需要保存模型的 ``Callback``，例如 :class:`~fastNLP.core.\

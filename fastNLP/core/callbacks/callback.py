@@ -30,11 +30,13 @@ class Callback:
                         on_train_batch_begin(trainer, batch, indices)
                         on_before_backward(trainer, outputs)  # 其中 outputs 是经过 output_mapping（如果设置了） 后的，否则即为 model 的输出。
                         on_after_backward(trainer)
-                        on_before_zero_grad(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
-                        on_after_zero_grad(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
                         on_before_optimizers_step(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
                         on_after_optimizers_step(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                        on_before_zero_grad(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                        on_after_zero_grad(trainer, optimizers)  # 实际调用受到 accumulation_steps 影响
+                        batch_idx_in_epoch += 1
                         on_train_batch_end(trainer)
+                    cur_epoch_idx += 1
                     on_train_epoch_end(trainer)
             except BaseException:
                 self.on_exception(trainer, exception)

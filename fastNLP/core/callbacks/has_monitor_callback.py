@@ -210,8 +210,6 @@ class HasMonitorCallback(ResultsMonitor, Callback):
 
     :param monitor: 监控的 metric 值：
 
-        :param monitor: 监控的 metric 值。
-
         * 为 ``None`` 时，
           fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置
           的 `monitor` 值（如果有设置）。
@@ -266,8 +264,6 @@ class ExecuteOnceBetterMonitor(HasMonitorCallback):
     """当监控的 ``monitor`` 结果更好的时候，调用 ``execute_fn`` 函数。
 
     :param monitor: 监控的 metric 值：
-
-        :param monitor: 监控的 metric 值。
 
         * 为 ``None`` 时，
           fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置

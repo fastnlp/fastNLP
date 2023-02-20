@@ -42,12 +42,12 @@ class Event:
         Trainer；
     """
     every: Optional[int]
-    once: Optional[bool]
+    once: Optional[int]
 
     def __init__(self,
                  value: str,
                  every: Optional[int] = None,
-                 once: Optional[bool] = None,
+                 once: Optional[int] = None,
                  filter_fn: Optional[Callable] = None):
         self.every = every
         self.once = once

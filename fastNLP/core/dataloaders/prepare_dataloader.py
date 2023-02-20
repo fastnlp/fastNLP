@@ -56,14 +56,14 @@ def prepare_dataloader(dataset,
           有设置则通过当前 :mod:`sys.modules` 中已经 import 的 ``backend`` 进行判
           定。如果以上均无法判定，则报错。如果找到了 ``backend``，则按照下述的方式处
           理。
-        * 为 ``torch`` 时，使用 :func:`~fastNLP.core.dataloaders.\
-            prepare_torch_dataloader`。
-        * 为 ``paddle`` 时，使用 :func:`~fastNLP.core.dataloaders.\
-            prepare_paddle_dataloader`。
-        * 为 ``jittor`` 时，使用 :func:`~fastNLP.core.dataloaders.\
-            prepare_jittor_dataloader`。
-        * 为 ``oneflow`` 时，使用 :func:`~fastNLP.core.dataloaders.\
-          prepare_oneflow_dataloader`。
+        * 为 ``torch`` 时，使用
+          :func:`~fastNLP.core.dataloaders.prepare_torch_dataloader`。
+        * 为 ``paddle`` 时，
+          使用 :func:`~fastNLP.core.dataloaders.prepare_paddle_dataloader`。
+        * 为 ``jittor`` 时，使用
+          :func:`~fastNLP.core.dataloaders.prepare_jittor_dataloader`。
+        * 为 ``oneflow`` 时，使用
+          :func:`~fastNLP.core.dataloaders.prepare_oneflow_dataloader`。
 
     :return
     """
