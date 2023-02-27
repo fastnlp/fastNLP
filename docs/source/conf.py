@@ -211,9 +211,6 @@ texinfo_documents = [
 copybutton_prompt_text = r'>>> |\.\.\. '
 copybutton_prompt_is_regexp = True
 
-# -- Options for Multiversions ----------------------------------------------
-smv_latest_version = 'dev0.8.0'
-
 
 # -- Extension configuration -------------------------------------------------
 def maybe_skip_member(app, what, name, obj, skip, options):

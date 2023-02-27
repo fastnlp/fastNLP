@@ -8,33 +8,21 @@ SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = fastNLP
 SPHINXEXCLUDE = ../fastNLP/transformers/*
 SOURCEDIR     = source
-BUILDDIR      = build
+BUILDDIR      = temp/
 PORT          = 8000
 
 # Put it first so that "make" without argument is like "make help".
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS)
 
-apidoc:
-	$(SPHINXAPIDOC) -efM -o source ../$(SPHINXPROJ) $(SPHINXEXCLUDE)
-
 server:
-	cd build/html && python -m http.server $(PORT)
-
-delete:
-	rm -f source/$(SPHINXPROJ).* source/modules.rst && rm -rf build
-
-web:
-	make html && make server
-
-dev:
-	make delete && make apidoc  && make html && make server
+	cd @$(BUILDDIR)/html && python -m http.server $(PORT)
 
 versions:
-	sphinx-multiversion "$(SOURCEDIR)" "$(BUILDDIR)" && cd build && python -m http.server $(PORT)
+	sphinx-multiversion "$(SOURCEDIR)" "$(BUILDDIR)"
 
-prod:
-	make apidoc && make html 
+server-versions:
+	cd $(BUILDDIR) && python -m http.server $(PORT)
 
 .PHONY: help Makefile
 

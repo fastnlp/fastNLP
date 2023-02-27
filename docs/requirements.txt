@@ -1,4 +1,6 @@
+nbsphinx
+ -e git+https://github.com/x54-729/pytorch_sphinx_theme.git#egg=pytorch_sphinx_theme
 sphinx
-sphinx_rtd_theme
-sphinx_autodoc_typehints
 sphinx-multiversion
+sphinx_autodoc_typehints
+sphinx_copybutton

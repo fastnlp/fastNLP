@@ -9,3 +9,5 @@ fastNLP torch 教程系列
 
    fastnlp_torch_tutorial
    fastnlp_torch_tutorial_seq_labeling
+   fastnlp_torch_modelscope
+   fastnlp_torch_translation
