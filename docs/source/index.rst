@@ -29,24 +29,32 @@ fastNLP 具有如下的特性：
       分布式训练 - 命令行启动
 
 
-快速上手
-----------------
-
 .. toctree::
-   :maxdepth: 3
-
-   tutorials/index
-
-API 文档
--------------
-
-您可以通过查阅 API 文档来找到你所需要的工具。
-
-.. toctree::
-   :titlesonly:
    :maxdepth: 2
+   :caption: 快速上手
 
-   fastNLP
+   tutorials/basic/index
+   tutorials/torch/index
+   tutorials/paddle/index
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: API 文档
+
+   fastNLP.core <api/core>
+   fastNLP.io <api/io>
+   fastNLP.embeddings <api/embeddings>
+   fastNLP.models <api/models>
+   fastNLP.modules <api/modules>
+   fastNLP.envs <api/envs>
+   fastNLP.transformers <api/transformers>
+
+.. toctree::
+   :maxdepth: 1
+   :caption: 说明
+
+   instructions/contribution
 
 
 索引与搜索
