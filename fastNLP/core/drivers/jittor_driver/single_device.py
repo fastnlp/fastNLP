@@ -24,7 +24,7 @@ class JittorSingleDriver(JittorDriver):
     r"""
     ``Jittor`` 框架下用于 ``cpu`` 和单卡 ``gpu`` 运算的 ``Driver``。
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数。
+    :param model: 传入给 :class:`.Trainer` 的 ``model`` 参数。
     :param device: 训练和模型所在的设备，在 **Jittor** 中，应当为以下值之一：
         ``[None, 'cpu', 'gpu', 'cuda']`` ：
 
@@ -39,9 +39,8 @@ class JittorSingleDriver(JittorDriver):
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
-            core.utils.auto_param_call`。
+            关于该参数的详细说明，请参见 :class:`.Trainer` 和 :func:`~fastNLP.\
+            core.auto_param_call`。
 
     """
 

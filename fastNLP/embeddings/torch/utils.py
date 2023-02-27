@@ -1,7 +1,3 @@
-r"""
-.. todo::
-    doc
-"""
 import numpy as np
 
 from ...envs.imports import _NEED_IMPORT_TORCH
@@ -41,13 +37,12 @@ def get_embeddings(init_embed, padding_idx=None):
 
     :param init_embed: 支持以下几种输入类型：
 
-            - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个
-              词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
-            - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对
-              象，此时就以传入的对象作为 embedding；
-            - :class:`numpy.ndarray`，将使用传入的 ndarray 作为 Embedding 初始
-              化；
-            - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+        - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的
+           维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+        - :class:`torch.nn.Embedding` 或 **fastNLP** 的 :class:`.Embedding` 对
+           象，此时就以传入的对象作为 embedding；
+        - :class:`numpy.ndarray`，将使用传入的 ndarray 作为 Embedding 初始化；
+        - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
 
     :param padding_idx: 当传入 :class:`tuple` 时，``padding_idx`` 有效
     :return:

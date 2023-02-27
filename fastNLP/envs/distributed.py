@@ -13,10 +13,12 @@ __all__ = [
 
 
 def is_cur_env_distributed() -> bool:
-    r"""判断当前是否处于分布式的环境下。单卡模式该函数一定返回 ``False``；注意进程
-    0 在多卡的训练模式下前后的值是不一样的，例如在开启多卡的 driver 之前，在进程 0 上
-    的该函数返回 ``False``；但是在开启后，在进程 0 上 的该函数返回的值是 ``True``；
-    多卡模式下除了进程 0 外的其它进程返回的值一定是 ``True``。"""
+    r"""判断当前是否处于分布式的环境下。
+
+    单卡模式该函数一定返回 ``False``；注意进程 0 在多卡的训练模式下前后的值是不一样
+    的，例如在开启多卡的 driver 之前，在进程 0 上的该函数返回 ``False``；但是在开启
+    后，在进程 0 上 的该函数返回的值是 ``True``；多卡模式下除了进程 0 外的其它进程返
+    回的值一定是 ``True``。"""
     return FASTNLP_GLOBAL_RANK in os.environ
 
 
@@ -66,10 +68,11 @@ def rank_zero_call(fn: Callable):
 def fastnlp_no_sync_context(level: int = 2):
     r"""
     用于让 **fastNLP** 的 :meth:`barrier` 以及 ``gather`` / ``broadcast`` 等操作
-    等同于只有 1 卡的多卡程序。如果为 1 表示 **fastNLP** 里的 :meth:`barrier` 操作
-    失效；如果为 2 表示 :meth:`barrier` 与 ``gather`` / ``broadcast`` 都失效。
+    等同于只有 1 卡的多卡程序。
 
-    :param level: 可选 ``[0, 1, 2]``
+    :param level: 可选 ``[0, 1, 2]``；如果为 1 表示 **fastNLP** 里的
+        :meth:`barrier` 操作失效；如果为 2 表示 :meth:`barrier` 与 ``gather`` /
+        ``broadcast`` 都失效。
     """
     old_level = os.environ.get(FASTNLP_NO_SYNC, None)
     os.environ[FASTNLP_NO_SYNC] = f'{level}'
@@ -82,7 +85,7 @@ def fastnlp_no_sync_context(level: int = 2):
 
 @contextmanager
 def all_rank_call_context():
-    r"""在多卡模式下，该环境内，会暂时地将 ``FASTNLP_GLOBAL_RAN``K 设置为
+    r"""在多卡模式下，该环境内，会暂时地将 ``FASTNLP_GLOBAL_RANK`` 设置为
     **"0"**，使得 :func:`rank_zero_call` 函数失效，使得每个进程都会运行该函数。
 
     使用方式::
@@ -103,12 +106,13 @@ def all_rank_call_context():
 
 
 def rank_zero_rm(path: Optional[Union[str, Path]]):
-    r"""仅在 rank 0 下删除文件的函数。普通的删除文件操作在分布式文件系统中可能会发生
-    错误，rank 0 下发删除成功后就运行走了，但实际的删除需要 rank 0 的机器 发送到远程
-    文件系统再去执行，这个时候在 rank 0 已经删除成功了，但是在远程文件系统那里这个操
-    作还没完成，rank 1 读取的时候还是读取到存在这个文件；该函数会保证所有进程都检测
-    到 ``path`` 删除之后才退出，请保证不同进程上 ``path`` 是完全一样的，否则会陷入死
-    锁状态。
+    r"""仅在 rank 0 下删除文件的函数，防止在多卡条件下对文件的访问出现冲突。
+
+    普通的删除文件操作在分布式文件系统中可能会发生错误，rank 0 下发删除成功后就运行走
+    了，但实际的删除需要 rank 0 的机器 发送到远程文件系统再去执行，这个时候在 rank
+    0 已经删除成功了，但是在远程文件系统那里这个操作还没完成，rank 1 读取的时候还是读
+    取到存在这个文件；该函数会保证所有进程都检测到 ``path`` 删除之后才退出，请保证不
+    同进程上 ``path`` 是完全一样的，否则会陷入死锁状态。
 
     :param path:
     """

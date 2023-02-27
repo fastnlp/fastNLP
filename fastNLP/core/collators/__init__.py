@@ -16,6 +16,12 @@ __all__ = [
     'PaddleNumberPadder',
     'PaddleTensorPadder',
     'PaddleSequencePadder',
+    'JittorNumberPadder',
+    'JittorTensorPadder',
+    'JittorSequencePadder',
+    'OneflowNumberPadder',
+    'OneflowTensorPadder',
+    'OneflowSequencePadder',
     'get_padded_numpy_array',
 ]
 from .collator import Collator

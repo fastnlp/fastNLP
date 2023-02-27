@@ -46,6 +46,8 @@ def auto_param_call(fn: Callable,
                     signature_fn: Optional[Callable] = None,
                     mapping: Optional[Dict[AnyStr, AnyStr]] = None) -> Any:
     r"""
+    执行 **参数匹配** 的函数。
+
     该函数会根据输入函数的形参名从 ``*args`` （均为 **dict** 类型）中找到匹配的值进
     行调用，如果传入的数据与 ``fn`` 的形参不匹配，可以通过 ``mapping`` 参数进行转
     换。``mapping`` 参数中的一对 ``(key, value)`` 表示在 ``*args`` 中找到 ``key``
@@ -744,8 +746,7 @@ def _flat_nest_dict(d: Mapping, parent_key: Tuple, compress_none_key: bool):
 
 
 def get_launch_time() -> str:
-    """
-    返回当前程序的运行时间，这个时间戳也是保存模型时用的保存时间戳。
+    """返回当前程序的运行时间，这个时间戳也是保存模型时用的保存时间戳。
 
     :return:
     """

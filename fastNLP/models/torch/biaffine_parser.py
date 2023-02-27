@@ -245,18 +245,18 @@ class LabelBilinear(nn.Module):
 class BiaffineParser(GraphParser):
     r"""
     **Biaffine Dependency Parser** 实现。
+
     论文参考 `Deep Biaffine Attention for Neural Dependency Parsing (Dozat and
     Manning, 2016) <https://arxiv.org/abs/1611.01734>`_ 。
 
     :param embed: 单词词典，支持以下几种输入类型：
 
-            - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个
-              词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
-            - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对
-              象，此时就以传入的对象作为 embedding；
-            - :class:`numpy.ndarray`，将使用传入的 ndarray 作为 Embedding 初始
-              化；
-            - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+        - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的
+          维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+        - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时
+          就以传入的对象作为 embedding；
+        - :class:`numpy.ndarray`，将使用传入的 ndarray 作为 Embedding 初始化；
+        - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
 
     :param pos_vocab_size: part-of-speech 词典大小
     :param pos_emb_dim: part-of-speech 向量维度
@@ -268,8 +268,8 @@ class BiaffineParser(GraphParser):
     :param dropout: dropout 概率
     :param encoder: encoder 类别，可选 ``['lstm', 'var-lstm', 'transformer']``。
     :param use_greedy_infer: 是否在 inference 时使用 :meth:`贪心算法
-        <GraphParser.greedy_decoder>`，若为 ``False`` 将使用更加精确但相对缓慢的
-        :meth:`MST算法 <GraphParser.mst_decoder>`。
+        <.GraphParser.greedy_decoder>`，若为 ``False`` 将使用更加精确但相对缓慢的
+        :meth:`MST算法 <.GraphParser.mst_decoder>`。
     """
 
     def __init__(self,
@@ -373,12 +373,12 @@ class BiaffineParser(GraphParser):
             heads 输入到 label 分类器。
         :return: 类型为字典的 parsing 结果，各个键的含义为：
 
-                * ``pred1`` -- **边** 预测 logits，形状为 ``[batch_size,
-                  seq_len, seq_len]``；
-                * ``pred2`` -- **label** 预测 logits，形状为 ``[batch_size,
-                  seq_len, num_label]``；
-                * ``pred3`` -- **heads** 的预测结果，形状为 ``[batch_size,
-                  seq_len]``，在 ``target1=None`` 时预测；
+            * ``pred1`` -- **边** 预测 logits，形状为 ``[batch_size, seq_len,
+              seq_len]``；
+            * ``pred2`` -- **label** 预测 logits，形状为 ``[batch_size, seq_len,
+              num_label]``；
+            * ``pred3`` -- **heads** 的预测结果，形状为 ``[batch_size,
+              seq_len]``，在 ``target1=None`` 时预测；
 
         """
         # prepare embeddings

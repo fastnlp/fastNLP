@@ -16,9 +16,10 @@ __all__ = ['Driver']
 
 class Driver(ABC):
     r"""
-    用来初始化 `Driver` 的基类，所有定制的 `driver` 都需要继承此类；
-    **fastNLP** 提供的 driver 实例都会同时被 :class:`~fastNLP.core.controllers.\
-    Trainer` 和 :class:`~fastNLP.core.controllers.Evaluator` 调用。
+    用来初始化 ``Driver`` 的基类，所有定制的 `driver` 都需要继承此类。
+
+    **fastNLP** 提供的 driver 实例都会同时被 :class:`.Trainer` 和 :class:`.\
+    Evaluator` 调用。
 
     :param model: 训练或者评测的模型，需要注意该模型可能为用户已经使用类似
         :class:`torch.nn.DataParallel` 或者 :class:`torch.nn.parallel.\
@@ -51,26 +52,23 @@ class Driver(ABC):
         :param dataloader: 根据 ``dataloader`` 设置其对应的分布式版本以及可复现版
             本。
         :param dist: 应当为一个字符串，其值应当为以下之一：``[None, "dist",
-            "unrepeatdist"]``，并且根据在 :class:`~fastNLP.core.controllers.\
-            Trainer` 和 :class:`~fastNLP.core.controllers.Evaluator` 中
-            *kwargs* 的参数 ``use_dist_sampler`` 和调用时机不同，对应不同的值：
+            "unrepeatdist"]``，并且根据在 :class:`.Trainer` 和 :class:`.\
+            Evaluator` 中 *kwargs* 的参数 ``use_dist_sampler`` 和调用时机不同，对
+            应不同的值：
 
-            * 当 ``use_dist_sampler`` 为 ``False``，且在 :class:`~fastNLP.\
-              core.controllers.Trainer` 或 :class:`~fastNLP.core.controllers.\
-              Evaluator` **初始化** 中被调用时，参数值为 ``None``，表示不需要考虑
-              当前 ``dataloader`` 切换为分布式状态；
-            * 当 ``use_dist_sampler`` 为 ``True``，且在 :class:`~fastNLP.core.\
-              controllers.Trainer` **初始化** 中被调用时，参数值为 ``"dist"``，表
-              示该 ``dataloader`` 应该保证每个 gpu 上返回的 batch 的数量是一样多
-              的，允许出现少量 sample 在不同 gpu 上出现重复；
-            * 当 ``use_dist_sampler`` 为 ``True``，且在 :class:`~fastNLP.core.\
-              controllers.Evaluator` **初始化** 中被调用时，参数值为
-              ``"unrepeatdist"``，表示该 ``dataloader`` 应该保证所有 gpu 上迭代出
-              来的数据合并起来应该刚好等于原始的数据，允许不同 gpu 上 batch 的数量不
-              一致；
+            * 当 ``use_dist_sampler`` 为 ``False``，且在 :class:`.Trainer` 或
+              :class:`.Evaluator` **初始化** 中被调用时，参数值为 ``None``，表示不
+              需要考虑当前 ``dataloader`` 切换为分布式状态；
+            * 当 ``use_dist_sampler`` 为 ``True``，且在 :class:`.Trainer` 的
+              **初始化** 中被调用时，参数值为 ``"dist"``，表示该 ``dataloader`` 应
+              该保证每个 gpu 上返回的 batch 的数量是一样多的，允许出现少量 sample
+              在不同 gpu 上出现重复；
+            * 当 ``use_dist_sampler`` 为 ``True``，且在 :class:`.Evaluator` 的
+              **初始化** 中被调用时，参数值为 ``"unrepeatdist"``，表示该
+              ``dataloader`` 应该保证所有 gpu 上迭代出来的数据合并起来应该刚好等于
+              原始的数据，允许不同 gpu 上 batch 的数量不一致；
             * 当 **断点重训加载** 中调用 :meth:`load_checkpoint` 时，该函数也会被
-              调用，且 ``dist`` 值为 :class:`~fastNLP.core.samplers.\
-              ReproducibleSampler` 或 :class:`~fastNLP.core.samplers.\
+              调用，且 ``dist`` 值为 :class:`.ReproducibleSampler` 或 :class:`.\
               ReproducibleBatchSampler`，此时表示需要用 ``dist`` 代表的 sampler
               或 batch_sampler 重新实例化一个新的 dataloader；
 
@@ -78,12 +76,10 @@ class Driver(ABC):
             要保证返回的 dataloader 可以保存当前的迭代状态，使得该状态可以加载到一个
             全新的 dataloader 中然后恢复其状态。
         :return: 应当返回一个被替换 sampler 后的 **新的** dataloader 对象 (注意此
-            处一定需要返回一个新的 dataloader 对象) ；此外，如果传入的
-            ``dataloader`` 中是 :class:`~fastNLP.core.samplers.\
-            ReproducibleSampler` 或者 :class:`~fastNLP.core.samplers.\
-            ReproducibleBatchSampler` 需要 **重新初始化** 一个放入返回的
-            dataloader 中。如果 ``dist`` 为空，且 ``reproducible`` 为
-            ``False``，可直接返回原对象。
+            处一定需要返回一个新的对象) ；此外，如果传入的 ``dataloader`` 中是
+            :class:`.ReproducibleBatchSampler` 或 :class:`.ReproducibleSampler`
+            则需要 **重新初始化** 一个放入返回的 dataloader 中。如果 ``dist`` 为
+            空，且 ``reproducible`` 为 ``False``，可直接返回原对象。
         """
         if dist is None and reproducible is False:
             return dataloader
@@ -114,18 +110,17 @@ class Driver(ABC):
                    signature_fn: Optional[Callable]) -> Dict:
         r"""
         通过调用 ``fn`` 来实现训练时的前向传播过程；
-        注意 :class:`~fastNLP.core.controllers.Trainer` 和 :class:`~fastNLP.\
-        core.controllers.Evaluator` 会调用该函数来实现网络的前向传播过程，其中传入
-        该函数的参数 ``fn`` 是函数 :meth:`get_model_call_fn` 所返回的函数。
+        注意 :class:`.Trainer` 和 :class:`.Evaluator` 会调用该函数来实现网络的前向
+        传播过程，其中传入该函数的参数 ``fn`` 是函数 :meth:`get_model_call_fn` 所
+        返回的函数。
 
         :param batch: 当前的一个 batch 的数据；可以为字典或者其它类型。
         :param fn: 调用该函数进行一次计算。
-        :param signature_fn: 由 :class:`~fastNLP.core.controllers.Trainer` 传入
-            的用于网络前向传播一次的签名函数，因为当 batch 是一个 :class:`Dict` 的'
-            时候，我们会自动调用 :func:`fastNLP.core.utils.auto_param_call` 函
-            数，而一些被包裹的模型需要暴露其真正的函数签名，例如
-            :class:`DistributedDataParallel` 的调用函数是 ``forward``，但是需要其
-            函数签名为 ``model.module.forward``。
+        :param signature_fn: 由 :class:`.Trainer` 传入的用于网络前向传播一次的签名
+            函数，因为当 ``batch`` 是一个 :class:`Dict` 的时候，我们会自动调用
+            :func:`.auto_param_call` 函数，而一些被包裹的模型需要暴露其真正的函数签
+            名，例如 :class:`DistributedDataParallel` 的调用函数是 ``forward``，
+            但是需要其 函数签名为 ``model.module.forward``。
         :return: 由 ``fn`` 返回的结果（应当为一个 :class:`dict` 或者
             :class:`dataclass`，但是不需要我们去检查）。
         """
@@ -136,11 +131,10 @@ class Driver(ABC):
     @abstractmethod
     def get_model_call_fn(self, fn: str) -> Tuple:
         r"""
-        该函数会接受 :class:`~fastNLP.core.controllers.Trainer` 的 ``train_fn``
-        或者 :class:`~fastNLP.core.controllers.Evaluator` 的 ``evaluate_fn``，
-        返回一个实际用于调用 :meth:`model_call` 时传入的函数参数；该函数会由
-        :class:`~fastNLP.core.controllers.Trainer` 和 :class:`~fastNLP.core.\
-        controllers.Evaluator` 在 :func:`driver.setup` 函数之后调用。
+        该函数会接受 :class:`Trainer` 的 ``train_fn`` 或者 :class:`.Evaluator`
+        的 ``evaluate_fn``，返回一个调用 :meth:`model_call` 时实际传入的函数参数；
+        该函数会由 :class:`.Trainer` 和 :class:`.Evaluator` 在 :func:`Driver.\
+        setup` 函数之后调用。
 
         之所以设置该函数的目的在于希望将具体的 model_call function 从 driver 中抽离
         出来，然后将其附着在 ``Trainer`` 或者 ``Evaluator`` 身上；
@@ -155,18 +149,16 @@ class Driver(ABC):
         这一函数应当通过参数 ``fn`` 来判断应当返回的实际的调用的函数，具体逻辑如下所
         示：
 
-            1. 如果 ``fn`` 为 "train_step" 或 "evaluate_step"，那么对传入的模型进
-               行检测，如果模型未定义方法 ``fn``，则默认调用模型的 :meth:`forward`
-               函数，然后给出 warning；
-            2. 如果 ``fn`` 是其他字符串，那么如果模型没有定义方法 ``fn`` 则直接报
-               错；
+        1. 如果 ``fn`` 为 "train_step" 或 "evaluate_step"，那么对传入的模型进行检
+           测，如果模型未定义方法 ``fn``，则默认调用模型的 :meth:`forward` 函数，然
+           后给出 warning；
+        2. 如果 ``fn`` 是其他字符串，那么如果模型没有定义方法 ``fn`` 则直接报错；
 
-        注意不同的 driver 需要做额外的检测处理，例如在 :class:`~fastNLP.core.\
-        drivers.torch_driver.TorchDDPDriver` 中，当传入的模型本身就是
-        :class:`DistributedDataParallel` 时，我们只能调用模型的 :meth:`forward`
-        函数，因此需要额外的 warning；这一点特别需要注意的问题在于 driver 自己在
-        setup 时也会对模型进行改变（:class:`~fastNLP.core.drivers.torch_driver.\
-        TorchDDPDriver`），因此可能需要额外标记最初传入 driver 的模型是哪种形式的。
+        注意不同的 driver 需要做额外的检测处理，例如在 :class:`.TorchDDPDriver`
+        中，当传入的模型本身就是 :class:`DistributedDataParallel` 时，我们只能调用
+        模型的 :meth:`forward` 函数，因此需要额外的 warning；特别需要注意的问题在
+        于 driver 自己在 setup 时也会对模型进行改变（:class:`.TorchDDPDriver`），
+        因此可能需要额外标记最初传入 driver 的模型是哪种形式的。
 
         :param fn: 一个字符串，该函数通过该字符串判断要返回模型的哪种方法
         :return: 一个元组，包含两个函数，用于在调用 :meth:`model_call` 时传入
@@ -190,8 +182,8 @@ class Driver(ABC):
     def optimizers(self) -> List:
         r"""
         如下所示，driver 返回的 :attr:`optimizers` 一定是一个 :class:`List`，如果
-        用户直接向 :class:`~fastNLP.core.controllers.Trainer` 传入一个单独的
-        optimizer，我们会使用一个 List 将其包裹；
+        用户直接向 :class:`.Trainer` 传入一个单独的 optimizer，我们会使用一个 List
+        将其包裹；
 
         :return: List[optimizer0, optimizer1, optimizer2, ...]
         """
@@ -360,8 +352,8 @@ class Driver(ABC):
             的文件。把 model 相关的内容放入到 ``FASTNLP_MODEL_FILENAME`` 文件中，
             将传入的 ``states`` 以及自身产生的其它状态一并保存在
             ``FASTNLP_CHECKPOINT_FILENAME`` 里面。
-        :param states: 由 :class:`~fastNLP.core.controllers.Trainer` 传入的一个
-            字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态。
+        :param states: 由 :class:`.Trainer` 传入的一个字典，其中已经包含了为了实现
+            断点重训所需要保存的其它对象的状态。
         :param dataloader: 正在使用的 dataloader。
         :param only_state_dict: 是否只保存模型的参数，当 ``should_save_model``
             为 ``False``，该参数无效。
@@ -383,8 +375,8 @@ class Driver(ABC):
         断点重训的加载函数，该函数会负责读取数据，并且恢复 **优化器** 、**sampler**
         的状态和 **模型** （如果 ``should_load_model`` 为 True）以及其它在
         :meth:`save_checkpoint` 函数中执行的保存操作，然后将一个 state 字典返回给
-        :class:`~fastNLP.core.controllers.Trainer` （字典的内容为函数
-        :meth:`save_checkpoint` 接受到的 ``states`` ）。
+        :class:`.Trainer` （字典的内容为函数 :meth:`save_checkpoint` 接受到的
+        ``states`` ）。
 
         该函数应该在所有 rank 上执行。
 
@@ -414,14 +406,14 @@ class Driver(ABC):
                 返回的 dataloader 还会产生的 batch 数量 + batch_idx_in_epoch =
                 原来不断点训练时的 batch 的总数
 
-              由于 ``返回的 dataloader 还会产生的 batch 数`` 在 ``batch_size``
+              由于 **返回的 dataloader 还会产生的 batch 数** 在 ``batch_size``
               与 ``drop_last`` 参数给定的情况下无法改变，因此只能通过调整
               ``batch_idx_in_epoch`` 这个值来使等式成立。一个简单的计算原则如下：
 
-                * drop_last 为 ``True`` 时，等同于 floor(sample_in_this_rank/
-                  batch_size) - floor(num_left_samples/batch_size)；
-                * drop_last 为 ``False`` 时，等同于 ceil(sample_in_this_rank/
-                  batch_size) - ceil(num_left_samples/batch_size)。
+              * drop_last 为 ``True`` 时，等同于 floor(sample_in_this_rank/
+                batch_size) - floor(num_left_samples/batch_size)；
+              * drop_last 为 ``False`` 时，等同于 ceil(sample_in_this_rank/
+                batch_size) - ceil(num_left_samples/batch_size)。
         """
 
     @staticmethod
@@ -453,6 +445,7 @@ class Driver(ABC):
     def unwrap_model(self):
         r"""
         保证用户拿到的模型一定是最原始的模型；
+
         注意因为我们把保存模型的主要逻辑和代码移到了 `Driver` 中，因此在
         :meth:`save_model` 函数中，一定要先调用此函数来保证我们保存的模型一定是
         最为原始的模型；需要注意用户本身传入的模型就是经过类似 :class:`torch.nn.\
@@ -467,8 +460,9 @@ class Driver(ABC):
     def move_model_to_device(model, device):
         r"""
         用来将模型转移到指定的 ``device`` 上；
+
         之所以写成 :class:`staticmethod`，是因为一方面在 `Driver` 中我们要使用
-        :meth:`unwrap_model` 来拿到最原始的模型，另一方面，在 :meth`save_model`
+        :meth:`unwrap_model` 来拿到最原始的模型，另一方面，在 :meth:`save_model`
         中，我们需要先将模型移到 cpu 后，又再移到 gpu 上，因此不适宜在该函数内部调
         用 :meth:`unwrap_model`，而是将 ``model`` 作为该函数的参数。
         """

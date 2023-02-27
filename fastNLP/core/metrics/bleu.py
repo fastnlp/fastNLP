@@ -281,7 +281,7 @@ def _get_brevity_penalty(pred_len: float, references_len: float) -> float:
 
 
 class BLEU(Metric):
-    r"""计算 bleu 的 metric 。
+    r"""计算 **bleu** 的 ``Metric`` 。
 
     :param n_gram: Gram 的范围是 ``[1, 4]``
     :param smooth: 是否选择 **smoothing** 计算
@@ -292,25 +292,26 @@ class BLEU(Metric):
         函数时传入的参数决定具体的 backend ，一般情况下直接使用 ``'auto'`` 即可。
     :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相
         同的 element 的数字聚合后再得到 metric，当 ``backend`` 不支持分布式时，该参
-        数无意义。如果为 ``None``，将在 :class:`~fastNLP.core.controllers.\
-        Evaluator` 中根据 ``sampler`` 是否使用分布式进行自动设置。
+        数无意义。如果为 ``None``，将在 :class:`.Evaluator` 中根据 ``sampler`` 是
+        否使用分布式进行自动设置。
     :param tokenizer: 用户可以传入 Callable 函数进行分词。如果是 ``str``，则按照传
         入的 str 选择对应的 tokenizer，默认选项有 ``['none','13a','zh', 'char',
         'intl']``：
 
-        * 值为 ``"none"`` 时
-         tokenizer 将只进行分词处理，不进行其他处理。
-        * 值为 ``"13a"`` 时
-         将对于句子中的特殊符号，标点数字进行正则化再进行分词，模仿的是 ``Moses`` 的
-         ``mteval-v13a``。
-        * 值为 ``"zh"`` 时
-         输入的数据为中文句子，tokenizer 为在每一个汉字前后加入空格，以做切分。
-        * 值为 ``"char"`` 时
-         tokenizer 会在输入句子的每一个 char 前后加入空格，以 char 为单位进行切分。
-        * 值为 ``"intl"`` 时
-         使用国际化进行词语切分，规则仿照于 ``13a``。
-         如果是 ``Callable``，则选择用户自定义的 tokenizer。
-         如果是 ``None``，则会再第一次 update 时选择第一个 sample 的语言进行选择。
+        * 值为 ``"none"`` 时，
+          tokenizer 将只进行分词处理，不进行其他处理。
+        * 值为 ``"13a"`` 时，
+          将对于句子中的特殊符号，标点数字进行正则化再进行分词，模仿的是 ``Moses``
+          的 ``mteval-v13a``。
+        * 值为 ``"zh"`` 时，
+          输入的数据为中文句子，tokenizer 为在每一个汉字前后加入空格，以做切分。
+        * 值为 ``"char"`` 时，
+          tokenizer 会在输入句子的每一个 char 前后加入空格，以 char 为单位进行切
+          分。
+        * 值为 ``"intl"`` 时，
+          使用国际化进行词语切分，规则仿照于 ``13a``。
+          如果是 ``Callable``，则选择用户自定义的 tokenizer。
+          如果是 ``None``，则会再第一次 update 时选择第一个 sample 的语言进行选择。
     :param lowercase: 在设定 tokenizer 时是否将字母小写处理。
     """
 
@@ -380,10 +381,11 @@ class BLEU(Metric):
         r"""
         :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
 
-        :param predictions: 预测的 ``sentence``，类型为``Sequence``，长度可变，假
-            设为 ``L``。可以为 :class:`str` 类型，也可以为 :class:`list` 类型。
-        :param references: 答案译文，type为``Sequence``，长度必须也为``L``，保持和
-            ``predictions`` 一致，每一个元素也是一个``Sequence``。
+        :param predictions: 预测的 ``sentence``，类型为 ``Sequence``，长度可变，
+            假设为 ``L``。可以为 :class:`str` 类型，也可以为 :class:`list` 类型。
+        :param references: 答案译文，类型为 ``Sequence``，长度必须也为 ``L``，
+            保持和 ``predictions`` 一致，每一个元素也是一个 ``Sequence``。
+
             * references 可以为 :class:`str` 类型，但是该情况下 predictions 也必
               须为 :class:`str` 类型。
             * references 可以为 :class:`list[str]` 类型，如果 predictions 只有一

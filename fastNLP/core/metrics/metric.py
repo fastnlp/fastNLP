@@ -30,17 +30,17 @@ class Metric:
 
         如果您需要自定义自己的 :class:`Metric`，并且有分布式训练的需求，请确保：
 
-            1. 调用 :meth:`~Metric.register_element` 函数来注册需要 gather 的张量
-            2. 或在 :meth:`~Metric.get_metric` 函数中调用 :meth:`~Metric.\
-               all_gather_object` 函数来手动收集不同设备上的数据。
+        1. 调用 :meth:`~Metric.register_element` 函数来注册需要 gather 的张量
+        2. 或在 :meth:`~Metric.get_metric` 函数中调用 :meth:`~Metric.\
+           all_gather_object` 函数来手动收集不同设备上的数据。
 
     :param backend: 目前支持五种类型的 backend, ``['torch', 'paddle', 'jittor',
         'oneflow', 'auto']``。其中 ``'auto'`` 表示根据实际调用 :meth:`update` 函
         数时传入的参数决定具体的 backend ，大部分情况下直接使用 ``'auto'`` 即可。
     :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相
         同的 element 的数字聚合后再得到 metric，当 ``backend`` 不支持分布式时，该参
-        数无意义。如果为 ``None``，将在 :class:`~fastNLP.core.controllers.\
-        Evaluator` 中根据 ``sampler`` 是否使用分布式进行自动设置。
+        数无意义。如果为 ``None``，将在 :class:`.Evaluator` 中根据 ``sampler``
+        是否使用分布式进行自动设置。
     """
 
     def __init__(self,
@@ -87,7 +87,7 @@ class Metric:
             Tensor`；如果 ``'backend'`` 为 ``'paddle'`` 则该对象为
             :class:`paddle.Tensor`；如果 ``backend`` 为  ``'jittor'`` , 则该对象
             为 :class:`jittor.Var`。一般情况下直接默认为 ``'auto'`` 就行了，
-            **fastNLP** 会根据实际调用 :meth`Metric.update`  函数时传入的参数进行
+            **fastNLP** 会根据实际调用 :meth:`Metric.update`  函数时传入的参数进行
             合理的初始化，例如当传入的参数中只包含 :class:`torch.Tensor` 这一种
             tensor 时（可以有其它非 tensor 类型的输入）则认为 ``backend`` 为
             ``'torch'``；只包含 :class:`jittor.Var` 这一种 tensor 时（可以有其它

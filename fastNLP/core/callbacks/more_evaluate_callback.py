@@ -8,8 +8,10 @@ __all__ = ['MoreEvaluateCallback']
 
 
 class MoreEvaluateCallback(HasMonitorCallback):
-    r"""当评测时需要调用不同的 ``evaluate_fn`` （例如在大部分生成任务中，一般使用训
-    练 loss 作为训练过程中的 evaluate；但同时在训练到一定 epoch 数量之后，会让模型生
+    r"""在训练过程中调用额外的 ``evaluate_fn`` 函数的 ``Callback``。
+
+    当评测时需要调用不同的 ``evaluate_fn`` （例如在大部分生成任务中，一般使用训练
+    loss 作为训练过程中的 evaluate；但同时在训练到一定 epoch 数量之后，会让模型生
     成的完整的数据评测 bleu 等。此刻就可能需要两种不同的 ``evaluate_fn`` ），只使用
     Trainer 无法满足需求，可以通过调用本 callback 进行。如果需要根据本 callback 中
     的评测结果进行模型保存，请传入 ``topk`` 以及 ``topk_monitor`` 等相关参数。可以
@@ -23,8 +25,8 @@ class MoreEvaluateCallback(HasMonitorCallback):
 
     :param dataloaders: 需要评估的数据
     :param metrics: 使用的 metrics 。
-    :param evaluate_every: 用来控制 ``Trainer`` 内部的 ``Evaluator`` 验证的频率，
-        其可以为负数、正数或者函数：
+    :param evaluate_every: 用来控制 :class:`.Trainer` 内部的 :class:`.Evaluator`
+        验证的频率，其可以为负数、正数或者函数：
 
         1. 为负数时表示每隔几个 ``epoch`` evaluate 一次；
         2. 为正数则表示每隔几个 ``batch`` evaluate 一次；
@@ -43,11 +45,11 @@ class MoreEvaluateCallback(HasMonitorCallback):
             ...     else:
             ...         return False
 
-            该函数表示当每经过 1000 个 batch，``Trainer`` 中内置的 ``Evaluator``
-            就会验证一次；
+            该函数表示当每经过 1000 个 batch，:Class:`.Trainer` 中内置的
+            :class:`.Evaluator` 就会验证一次；
 
             另一个需要注意的事情在于该函数会在每一次 batch 的结尾进行调用，当该函数
-            返回 ``True`` 时，``Evaluator`` 才会进行验证；
+            返回 ``True`` 时，:class:`.Evaluator` 才会进行验证；
     :param watch_monitor: 这个值用来表示监控的 Trainer 中 evaluate 的结果，当该值
         不为 ``None``，``evaluate_every`` 失效。本参数的意义是，当检测到 Trainer
         中 evaluate results 的 ``{watch_monitor}`` 的结果更好时，则进行一次
@@ -57,7 +59,7 @@ class MoreEvaluateCallback(HasMonitorCallback):
            完全一致的名称，将使用 **最长公共字符串算法** 找到最匹配的那个作为
            monitor ；
         2. 一个函数，接受参数为 evaluation 的结果（字典类型），返回一个 float 值作
-           为 monitor 的结果，如果当前结果中没有相关的monitor 值请返回 ``None``；
+           为 monitor 的结果，如果当前结果中没有相关的 monitor 值请返回 ``None``；
     :param watch_monitor_larger_better: ``watch_monitor`` 是否越大越好；
     :param evaluate_fn: 用来控制 `Evaluator` 在评测的前向传播过程中是调用哪一个函
         数，例如是 :meth:`model.evaluate_step` 还是 :meth:`model.forward`：
@@ -84,9 +86,9 @@ class MoreEvaluateCallback(HasMonitorCallback):
         不为 ``None`` 时，该参数无效。
     :param save_object: 可选 ``['trainer', 'model']``，表示在保存时的保存对象为
         ``trainer+model`` 还是 只是 ``model``。如果保存 ``trainer`` 对象的话，将
-        会保存 :class:`~fastNLP.core.controllers.Trainer` 的相关状态，之后可以通
-        过 :meth:`Trainer.load_checkpoint` 加载该断点继续进行训练。如果保存的是
-        ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
+        会保存 :class:`.Trainer` 的相关状态，之后可以通过 :meth:`.Trainer.\
+        load_checkpoint` 加载该断点继续进行训练。如果保存的是``Model`` 对象，则可以
+        通过 :meth:`.Trainer.load_model` 加载该模型权重。
     :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函
         数应当接受一个文件夹作为参数，不返回任何东西。如果传入了 ``model_save_fn``
         函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运
@@ -96,9 +98,8 @@ class MoreEvaluateCallback(HasMonitorCallback):
         文件，记录当前的 results。仅在设置了 ``topk`` 的场景下有用，默认为
         ``True``。
     :param save_kwargs: 一个字典，表示更多的保存相关的参数。
-    :param kwargs: 其它与 :class:`~fastNLP.core.controllers.Evaluator` 相关的初
-        始化参数，如果不传入，将从 :class:`~fastNLP.core.controllers.Trainer` 中
-        获取。
+    :param kwargs: 其它与 :class:`.Evaluator` 相关的初始化参数，如果不传入，将从
+        :class:`.Trainer` 中获取。
     """
 
     def __init__(self,

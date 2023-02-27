@@ -1,8 +1,3 @@
-r"""
-.. todo::
-    doc
-"""
-
 import json
 import os
 from collections import defaultdict
@@ -32,30 +27,30 @@ STATIC_EMBED_FILENAME = 'static.txt'
 class StaticEmbedding(TokenEmbedding):
     r"""
     ``StaticEmbedding`` 组件。给定预训练 embedding 的名称或路径，根据 ``vocab``
-    从 embedding 中抽取相应的数据（只会将出现在 ``vocab`` 中的词抽取出来，如果没有找
-    到，则会随机初始化一个值；但如果该 word 是被标记为 ``no_create_entry`` 的话，则
-    不会单独创建一个值，而是被指向 ``<UNK>`` 的 index）。当前支持自动下载的预训练
-    vector 有:
+    从 embedding 中抽取相应的数据。
 
-        - ``en`` -- 实际为 ``en-glove-840b-300d`` （常用）
-        - ``en-glove-6b-50d`` -- **glove** 官方的 50d 向量
-        - ``en-glove-6b-100d`` -- **glove** 官方的 100d 向量
-        - ``en-glove-6b-200d`` -- **glove** 官方的 200d 向量
-        - ``en-glove-6b-300d`` -- **glove** 官方的 300d 向量
-        - ``en-glove-42b-300d`` -- **glove** 官方使用 42B 数据训练版本
-        - ``en-glove-840b-300d``
-        - ``en-glove-twitter-27b-25d``
-        - ``en-glove-twitter-27b-50d``
-        - ``en-glove-twitter-27b-100d``
-        - ``en-glove-twitter-27b-200d``
-        - ``en-word2vec-300d`` -- **word2vec** 官方发布的 300d 向量
-        - ``en-fasttext-crawl`` -- **fasttext** 官方发布的 300d 英文预训练
-        - ``cn-char-fastnlp-100d`` -- **fastNLP** 训练的 100d 的 character
-          embedding
-        - ``cn-bi-fastnlp-100d`` -- **fastNLP** 训练的 100d 的 bigram embedding
-        - ``cn-tri-fastnlp-100d`` -- **fastNLP** 训练的 100d 的 trigram
-          embedding
-        - ``cn-fasttext`` -- **fasttext** 官方发布的 300d 中文预训练 embedding
+    ``StaticEmbedding`` 只会将出现在 ``vocab`` 中的词抽取出来，如果没有找到则会随机
+    初始化一个值；但如果该 word 是被标记为 ``no_create_entry`` 的话，则不会单独创建
+    一个值，而是被指向 ``<UNK>`` 的 index）。当前支持自动下载的预训练 vector 有:
+
+    - ``en`` -- 实际为 ``en-glove-840b-300d`` （常用）
+    - ``en-glove-6b-50d`` -- **glove** 官方的 50d 向量
+    - ``en-glove-6b-100d`` -- **glove** 官方的 100d 向量
+    - ``en-glove-6b-200d`` -- **glove** 官方的 200d 向量
+    - ``en-glove-6b-300d`` -- **glove** 官方的 300d 向量
+    - ``en-glove-42b-300d`` -- **glove** 官方使用 42B 数据训练版本
+    - ``en-glove-840b-300d``
+    - ``en-glove-twitter-27b-25d``
+    - ``en-glove-twitter-27b-50d``
+    - ``en-glove-twitter-27b-100d``
+    - ``en-glove-twitter-27b-200d``
+    - ``en-word2vec-300d`` -- **word2vec** 官方发布的 300d 向量
+    - ``en-fasttext-crawl`` -- **fasttext** 官方发布的 300d 英文预训练
+    - ``cn-char-fastnlp-100d`` -- **fastNLP** 训练的 100d 的 character
+      embedding
+    - ``cn-bi-fastnlp-100d`` -- **fastNLP** 训练的 100d 的 bigram embedding
+    - ``cn-tri-fastnlp-100d`` -- **fastNLP** 训练的 100d 的 trigram embedding
+    - ``cn-fasttext`` -- **fasttext** 官方发布的 300d 中文预训练 embedding
 
     Example::
 
@@ -79,14 +74,14 @@ class StaticEmbedding(TokenEmbedding):
 
     :param vocab: 词表。``StaticEmbedding`` 只会加载包含在词表中的词的词向量，在预
         训练向量中没找到的使用随机初始化
-    :param model_dir_or_name: 可以有两种方式调用预训练好的 :class:`StaticEmbedding` ：
+    :param model_dir_or_name: 有两种方式调用预训练好的 :class:`StaticEmbedding`：
 
-            1. 传入 embedding 文件夹（文件夹下应该只有一个以 **.txt** 作为后缀的文
-               件）或文件路径；
-            2. 传入 embedding 的名称，第二种情况将自动查看缓存中是否存在该模型，没有
-               的话将自动下载;
-            3. 如果输入为 ``None`` 则使用 ``embedding_dim`` 的维度随机初始化一个
-               embedding；
+        1. 传入 embedding 文件夹（文件夹下应该只有一个以 **.txt** 作为后缀的文件）
+           或文件路径；
+        2. 传入 embedding 的名称，第二种情况将自动查看缓存中是否存在该模型，没有的话
+           将自动下载;
+        3. 如果输入为 ``None`` 则使用 ``embedding_dim`` 的维度随机初始化一个
+           embedding；
     :param embedding_dim: 随机初始化的 embedding 的维度，当该值为大于 0 的值时，将
         忽略 ``model_dir_or_name``。
     :param requires_grad: 是否需要梯度。
@@ -317,9 +312,9 @@ class StaticEmbedding(TokenEmbedding):
         两个元素）还是glove格式的数据。
 
         :param str embed_filepath: 预训练的embedding的路径。
-        :param vocab: 词表 :class:`~fastNLP.Vocabulary` 类型，读取出现在 vocab
-            中的词的 embedding。没有出现在 vocab 中的词的 embedding 将通过找到的词
-            的 embedding 的正态分布采样出来，以使得整个 Embedding 是同分布的。
+        :param vocab: 词表 :class:`.Vocabulary` 类型，读取出现在 vocab 中的词的
+            embedding。没有出现在 vocab 中的词的 embedding 将通过找到的词的
+            embedding 的正态分布采样出来，以使得整个 Embedding 是同分布的。
         :param dtype: 读出的 embedding 的类型
         :param str padding: 词表中 padding 的 token
         :param str unknown: 词表中 unknown 的 token
@@ -451,8 +446,7 @@ class StaticEmbedding(TokenEmbedding):
 
         :param folder: 会在该 ``folder`` 下生成三个文件：
 
-            - ``vocab.txt``，可以通过 :meth:`fastNLP.core.Vocabulary.load`
-              读取；
+            - ``vocab.txt``，可以通过 :meth:`.Vocabulary.load` 读取；
             - ``embedding.txt`` 按照 *word2vec* 的方式存储，以空格的方式隔开元
               素，第一行只有两个元素，剩下的行首先是 word 然后是各个维度的值；
             - ``static_embed_hyper.json``，:class:`StaticEmbedding` 的超参

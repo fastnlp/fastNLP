@@ -11,15 +11,15 @@ __all__ = ['Accuracy', 'TransformersAccuracy']
 
 
 class Accuracy(Metric):
-    r"""计算 准确率 的 metric 。
+    r"""计算 **准确率** 的 ``Metric`` 。
 
     :param backend: 目前支持五种类型的backend, ``['auto', 'torch', 'paddle',
         'jittor', 'oneflow']``。其中 ``'auto'`` 表示根据实际调用 :meth:`update`
         函数时传入的参数决定具体的 backend ，一般情况下直接使用 ``'auto'`` 即可。
     :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相
         同的 element 的数字聚合后再得到 metric，当 ``backend`` 不支持分布式时，该参
-        数无意义。如果为 ``None``，将在 :class:`~fastNLP.core.controllers.\
-        Evaluator` 中根据 ``sampler`` 是否使用分布式进行自动设置。
+        数无意义。如果为 ``None``，将在 :class:`.Evaluator` 中根据 ``sampler`` 是
+        否使用分布式进行自动设置。
     """
 
     def __init__(self,

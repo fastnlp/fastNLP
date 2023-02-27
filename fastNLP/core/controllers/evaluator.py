@@ -1,15 +1,3 @@
-r"""
-``Evaluator`` 是新版 **fastNLP** 中用来进行评测模型的评测器，其与 ``Trainer`` 相对
-应，二者共同构建起了 **fastNLP** 中 **训练** 和 **评测** 的框架。``Evaluator`` 的
-整体架构与 ``Trainer`` 类似，也是利用 ``Driver`` 来负责底层的评测逻辑。通过使用
-``Evaluator``，您可以快速、方便、准确地对您的模型进行全方位地评测。
-
-.. note::
-
-    ``Trainer`` 通过来自己内部内置一个 ``Evaluator`` 实例来支持在训练过程中进行验证
-    的功能；
-"""
-
 import io
 import os
 from dataclasses import is_dataclass
@@ -35,18 +23,29 @@ __all__ = ['Evaluator']
 
 
 class Evaluator:
-    r"""用于评测模型性能好坏的评测器；
+    r"""用于评测模型性能好坏的评测器。
+
+    ``Evaluator`` 是新版 **fastNLP** 中用来评测模型的评测器，与 :class:`.\
+    Trainer` 相对应，二者共同构建起了 **fastNLP** 中 **训练** 和 **评测** 的框架。
+    ``Evaluator`` 的整体架构与 :class:`.Trainer` 类似，也是利用 :class:`.Driver`
+    来负责底层的评测逻辑。通过使用 ``Evaluator``，您可以快速、方便、准确地对您的模型
+    进行全方位地评测。
 
     .. note::
 
-        ``Evaluator`` 与 ``Trainer`` 类似，都是使用 ``Driver`` 作为底层来实现评测
-        或者训练，因此大多数与 ``Trainer`` 同名的参数的意义和使用都与 ``Trainer``
-        中的参数相同，对于这些参数，您可以参考 ``Trainer`` 的文档来获取更详细的信
-        息；详见 :class:`~fastNLP.core.controllers.trainer.Trainer`；
+        :class:`.Trainer` 通过来自己内部内置一个 ``Evaluator`` 实例来
+        支持在训练过程中进行验证的功能；
 
-    :param model: 训练所需要的模型，例如 ``torch.nn.Module``，等价于 ``Trainer``
-        中的 ``model`` 参数；当 ``driver`` 参数传入为一个 :class:`~fastNLP.core.\
-        drivers.Driver` 对象时，``model`` 参数将被忽略。
+    .. note::
+
+        ``Evaluator`` 与 :class:`.Trainer` 类似，都是使用 :class:`.Driver` 作为
+        底层来实现评测或者训练，因此大多数与 :class:`.Trainer` 同名的参数的意义和使
+        用都与 :class:`.Trainer` 中的参数相同，对于这些参数，您可以参考 :class:`.\
+        Trainer` 的文档来获取更详细的信息。
+
+    :param model: 训练所需要的模型，例如 ``torch.nn.Module``，等价于 :class:`.\
+        Trainer` 中的 ``model`` 参数；当 ``driver`` 参数为一个 :class:`.Driver`
+        对象时，``model`` 参数将被忽略。
     :param dataloaders: 用于评测的数据集。如果为多个，您需要使用 ``dict`` 传入，即
         对每一个数据集标上用于标识它们的标签；也可以使用 evaluate_dataloaders作为参
         数的名称。
@@ -54,18 +53,17 @@ class Evaluator:
         为一个 ``metric`` 的名称，``value`` 为具体的 ``Metric`` 对象。目前支持以
         下 metrics：
 
-        1. fastNLP 自己的 ``metric``：详见 :class:`~fastNLP.core.metrics.\
-           Metric`；
+        1. fastNLP 自己的 ``metric``：详见 :class:`.Metric`；
         2. torchmetrics；
         3. allennlp.training.metrics；
         4. paddle.metric；
 
-    :param driver: 等价于 ``Trainer`` 中的 ``driver`` 参数；
+    :param driver: 等价于 :class:`.Trainer` 中的 ``driver`` 参数；
 
         .. note::
 
-            如果在您的脚本中在初始化 ``Evaluator`` 前也初始化了 ``Trainer`` 进行训
-            练，那么强烈建议您直接将 ``trainer.driver`` 传入 ``Evaluator`` 当做该
+            如果在您的脚本中在初始化 ``Evaluator`` 前也初始化了 :class:`.Trainer`
+            进行训练，那么强烈建议您直接将 ``trainer.driver`` 传入 ``Evaluator`` 当做该
             参数的值；
 
             .. code-block::
@@ -87,8 +85,7 @@ class Evaluator:
     :param device: 等价于 ``Trainer`` 中的 ``device`` 参数；
     :param evaluate_batch_step_fn: 您可以传入该参数来定制每次评测一个 batch 的数据
         时所执行的函数。该函数应接受的两个参数为 ``evaluator`` 和 ``batch``，
-        不需要有返回值；可以参考 :meth:`~fastNLP.core.controllers.loops.\
-        evaluate_batch_loop.EvaluateBatchLoop.batch_step_fn`；
+        不需要有返回值；可以参考 :meth:`.EvaluateBatchLoop.batch_step_fn`；
     :param evaluate_fn: 用来控制 ``Evaluator`` 在评测的前向传播过程中调用的是哪一
         个函数，例如对于 pytorch 而言，通过该参数确定使用的是 :meth:`model.\
         evaluate_step` 还是 :meth:`model.forward` （不同训练框架所使用的的前向传播
@@ -126,14 +123,17 @@ class Evaluator:
     :param fp16: 是否在评测时使用 fp16 混合精度；
     :param verbose: 是否打印 evaluate 的结果；
     :kwargs:
-        * *torch_kwargs* -- 等价于 ``Trainer`` 中的 ``torch_kwargs`` 参数；
-        * *paddle_kwargs* -- 等价于 ``Trainer`` 中的 ``paddle_kwargs`` 参数；
-        * *fairscale_kwargs* -- 等价于 ``Trainer`` 中的 ``fairscale_kwargs`` 参
-          数；
-        * *deepspeed_kwargs* -- 等价于 ``Trainer`` 中的 ``deepspeed_kwargs`` 参
-          数；
-        * *oneflow_kwargs* -- 等价于 ``Trainer`` 中的 ``oneflow_kwargs`` 参数；
-        * *data_device* -- 等价于 ``Trainer`` 中的 ``data_device`` 参数；
+        * *torch_kwargs* -- 与 :class:`.Trainer` 中的 ``torch_kwargs`` 参数
+          等同；
+        * *paddle_kwargs* -- 与 :class:`.Trainer` 中的 ``paddle_kwargs`` 参数
+          等同；
+        * *fairscale_kwargs* -- 与 :class:`.Trainer` 中的 ``fairscale_kwargs``
+          参数等同；
+        * *deepspeed_kwargs* -- 与 :class:`.Trainer` 中的 ``deepspeed_kwargs``
+          等同；
+        * *oneflow_kwargs* -- 与 :class:`.Trainer` 中的 ``oneflow_kwargs``
+          参数等同；
+        * *data_device* -- 与 :class:`.Trainer` 中的 ``data_device`` 参数等同；
         * *model_use_eval_mode* (``bool``) --
           是否在评测的时候将 ``model`` 的状态设置成 ``eval`` 状态。在 ``eval`` 状
           态下，``model`` 的 ``dropout`` 与 ``batch normalization`` 将会关闭。默
@@ -147,9 +147,9 @@ class Evaluator:
 
             - 深度学习框架自带的默认 sampler ;
             - fastNLP 的 Sampler ；
-          则将替换为 :class:`~fastNLP.UnrepeatedSequentialSampler`，如果这个行为
-          不是期待的，请本参数设置为 ``False``，并针对每个卡控制其可以用到的数据。如
-          果不是以上两类 sampler ，fastNLP 将报错。
+          则将替换为 :class:`.UnrepeatedSequentialSampler`，如果这个行为不是期待
+          的，请本参数设置为 ``False``，并针对每个卡控制其可以用到的数据。如果不是以
+          上两类 sampler ，fastNLP 将报错。
         * *output_from_new_proc* -- 等价于 ``Trainer`` 中的
           ``output_from_new_proc`` 参数；
         * *progress_bar* -- 等价于 ``Trainer`` 中的 ``progress_bar`` 参数；
@@ -320,14 +320,14 @@ class Evaluator:
         返回一个字典类型的数据，其中 key 为 metric 的名字，value 为对应 metric 的结
         果。
 
-            1. 如果存在多个 metric ，一个 dataloader 的情况，key 的命名规则是
-               ``metric_indicator_name#metric_name``；
-            2. 如果存在多个数据集，一个metric的情况，key的命名规则是
-               ``metric_indicator_name#metric_name#dataloader_name`` （其中
-               **#** 是默认的 separator ，可以通过 Evaluator 初始化参数修改）；
-            3. 如果存在多个metric，多个dataloader的情况，key的命名规则是
-               ``metric_indicator_name#metric_name#dataloader_name``，其中
-               metric_indicator_name 可能不存在；
+        1. 如果存在多个 metric ，一个 dataloader 的情况，key 的命名规则是
+           ``metric_indicator_name#metric_name``；
+        2. 如果存在多个数据集，一个metric的情况，key的命名规则是
+           ``metric_indicator_name#metric_name#dataloader_name`` （其中 **#**
+           是默认的 separator ，可以通过 Evaluator 初始化参数修改）；
+        3. 如果存在多个metric，多个dataloader的情况，key的命名规则是
+           ``metric_indicator_name#metric_name#dataloader_name``，其中
+           metric_indicator_name 可能不存在；
 
         :param num_eval_batch_per_dl: 每个 dataloader 测试前多少个 batch 的数据，
             -1 为测试所有数据。
@@ -466,8 +466,8 @@ class Evaluator:
         self.metrics_wrapper.reset()
 
     def update(self, batch, outputs):
-        r"""自动调用所有 metric 的 :meth:`update` 方法，会根据不同 metric 的参数列
-        表进行匹配传参。
+        r"""自动调用所有 metric 的 ``update``` 方法，会根据不同 metric 的参数列表
+        进行匹配传参。
 
         :param batch: 一般是来自于 DataLoader 的输出，如果不为 dict 类型的话，该值
             将被忽略。
@@ -478,8 +478,8 @@ class Evaluator:
         self.metrics_wrapper.update(batch, outputs)
 
     def get_metric(self) -> Dict:
-        r"""调用所有 metric 的 :meth:`get_metric` 方法，并返回结果。其中 key 为
-            metric 的名称，value 是各个 metric 的结果。
+        r"""调用所有 metric 的 ``get_metric`` 方法，并返回结果。其中 key 为 metric
+        的名称，value 是各个 metric 的结果。
 
         :return:
         """
@@ -498,7 +498,7 @@ class Evaluator:
 
     def evaluate_step(self, batch):
         r"""将 ``batch`` 传递到 model 中进行处理，根据当前 ``evaluate_fn`` 选择进
-        行 evaluate会将返回结果经过 ``output_mapping`` 处理后再返回。
+        行 evaluate 会将返回结果经过 ``output_mapping`` 处理后再返回。
 
         :param batch: ``evaluate_fn`` 函数支持的输入类型
         :return: ``evaluate_fn`` 函数的输出结果，如果有设置 ``output_mapping``，

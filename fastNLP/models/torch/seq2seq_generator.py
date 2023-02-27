@@ -12,8 +12,9 @@ __all__ = ['SequenceGeneratorModel']
 
 
 class SequenceGeneratorModel(nn.Module):
-    r"""通过使用本模型封装 seq2seq_model 使得其既可以用于训练也可以用于生成。训练的
-    时候本模型的 :meth:`forward` 函数会被调用，生成的时候本模型的 :meth:`predict`
+    r"""能够封装 ``seq2seq_model``，使其既可以用于训练也可以用于生成。
+
+    训练时本模型的 :meth:`forward` 函数会被调用，生成时本模型的 :meth:`predict`
     函数会被调用。
 
     :param seq2seq_model: 序列到序列模型

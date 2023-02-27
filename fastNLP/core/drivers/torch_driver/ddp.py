@@ -206,22 +206,32 @@ __all__ = ['TorchDDPDriver']
 
 class TorchDDPDriver(TorchDriver):
     r"""
+    实现了 ``pytorch`` 中使用 :class:`torch.nn.DistributedDataParallel` 进行分布
+    式训练的 ``Driver``。
+
     ``TorchDDPDriver`` 通过开启多个进程，让每个进程单独使用一个 gpu 设备来实现分布式
-    训练。
+    训练。它还被以下子类继承：
+
+    1. :class:`.DeepSpeedDriver`：实现了 ``deepspeed`` 分布式训练的功能；
+    2. :class:`.FairScaleDriver`：实现了 ``fairscale`` 的功能；
+    3. :class:`.TorchFSDPDriver`：实现了 ``torch.distributed.fsdp`` 模块的功能。
+
+    与 :class:`.TorchDriver` 作为父类不同的是，``TorchDDPDriver`` 自身就具有完整的
+    功能可以使用，上面列出的子类均为 **分布式训练** 功能的延伸。
 
     .. note::
 
-        您在绝大多数情况下不需要自己使用到该类，通过向 ``Trainer`` 传入正确的参数，
-        您可以方便快速地部署您的分布式训练。
+        您在绝大多数情况下不需要自己使用到该类，通过向 :class:`.Trainer` 传入正确的
+        参数，您可以方便快速地部署您的分布式训练。
 
         ``TorchDDPDriver`` 目前支持的三种启动方式：
 
-            1. 用户自己不进行 ``ddp`` 的任何操作，直接使用我们的 ``Trainer``，这时
-               是由我们自己使用 ``open_subprocesses`` 拉起多个进程，然后
-               ``TorchDDPDriver`` 自己通过调用 ``dist.init_process_group`` 来初
-               始化 ddp 的通信组；（情况 A）
+        1. 用户自己不进行 ``ddp`` 的任何操作，直接使用我们的 :class:`.Trainer`，这
+           时是由我们自己使用 ``open_subprocesses`` 拉起多个进程，然后
+           ``TorchDDPDriver`` 自己通过调用 ``dist.init_process_group`` 来初
+           始化 ddp 的通信组；（情况 A）
 
-            .. code-block::
+           .. code-block::
 
                 trainer = Trainer(
                     ...
@@ -230,14 +240,13 @@ class TorchDDPDriver(TorchDriver):
                 )
                 trainer.run()
 
-            通过运行 ``python train.py`` 启动；
+           通过运行 ``python train.py`` 启动；
 
-            2. 用户同样不在 ``Trainer`` 之外初始化 ``ddp``，但是用户自己使用
-               ``python -m torch.distributed.launch`` 拉起来创建多个进程，这时我
-               们仍旧会通过调用 ``dist.init_process_group`` 来初始化 ``ddp`` 的通
-               信组；（情况 B）
+        2. 用户同样不在 ``Trainer`` 之外初始化 ``ddp``，但是用户自己使用 ``python
+           -m torch.distributed.launch`` 拉起来创建多个进程，这时我们仍旧会通过调
+           用 ``dist.init_process_group`` 来初始化 ``ddp`` 的通信组；（情况 B）
 
-            .. code-block::
+           .. code-block::
 
                 trainer = Trainer(
                     ...
@@ -247,15 +256,15 @@ class TorchDDPDriver(TorchDriver):
                 )
                 trainer.run()
 
-            通过运行 ``python -m torch.distributed.launch --nproc_per_node 2
-            train.py`` 启动；
+           通过运行 ``python -m torch.distributed.launch --nproc_per_node 2
+           train.py`` 启动；
 
-            3. 用户自己在外面初始化 ``DDP``，并且通过 ``python -m torch.
-               distributed.launch`` 拉起，这时无论是多个进程的拉起和 ddp 的通信组
-               的建立都由用户自己操作，我们只会在 ``driver.setup`` 的时候对
-               ``TorchDDPDriver`` 设置一些必要的属性值；（情况 C）
+        3. 用户自己在外面初始化 ``DDP``，并且通过 ``python -m torch.distributed.
+           launch`` 拉起，这时无论是多个进程的拉起和 ddp 的通信组的建立都由用户自己
+           操作，我们只会在 ``driver.setup`` 的时候对 ``TorchDDPDriver`` 设置一些
+           必要的属性值；（情况 C）
 
-            .. code-block::
+           .. code-block::
 
                 import torch.distributed as dist
                 from torch.nn.parallel import DistributedDataParallel
@@ -280,14 +289,14 @@ class TorchDDPDriver(TorchDriver):
                 )
                 trainer.run()
 
-            通过运行 ``python -m torch.distributed.launch --nproc_per_node 2
-            train.py`` 启动；
+           通过运行 ``python -m torch.distributed.launch --nproc_per_node 2
+           train.py`` 启动；
 
-        注意多机的启动强制要求用户在每一台机器上使用 ``python -m torch.\
+        注意多机的启动强制要求用户在每一台机器上使用 ``python -m torch.
         distributed.launch`` 启动；因此我们不会在 ``TorchDDPDriver`` 中保存
         任何当前有多少台机器的信息。
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数
+    :param model: 传入给 :class:`.Trainer` 的 ``model`` 参数
     :param parallel_device: 用于分布式训练的 ``gpu`` 设备
     :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``python -m torch.
         distributed.launch`` 启动的
@@ -304,17 +313,16 @@ class TorchDDPDriver(TorchDriver):
         * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.\
           amp.cuda.GradScaler` 的参数
     :kwargs:
-        * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
+        * *model_wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
           ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
-            core.utils.auto_param_call`。
+            关于该参数的详细说明，请参见 :class:`.Trainer` 和 :func:`~fastNLP.\
+            core.auto_param_call`。
 
-        * *sync_bn* (``bool``) -- 是否要将模型中可能存在的 BatchNorm 层转换为可同
-          步所有卡数据计算均值和方差的 SyncBatchNorm 层，默认为 True
+        * *sync_bn* (``bool``) -- 是否要将模型中可能存在的 ``BatchNorm`` 层转换为
+          可同步所有卡数据计算均值和方差的 ``SyncBatchNorm`` 层，默认为 ``True``。
 
         * *output_from_new_proc* (``str``) -- 应当为一个字符串，表示在多进程的
           driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一： ``["all",
@@ -444,9 +452,9 @@ class TorchDDPDriver(TorchDriver):
         r"""
         准备分布式环境，该函数主要做以下两件事情：
 
-            1. 开启多进程，每个 ``gpu`` 设备对应单独的一个进程；
-            2. 每个进程将模型迁移到自己对应的 ``gpu`` 设备上；然后使用
-               ``DistributedDataParallel`` 包裹模型；
+        1. 开启多进程，每个 ``gpu`` 设备对应单独的一个进程；
+        2. 每个进程将模型迁移到自己对应的 ``gpu`` 设备上；然后使用
+           ``DistributedDataParallel`` 包裹模型；
         """
         if self._has_setup:
             return

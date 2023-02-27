@@ -19,8 +19,10 @@ TAG_UNK = 'X'
 
 class ExtCNNDMPipe(Pipe):
     r"""
-    对 **CNN/Daily Mail** 数据进行适用于 ``extractive summarization task`` 的预
-    处理，预处理之后的数据具备以下结构：
+    对 **CNN/Daily Mail** 数据进行适用于 ``extractive summarization task`` 预
+    处理的 **Pipe**。
+
+    预处理之后的数据具备以下结构：
 
     .. csv-table::
        :header: "text", "summary", "label", "publication", "text_wd", "words", "seq_len", "target"
@@ -170,7 +172,7 @@ class ExtCNNDMPipe(Pipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:

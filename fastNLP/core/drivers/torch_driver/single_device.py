@@ -26,14 +26,15 @@ __all__ = ['TorchSingleDriver']
 
 class TorchSingleDriver(TorchDriver):
     r"""
-    ``TorchSingleDriver`` 是用于 cpu 和 单卡 gpu 运算的 ``driver``。
+    ``TorchSingleDriver`` 是用于 cpu 和 单卡 gpu 运算的 ``Driver``。
 
     .. note::
 
-        如果您希望使用 ``DataParallel`` 来训练您的模型，您应当自己在 ``Trainer``
-        初始化之前初始化好 ``DataParallel``，然后将其传入 ``Trainer`` 中。
+        如果您希望使用 ``DataParallel`` 来训练您的模型，您应当自己在 :class:`.\
+        Trainer` 初始化之前初始化好 ``DataParallel``，然后将其传入 :class:`.\
+        Trainer` 中。
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数
+    :param model: 传入给 :class:`.Trainer` 的 ``model`` 参数
     :param device: torch.device，当前进程所使用的设备
     :param fp16: 是否开启 fp16
     :param torch_kwargs:
@@ -44,14 +45,13 @@ class TorchSingleDriver(TorchDriver):
         * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.\
           amp.cuda.GradScaler` 的参数
     :kwargs:
-        * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
+        * *model_wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
           ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
-            core.utils.auto_param_call`。
+            关于该参数的详细说明，请参见 :class:`.Trainer` 和 :func:`~fastNLP.\
+            core.auto_param_call`。
     """
 
     def __init__(self,

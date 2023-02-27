@@ -1,8 +1,3 @@
-r"""
-.. todo::
-    doc
-"""
-
 from collections import Counter
 from typing import Any, Callable, List, Optional, Union
 
@@ -16,7 +11,7 @@ __all__ = ['FieldArray']
 
 class FieldArray:
     """
-    :class:`~fastNLP.core.dataset.DatSet` 中用于表示列的数据类型。
+    :class:`.DatSet` 中用于表示列的数据类型。
 
     :param name: 字符串的名称
     :param content: 任意类型的数据

@@ -56,58 +56,47 @@ class _FDataSet:
 
 
 class TorchDataLoader(DataLoader):
-    r"""提供给 ``torch`` 框架使用的 ``DataLoader`` 函数，``TorchDataLoader`` 提供
-    了 ``Collator`` 来自动检测 dataset 的每个 field 是否可以进行 pad，若是可 pad
-    的 field 则自动 pad 到相同长度，否则只会将相同 field 的数据收集组成一个 batch
-    返回。具体详见 :class:`~fastNLP.core.collators.Collator`；用户通过 callte_fn
-    来控制是否使用该功能，collate_fn 只能为 ``['auto', None, Callable]`` 三种取
-    值。
+    r"""提供给 ``torch`` 框架使用的 ``DataLoader`` 类。
 
-        * callate_fn 为 ``'auto'`` 时，
-          ``TorchDataLoader`` 使用 :class:`~fastNLP.core.collators.Collator` 作
-          为 collate_fn 的取值。此时可以配套使用 :meth:`set_pad` 和
-          :meth:`set_ignore` 方法来设置 pad_val 或忽略某个 field 的检测。
-        * callate_fn 为 ``None`` 时，
-          ``TorchDataLoadr`` 默认使用 torch DataLoader 自带的 collate_fn
-        * collate_fn 为 :class:`Callable` 时，该 Callable 函数应当接受一个 batch
-          参数作为输入，batch 是一个 List 对象且 List 中的每一条数据都是 dataset 的
-          一条数据；该 Callable 函数还应当返回一个对象。
+    ``TorchDataLoader`` 提供了 ``Collator`` 来自动检测 dataset 的每个 field 是否
+    可 pad，若是可 pad 的 field 则自动 pad 到相同长度，否则只会将相同 field 的数据
+    收集组成一个 batch 返回。具体详见 :class:`.Collator`；用户可以通过 collate_fn
+    来控制是否使用该功能。
 
-    :param dataset: 需要遍历的数据集，可以是 :class:`~fastNLP.core.dataset.\
-        DataSet`、pytorch 的 :class:`Dataset`、hugginface 的数据集对象，以及所有
-        实现了 :meth:`__getitem__` 和 :meth:`__len__` 函数的数据集对象。
+    :param dataset: 需要遍历的数据集，可以是 :class:`~fastNLP.core.DataSet`、
+        pytorch 的 :class:`Dataset`、hugginface 的数据集对象，以及所有实现了
+        :meth:`__getitem__` 和 :meth:`__len__` 函数的数据集对象。
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
     :param shuffle: 是否打乱数据集，默认为 ``None``, 如果传入的 ``ds_or_db`` 可以
         判断出哪个是 ``'train'`` 则设置其 shuffle 为 ``True``，其它的为 False 。
-    :param sampler: 数据的取样器，如 fastNLP 的 :class:`~fastNLP.core.samplers.\
-        ReproducibleSampler`、 pytorch 的 :class:`Sampler` 对象，以及所有实现了
-        :meth:`__len__` 和 :meth:`__iter__` 的对象。其 :meth:`__iter__` 方法每次
-        都会返回 dataset 的一个下标 index ，默认为 ``None``。其不为 ``None`` 时，
-        ``shuffle`` 参数无效。
+    :param sampler: 数据的取样器，如 fastNLP 的 :class:`.ReproducibleSampler`、
+        pytorch 的 :class:`Sampler` 对象，以及所有实现了方法 :meth:`__len__` 和
+        :meth:`__iter__` 的对象。其 :meth:`__iter__` 方法每次都会返回 dataset 的
+        一个下标 index ，默认为 ``None``。其不为 ``None`` 时， ``shuffle`` 参数无
+        效。
     :param batch_sampler: 批量取出数据的采样器，如 :class:`~fastNLP.core.\
-        samplers.ReproducibleBatchSampler`、pytorch 的 :class:`BatchSampler` 对
-        象，以及所有实现了 :meth:`__len__` 和 :meth:`__iter__` 的对象。其
-        :meth:`__iter__` 方法每次都会返回一个 List 对象，List 中的值为 dataset 的
-        下标 index ；默认为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``、
-        ``sampler``、``shuffle`` 均失效。
+        ReproducibleBatchSampler`、pytorch 的 :class:`BatchSampler` 对象，以及所
+        有实现了 :meth:`__len__` 和 :meth:`__iter__` 的对象。其 :meth:`__iter__`
+        方法每次都会返回一个 List 对象，List 中的值为 dataset 的下标 index ；默认
+        为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``、``sampler``、
+        ``shuffle`` 均失效。
     :param num_workers: 当 ``num_workers > 0`` 时，``TorchDataLoader`` 会开启
         ``num_workers`` 个子进程来处理数据，可以加快数据处理速度，但同时也消耗大量内
         存。当 ``num_workers=0`` 时，不开启子进程。默认为 ``0``。
     :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的
         Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``。
 
-        * callate_fn 为 ``None`` 时，需要注意的是此时传进来的 dataset 类型不能为
-          :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None``
-          时，``TorchDataLoader`` 调用默认的 torch 框架的 ``DataLoader`` 自带的
-          `default_collate_fn` 作为 callate_fn 的默认值，其无法处理
-          :class:`~fastNLP.core.dataset.DataSet` 的 dataset 对象。
-        * callate_fn 为 ``'auto'`` 时，``TorchDataLoader`` 使用
-          :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。
-          此时可以配套使用 :meth:`set_pad` 和 :meth:`set_ignore` 方法来设置
-          pad_val 或忽略某个 field 的检测。
+        * collate_fn 为 ``None`` 时，需要注意的是此时传进来的 dataset 类型不能为
+          :class:`.DataSet`，此时 ``TorchDataLoader`` 会调用默认的 pytorch 框架
+          的 ``DataLoader`` 自带的 ``collate_batch`` 作为 collate_fn 的默认值，不
+          过需要注意的是其无法处理 :class:`.DataSet` 的 dataset 对象。
+        * collate_fn 为 ``'auto'`` 时，``TorchDataLoader`` 将会使用 fastNLP 的
+          :class:`~fastNLP.core.Collator` 作为 collate_fn 的默认值。此时可以配套
+          使用 :meth:`set_pad` 和 :meth:`set_ignore` 方法来设置 pad_val 或忽略某
+          个 field 的检测。
         * collate_fn 为 :class:`Callable` 时，该 Callable 函数应当接受一个 batch
-          参数作为输入，batch 是一个 List 对象且 List 中的每一条数据都是 dataset 的
-          一条数据；该 Callable 函数还应当返回一个对象。
+          参数作为输入，batch 是一个 List 对象且 List 中的每一条数据都是 dataset
+          的一条数据；该 Callable 函数还应当返回一个对象。
 
     :param pin_memory: 如果其为 ``True``, 那么 ``TorchDataLoader`` 会在返回数据张
         量之前将其 copy 到 cuda 的 pin memory 中。
@@ -274,7 +263,7 @@ class TorchDataLoader(DataLoader):
             表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b':
             1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.__getitem__`
             返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表示序列中第
-            **0** 个或第 **1** 个元素。
+            **0** 个和第 **1** 个元素。
         :return: 使用的 collator
         """
         collator = self._get_collator()
@@ -309,17 +298,17 @@ def prepare_torch_dataloader(ds_or_db,
                              non_train_sampler: Union['Sampler[int]', ReproducibleSampler, UnrepeatedSampler] = None,
                              non_train_batch_size: Optional[int] = None) \
         -> Union[TorchDataLoader, Dict[str, TorchDataLoader]]:
-    r"""``prepare_torch_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为
-    :class:`TorchDataLoader` 对象，详见 :class:`TorchDataLoader` 的说明。根据
-    ds_or_db 的类型 ``[DataSet, DataBundle, Dict[name, Dataset]]`` 不同而有不同
-    返回结果，具体如下:
+    r"""将输入的单个或多个 dataset 同时转为 :class:`TorchDataLoader` 对象，根据
+    ``ds_or_db`` 的类型不同而有不同返回结果。
 
-        * 当 ds_or_db 为 ``DataSet`` 时，``prepare_torch_dataloader`` 会将使用的
-          除了 non_train_batch_size 和 non_train_sampler 以外的参数来帮你实例化一
-          个 :class:`TorchDataLoader` 对象并返回。详见 :class:`TorchDataLoader`
-          的说明。
-        * 当 ds_or_db 为 :class:`~fastNLP.io.DataBundle` 时，
-          ``prepare_torch_dataloader`` 会遍历 ``DataBundle`` 的数据集的
+    :param ds_or_db: 可以有以下三种取值：
+
+        * 当 ds_or_db 为 :class:`.DataSet` 等数据集类型时，
+          ``prepare_torch_dataloader`` 会将使用的除了 non_train_batch_size 和
+          non_train_sampler 以外的参数来帮你实例化一个 :class:`TorchDataLoader`
+          对象并返回。详见 :class:`TorchDataLoader` 的说明。
+        * 当 ds_or_db 为 :class:`.DataBundle` 时，
+          ``prepare_torch_dataloader`` 会遍历 :class:`.DataBundle` 的数据集的
           key-value 来创建不同的 :class:`TorchDataLoader` 对象；当 key 中包含
           ``'train'`` 字符串时，``prepare_torch_dataloader`` 默认该 value 为训练
           数据集，会将 ``batch_size`` 和 ``sampler`` 作为参数，其他 key 不包含
@@ -335,56 +324,43 @@ def prepare_torch_dataloader(ds_or_db,
           数。最终根据  ``key: TorchDataLoader`` 组成 ``Dict[key,
           TorchDataLoader]`` 的字典返回。
 
-    :param ds_or_db: 可以有以下三种取值，
-
-        * ds_or_db 为 :class:`~fastNLP.io.DataBundle`，返回值为 ``Dict[str,
-          TorchDataLoader]`` 的字典；
-        * ds_or_db 为 ``Dict[str, DataSet]`` 字典，返回值为 ``Dict[str,
-          TorchDataLoader]`` 的字典；
-        * ds_or_db 为实现了 :meth:`__getitem__` 和 :meth:`__len__` 的对象，详细可
-          参考 :class:`TorchDataLoader` 中关于参数 ``dataset`` 的说明。返回值为
-          :class:`TorchDataLoader`
-
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
     :param non_train_batch_size: 非训练数据集的 :class:`TorchDataLoader` 批次大
         小，默认为 ``16`` 且当 ``batch_sampler`` 为 ``None`` 有效。
     :param shuffle: 是否打乱数据集，默认为 ``None``, 如果传入的 ``ds_or_db`` 可以
         判断出哪个是 ``'train'`` 则设置其 shuffle 为 ``True``，其它的为 False 。
-    :param sampler: 数据的取样器，如 fastNLP 的 :class:`~fastNLP.core.samplers.\
-        ReproducibleSampler`、 pytorch 的 :class:`Sampler` 对象，以及所有实现了
-        :meth:`__len__` 和 :meth:`__iter__` 的对象。其 :meth:`__iter__` 方法每次
-        都会返回 dataset 的一个下标 index ，默认为 ``None``。其不为 ``None`` 时，
-        ``shuffle`` 参数无效。
+    :param sampler: 数据的取样器，如 fastNLP 的 :class:`.ReproducibleSampler`、
+        pytorch 的 :class:`Sampler` 对象，以及所有实现了方法 :meth:`__len__` 和
+        :meth:`__iter__` 的对象。其 :meth:`__iter__` 方法每次都会返回 dataset 的
+        一个下标 index ，默认为 ``None``。其不为 ``None`` 时， ``shuffle`` 参数无
+        效。
     :param non_train_sampler: 用于非训练数据集的取样器，如 :class:`~fastNLP.\
-        core.samplers.ReproducibleSampler`、pytorch 的 :class:`Sampler` 对象，
-        以及所有实现了 :meth:`__len__` 和 :meth:`__iter__` 方法的对象。其
-        :meth:`__iter__` 方法每次都会返回 dataset 的一个下标 index ，默认为
-        ``None``。当其不为 ``None`` 时，``shuffle`` 参数无效。
+        core.ReproducibleSampler`、pytorch 的 :class:`Sampler` 对象，以及所有实
+        现了 :meth:`__len__` 和 :meth:`__iter__` 方法的对象。其 :meth:`__iter__`
+        方法每次都会返回 dataset 的一个下标 index ，默认为 ``None``。当其不为 ``None`` 时，``shuffle`` 参数无效。
     :param batch_sampler: 批量取出数据的采样器，如 :class:`~fastNLP.core.\
-        samplers.ReproducibleBatchSampler`、pytorch 的 :class:`BatchSampler` 对
-        象，以及所有实现了 :meth:`__len__` 和 :meth:`__iter__` 方法的对象。其
-        :meth:`__iter__` 方法每次都会返回一个 List 对象，List 中的值为 dataset 的
-        下标 index ；默认为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``、
-        ``sampler``、``shuffle`` 均失效。
+        ReproducibleBatchSampler`、pytorch 的 :class:`BatchSampler` 对象，以及所
+        有实现了 :meth:`__len__` 和 :meth:`__iter__` 的对象。其 :meth:`__iter__`
+        方法每次都会返回一个 List 对象，List 中的值为 dataset 的下标 index ；默认
+        为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``、``sampler``、
+        ``shuffle`` 均失效。
     :param num_workers: 当 ``num_workers > 0`` 时，:class:`TorchDataLoader` 会
         开启 ``num_workers`` 个子进程来处理数据，可以加快数据处理速度，但同时也消耗
         大量内存。当 ``num_workers=0`` 时，不开启子进程。默认为 ``0``。
     :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的
         Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``：
 
-        * callate_fn 为 ``None`` 时，需要注意的是此时传进来的 dataset 类型不能为
-          :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None``
-          时，:class:`TorchDataLoader` 调用默认的 torch 框架的 ``DataLoader`` 自
-          带的 `default_collate_fn` 作为 callate_fn 的默认值，其无法处理
-          :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
-        * callate_fn 为 ``'auto'`` 时，:class:`TorchDataLoader` 使用
-          :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。此
-          时可以配套使用 :class:`TorchDataLoader` 的 :meth:`TorchDataLoader.\
-          set_pad` 和 :meth:`TorchDataLoader.set_ignore` 方法来设置 pad_val 或忽
-          略某个 field 的检测。
+        * collate_fn 为 ``None`` 时，需要注意的是此时传进来的 dataset 类型不能为
+          :class:`.DataSet`，此时 ``TorchDataLoader`` 会调用默认的 pytorch 框
+          架的 ``DataLoader`` 自带的 ``collate_batch`` 作为 collate_fn 的默认值，
+          不过需要注意的是其无法处理 :class:`.DataSet` 的 dataset 对象。
+        * collate_fn 为 ``'auto'`` 时，``TorchDataLoader`` 将会使用 fastNLP 的
+          :class:`~fastNLP.core.Collator` 作为 collate_fn 的默认值。此时可以配套
+          使用 :meth:`TorchDataLoader.set_pad` 和 :meth:`TorchDataLoader.\
+          set_ignore` 方法来设置 pad_val 或忽略某个 field 的检测。
         * collate_fn 为 :class:`Callable` 时，该 Callable 函数应当接受一个 batch
-          参数作为输入，batch 是一个 List 对象且 List 中的每一条数据都是 dataset 的
-          一条数据；该 Callable 函数还应当返回一个对象。
+          参数作为输入，batch 是一个 List 对象且 List 中的每一条数据都是 dataset
+          的一条数据；该 Callable 函数还应当返回一个对象。
 
     :param pin_memory: 如果其为 ``True``, 那么 :class:`TorchDataLoader` 会在返回
         数据张量之前将其 copy 到 cuda 的 pin memory 中。

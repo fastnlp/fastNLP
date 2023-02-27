@@ -11,16 +11,16 @@ __all__ = [
 
 
 class UnrepeatedSampler:
-    """在多卡场景下保证 indice 不重复的 Sampler。"""
+    """在多卡场景下保证 indice 不重复的 ``Sampler``。"""
     pass
 
 
 class UnrepeatedRandomSampler(UnrepeatedSampler):
-    """考虑在多卡 evaluate 的场景下，不能重复采样。
+    """考虑在多卡 evaluate 的场景下保证不重复采样的 ``Sampler``。
 
-    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
-        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
-        jittor 框架的 :class:`Dataset` 对象。
+    :param dataset: 实现了 :meth:`__len__` 方法的数据容器，如 :class:`.DataSet`、
+        huggingface 的数据集对象或 pytorch、paddle、oneflow、jittor 框架的
+        :class:`Dataset` 对象。
     :param shuffle: 如果为 ``True``，将不进行 shuffle，实际上数据会以从长到短的方式
         输出
     :param seed: 设置的随机数种子
@@ -45,6 +45,7 @@ class UnrepeatedRandomSampler(UnrepeatedSampler):
         r"""
         返回 ``Sampler`` 一次完整的迭代过程会产生多少个 index 。多卡的情况下，只考
         虑 **当前rank**。
+
         :return:
         """
         num_common = self.num_samples // self.num_replicas
@@ -110,25 +111,24 @@ class UnrepeatedRandomSampler(UnrepeatedSampler):
 
 class UnrepeatedSortedSampler(UnrepeatedRandomSampler):
     r"""将 ``dataset`` 中的数据根据 ``length`` 从长到短进行迭代，并且保证在多卡场景
-    下数据不重复。
+    下数据不重复的 ``Sampler``.
 
     .. note::
 
-        本 Sampler 可能导致各个机器上的batch 数量不完全一致。
+        本 Sampler 可能导致各个机器上的 batch 数量不完全一致。
 
-    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
-        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
-        jittor 框架的 :class:`Dataset` 对象。
+    :param dataset: 实现了 :meth:`__len__` 方法的数据容器，如 :class:`.DataSet`、
+        huggingface 的数据集对象或 pytorch、paddle、oneflow、jittor 框架的
+        :class:`Dataset` 对象。
     :param length: 每条数据的长度
 
-        * 为 ``List[int]`` 时
+        * 为 ``List[int]`` 时，
           应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
-        * 为 ``str`` 时
-          仅当传入的 ``dataset`` 是 :class:`~fastNLP.core.dataset.DataSet` 时，
-          允许传入 :class:`str`，该 :class:`str` 将被认为是 ``dataset`` 中的
-          ``field``。若 field 中的元素为 :class:`int`，则认为该值是 sample 的长
-          度；若不为 :class:`int`，则尝试使用 :func:`len` 方法获取该 ``field`` 中
-          每个元素的长度。
+        * 为 ``str`` 时，
+          仅当传入的 ``dataset`` 是 :class:`.DataSet` 时允许传入 :class:`str`。
+          该 :class:`str` 将被认为是 ``dataset`` 中的 ``field``。若 field 中的元
+          素为 :class:`int`，则认为该值是 sample 的长度；若不为 :class:`int`，则尝
+          试使用 :func:`len` 方法获取该 ``field`` 中每个元素的长度。
 
     :param kwargs: fastNLP 内部使用的参数
     """
@@ -158,11 +158,11 @@ class UnrepeatedSortedSampler(UnrepeatedRandomSampler):
 
 
 class UnrepeatedSequentialSampler(UnrepeatedRandomSampler):
-    """按照顺序读取 dataset。
+    """按照顺序、不重复读取 dataset 的 ``Sampler``。
 
-    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
-        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
-        jittor 框架的 :class:`Dataset` 对象。
+    :param dataset: 实现了 :meth:`__len__` 方法的数据容器，如 :class:`.DataSet`、
+        huggingface 的数据集对象或 pytorch、paddle、oneflow、jittor 框架的
+        :class:`Dataset` 对象。
     :param chunk_dist: 如果为 ``True``，当多卡时将不间隔索取数据；为 ``False`` 时
         则会间隔取数据。假设 dataset 有 10 个 sample ，使用 2 卡，若为 ``True``，
         卡 **0** 拿 [0, 1, 2, 3, 4], 卡 **1** 拿 [5, 6, 7, 8, 9] ；如果为

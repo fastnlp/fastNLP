@@ -12,7 +12,10 @@ __all__ = ['CMRC2018Loader']
 
 class CMRC2018Loader(Loader):
     r"""
-    **CMRC2018** 数据集的 **Loader**，如果您使用了本数据，请引用
+    **CMRC2018** 数据集的 **Loader**。
+
+    如果您使用了本数据，请引用：
+
     A Span-Extraction Dataset for Chinese Machine Reading Comprehension.
     YimingCui, Ting Liu, etc.
 

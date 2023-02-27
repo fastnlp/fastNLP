@@ -76,9 +76,11 @@ def paddle_to(
     data: 'paddle.Tensor', device: Union[str, int, 'paddle.CPUPlace',
                                          'paddle.CUDAPlace']
 ) -> 'paddle.Tensor':
-    r"""将 ``data`` 迁移到指定的 ``device`` 上。:class:`paddle.Tensor` 没有类似
-    :meth:`torch.Tensor.to` 的函数来迁移张量，因此该函数只是集成了 :func:`paddle.
-    Tensor.cpu` 和 :func:`paddle.Tensor.cuda` 两个函数。
+    r"""将 ``data`` 迁移到指定的 ``device`` 上。
+
+    :class:`paddle.Tensor` 没有类似:meth:`torch.Tensor.to` 的函数来迁移张量，因此
+    该函数只是集成了 :func:`paddle.Tensor.cpu` 和 :func:`paddle.Tensor.cuda` 两
+    个函数。
 
     :param data: 要迁移的张量；
     :param device: 目标设备，可以是 ``str`` 或 ``int`` 及 **paddle** 自己的

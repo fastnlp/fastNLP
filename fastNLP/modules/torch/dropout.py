@@ -4,7 +4,8 @@ __all__ = ['TimestepDropout']
 
 
 class TimestepDropout(torch.nn.Dropout):
-    r"""
+    r"""在每个 timestamp 上对输入进行 ``dropout`` 的层。
+
     传入参数的 shape 为 ``(batch_size, num_timesteps, embedding_dim)``，使用同一
     个 shape 为 ``(batch_size, embedding_dim)`` 的 mask 在每个 timestamp 上做
     dropout。

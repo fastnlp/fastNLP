@@ -9,11 +9,12 @@ __all__ = ['ConvMaxpool']
 
 class ConvMaxpool(nn.Module):
     r"""
-    集合了 **Convolution** 和 **Max-Pooling** 于一体的层。给定一个大小为
-    ``[batch_size, max_len, input_size]`` 的输入，返回 ``[batch_size,
-    sum(output_channels)]`` 大小的 matrix。在内部，是先使用 ``CNN`` 给输入
-    做卷积，然后经过 activation 激活层，在通过在长度(max_len)这一维进行
-    ``max_pooling``。最后得到每个 sample 的一个向量表示。
+    集合了 **Convolution** 和 **Max-Pooling** 于一体的层。
+
+    给定一个大小为 ``[batch_size, max_len, input_size]`` 的输入，返回
+    ``[batch_size, sum(output_channels)]`` 大小的 matrix。在内部，是先使用
+    ``CNN`` 给输入做卷积，然后经过 activation 激活层，在通过在长度(max_len)这一维进
+    行 ``max_pooling``。最后得到每个 sample 的一个向量表示。
 
     :param in_channels: 输入 channel 的大小，一般是 embedding 的维度，或
         ``encoder`` 的 output 维度

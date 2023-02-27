@@ -29,9 +29,7 @@ __all__ = [
 
 
 class PaddleSingleDriver(PaddleDriver):
-    r"""实现了 **PaddlePaddle** 框架下在单卡或 ``cpu`` 环境下训练功能的。
-
-    **Driver**。
+    r"""实现了 **PaddlePaddle** 框架在单卡或 ``cpu`` 环境下训练功能的 ``Driver``。
 
     :param model: 训练时使用的 **PaddlePaddle** 模型
     :param device: 训练使用的设备
@@ -45,9 +43,8 @@ class PaddleSingleDriver(PaddleDriver):
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
-            core.utils.auto_param_call`。
+            关于该参数的详细说明，请参见 :class:`.Trainer` 和 :func:`~fastNLP.\
+            core.auto_param_call`。
     """
 
     def __init__(self,
@@ -189,7 +186,7 @@ class PaddleSingleDriver(PaddleDriver):
 
     def is_distributed(self) -> bool:
         """
-        :return 是否为分布式的 **Driver**，在 ``PaddleSingleDriver`` 中，返回
+        :return: 是否为分布式的 **Driver**，在 ``PaddleSingleDriver`` 中，返回
             ``False``。
         """
         return False

@@ -15,7 +15,9 @@ __all__ = ['TopkSaver']
 
 class Saver:
     r"""
-    执行保存的对象。保存的文件组织结构为::
+    执行保存操作的类，包含模型或断电的保存函数。
+
+    保存的文件组织结构为::
 
         - folder  # 当前初始化的参数
             - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
@@ -24,18 +26,17 @@ class Saver:
     :param folder: 保存在哪个文件夹下，默认为当前 folder 下。
     :param save_object: 可选 ``['trainer', 'model']``，表示在保存时的保存对象为
         ``trainer+model`` 还是 只是 ``model``。如果保存 ``trainer`` 对象的话，将
-        会保存 :class:`~fastNLP.core.controllers.Trainer` 的相关状态，之后可以通
-        过 :meth:`Trainer.load_checkpoint` 加载该断点继续进行训练。如果保存的是
-        ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
+        会保存 :class:`.Trainer` 的相关状态，之后可以通过 :meth:`.Trainer.\
+        load_checkpoint` 加载该断点继续进行训练。如果保存的是 ``Model`` 对象，则可
+        以通过 :meth:`.Trainer.load_model` 加载该模型权重。
     :param only_state_dict: 保存时是否仅保存权重，在 ``model_save_fn`` 不为
         ``None`` 时无意义。
     :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函
         数应当接受一个文件夹作为参数，不返回任何东西。如果传入了 ``model_save_fn``
         函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运
         行该函数。
-    :kwargs: 包含以下额外参数，以及更多需要传递给 :meth:`Trainer.save_checkpoint
-        <fastNLP.core.Trainer.save_checkpoint>` 或者  :meth:`Trainer.\
-        save_model <fastNLP.core.Trainer.save_model>` 接口的参数。
+    :kwargs: 包含以下额外参数，以及更多需要传递给 :meth:`.Trainer.save_checkpoint`
+        或者  :meth:`.Trainer.save_model` 接口的参数。
 
         * *use_timestamp_folder* (``bool``) -- 是否创建以脚本的启动时间命名的文件
           夹，默认为 ``True``。
@@ -203,7 +204,9 @@ class TopkQueue:
 
 
 class TopkSaver(ResultsMonitor, Saver):
-    r"""用来识别 topk 模型并保存，也可以仅当一个保存 Saver 使用。保存路径为::
+    r"""用于识别 topk 模型并保存，也可以仅当一个保存 Saver 使用。
+
+    保存路径为::
 
         - folder/
             - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
@@ -214,8 +217,8 @@ class TopkSaver(ResultsMonitor, Saver):
     :param monitor: 监控的 metric 值：
 
         * 为 ``None`` 时，
-          fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置
-          的 `monitor` 值（如果有设置）。
+          fastNLP 将尝试使用 :class:`.Trainer` 中设置的 `monitor` 值（如果有设
+          置）。
         * 为 ``str`` 时，
           fastNLP 将尝试直接使用该名称从 ``evaluation`` 的结果中寻找，如果最终在
           ``evaluation`` 结果中没有找到完全一致的名称，则将使用最长公共字符串算法
@@ -228,18 +231,17 @@ class TopkSaver(ResultsMonitor, Saver):
     :param folder: 保存在哪个文件夹下，默认为当前 folder 下。
     :param save_object: 可选 ``['trainer', 'model']``，表示在保存时的保存对象为
         ``trainer+model`` 还是 只是 ``model``。如果保存 ``trainer`` 对象的话，将
-        会保存 :class:`~fastNLP.core.controllers.Trainer` 的相关状态，之后可以通
-        过 :meth:`Trainer.load_checkpoint` 加载该断点继续进行训练。如果保存的是
-        ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
+        会保存 :class:`.Trainer` 的相关状态，之后可以通过 :meth:`.Trainer.\
+        load_checkpoint` 加载该断点继续进行训练。如果保存的是 ``Model`` 对象，则可
+        以通过 :meth:`.Trainer.load_model` 加载该模型权重。
     :param only_state_dict: 保存时是否仅保存权重，在 ``model_save_fn`` 不为
         ``None`` 时无意义。
     :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数，这个函
         数应当接受一个文件夹作为参数，不返回任何东西。如果传入了 ``model_save_fn``
         函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运
         行该函数。
-    :kwargs: 包含以下额外参数，以及更多需要传递给 :meth:`Trainer.save_checkpoint
-        <fastNLP.core.Trainer.save_checkpoint>` 或者  :meth:`Trainer.\
-        save_model <fastNLP.core.Trainer.save_model>` 接口的参数。
+    :kwargs: 包含以下额外参数，以及更多需要传递给 :meth:`.Trainer.save_checkpoint`
+        或者  :meth:`.Trainer.save_model` 接口的参数。
 
         * *use_timestamp_folder* (``bool``) -- 是否创建以脚本的启动时间命名的文件
           夹，默认为 ``True``。

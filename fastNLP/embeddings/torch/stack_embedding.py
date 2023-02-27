@@ -1,8 +1,3 @@
-r"""
-.. todo::
-    doc
-"""
-
 from typing import List
 
 from ...envs.imports import _NEED_IMPORT_TORCH
@@ -21,7 +16,7 @@ __all__ = [
 
 class StackEmbedding(TokenEmbedding):
     r"""
-    支持将多个 embedding 集合成一个 embedding。
+    将多个 ``Embedding`` 集合成一个 ``Embedding``。
 
     Example::
 
@@ -32,9 +27,8 @@ class StackEmbedding(TokenEmbedding):
         >>> embed_2 = StaticEmbedding(vocab, model_dir_or_name='en-word2vec-300', requires_grad=True)
         >>> embed = StackEmbedding([embed_1, embed_2])
 
-    :param embeds: 一个由若干个 :class:`~fastNLP.embeddings.torch.embedding.\
-        TokenEmbedding` 组成的 :class:`list`，要求每一个 ``TokenEmbedding`` 的词
-        表都保持一致
+    :param embeds: 一个由若干个 :class:`.TokenEmbedding` 组成的 :class:`list`，
+        要求每一个 ``TokenEmbedding`` 的词表都保持一致
     :param word_dropout: 按照一定概率随机将 word 设置为 ``unk_index``，这样可以使
         得 ``<UNK>`` 这个 token 得到足够的训练，且会对网络有一定的 regularize 作
         用。不同 embedidng 会在相同的位置被设置为 ``<UNK>``。如果这里设置了

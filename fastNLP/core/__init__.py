@@ -20,6 +20,7 @@ __all__ = [
     'HasMonitorCallback',
     'FitlogCallback',
     'TimerCallback',
+    'ExtraInfoStatistics',
 
     # collators
     'Collator',
@@ -36,6 +37,12 @@ __all__ = [
     'PaddleNumberPadder',
     'PaddleTensorPadder',
     'PaddleSequencePadder',
+    'JittorNumberPadder',
+    'JittorTensorPadder',
+    'JittorSequencePadder',
+    'OneflowNumberPadder',
+    'OneflowTensorPadder',
+    'OneflowSequencePadder',
     'get_padded_numpy_array',
 
     # controllers
@@ -65,6 +72,8 @@ __all__ = [
     'TorchSingleDriver',
     'TorchDDPDriver',
     'DeepSpeedDriver',
+    'FairScaleDriver',
+    'TorchFSDPDriver',
     'PaddleSingleDriver',
     'PaddleFleetDriver',
     'JittorSingleDriver',
@@ -105,6 +114,10 @@ __all__ = [
     'BucketedBatchSampler',
     'ReproducibleBatchSampler',
     'RandomBatchSampler',
+    'MixSampler',
+    'DopedSampler',
+    'MixSequentialSampler',
+    'PollingSampler',
 
     # utils
     'cache_results',

@@ -40,18 +40,24 @@ from .utils import optimizer_state_to_device
 
 class TorchDriver(Driver):
     r"""
-    专属于 ``pytorch`` 的 ``driver``，是 ``TorchSingleDriver`` 和
-    ``TorchDDPDriver`` 的父类。
+    实现 **pytorch** 框架训练基本功能的 ``Driver``。
+
+    这个类被以下子类继承：
+
+    1. :class:`.TorchSingleDriver`：实现了使用单卡和 ``cpu`` 训练的具体功能；
+    2. :class:`.TorchDDPDriver`：实现了使用 ``DistributedDataParallel`` 启动
+       **pytorch** 分布式训练的功能；
 
     .. warning::
 
-        您不应当直接初始化该类，然后传入给 ``Trainer``，换句话说，您应当使用该类的子
-        类 ``TorchSingleDriver`` 和 ``TorchDDPDriver``，而不是该类本身。
+        您不应当直接初始化该类，然后传入给 :class:`.Trainer`，换句话说，您应当使用该
+        类的子类 :class:`.TorchSingleDriver` 和 :class:`.TorchDDPDriver`，而不是
+        该类本身。
 
     .. note::
 
-        您可以在使用 ``TorchSingleDriver`` 和 ``TorchDDPDriver`` 时使用
-        ``TorchDriver`` 提供的接口。
+        您可以在使用 :class:`.TorchSingleDriver` 和 :class:`.TorchDDPDriver`
+        时使用 ``TorchDriver`` 提供的接口。
 
     :param model: 训练时使用的 **pytorch** 模型。
     :param fp16: 是否开启混合精度训练;
@@ -113,8 +119,7 @@ class TorchDriver(Driver):
             self.grad_scaler.update()
 
     def check_dataloader_legality(self, dataloader):
-        """检测 DataLoader 是否合法。支持的类型包括
-        :class:`~fastNLP.core.dataloaders.TorchDataLoader`、
+        r"""检测 DataLoader 是否合法。支持的类型包括 :class:`.TorchDataLoader`、
         :class:`torch.utils.data.DataLoader`。
 
         :param dataloder:
@@ -246,8 +251,8 @@ class TorchDriver(Driver):
             的文件。把 model 相关的内容放入到 ``FASTNLP_MODEL_FILENAME`` 文件中，
             将传入的 ``states`` 以及自身产生的其它状态一并保存在
             ``FASTNLP_CHECKPOINT_FILENAME`` 里面。
-        :param states: 由 :class:`~fastNLP.core.controllers.Trainer` 传入的一个
-            字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态。
+        :param states: 由 :class:`.Trainer` 传入的一个字典，其中已经包含了为了实现
+            断点重训所需要保存的其它对象的状态。
         :param dataloader: 正在使用的 dataloader。
         :param only_state_dict: 是否只保存模型的参数，当 ``should_save_model``
             为 ``False``，该参数无效。
@@ -387,8 +392,8 @@ class TorchDriver(Driver):
         断点重训的加载函数，该函数会负责读取数据，并且恢复 **优化器** 、**sampler**
         的状态和 **模型** （如果 ``should_load_model`` 为 True）以及其它在
         :meth:`save_checkpoint` 函数中执行的保存操作，然后将一个 state 字典返回给
-        :class:`~fastNLP.core.controllers.Trainer字典的内容为函数
-        :meth:`save_checkpoint` 接受到的 ``states`` ）。
+        :class:`.Trainer` 字典的内容为函数 :meth:`save_checkpoint` 接受到的
+        ``states`` ）。
 
         该函数应该在所有 rank 上执行。
 
@@ -417,14 +422,14 @@ class TorchDriver(Driver):
                 返回的 dataloader 还会产生的 batch 数量 + batch_idx_in_epoch =
                 原来不断点训练时的 batch 的总数
 
-              由于 ``返回的 dataloader 还会产生的 batch 数`` 在 ``batch_size``
+              由于 **返回的 dataloader 还会产生的 batch 数** 在 ``batch_size``
               与 ``drop_last`` 参数给定的情况下无法改变，因此只能通过调整
               ``batch_idx_in_epoch`` 这个值来使等式成立。一个简单的计算原则如下：
 
-                * drop_last 为 ``True`` 时，等同于 floor(sample_in_this_rank/
-                  batch_size) - floor(num_left_samples/batch_size)；
-                * drop_last 为 ``False`` 时，等同于 ceil(sample_in_this_rank/
-                  batch_size) - ceil(num_left_samples/batch_size)。
+              * drop_last 为 ``True`` 时，等同于 floor(sample_in_this_rank/
+                batch_size) - floor(num_left_samples/batch_size)；
+              * drop_last 为 ``False`` 时，等同于 ceil(sample_in_this_rank/
+                batch_size) - ceil(num_left_samples/batch_size)。
         """
         states = torch.load(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME))
 

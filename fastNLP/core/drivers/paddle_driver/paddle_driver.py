@@ -41,20 +41,20 @@ class PaddleDriver(Driver):
 
     这个类被以下子类继承：
 
-    1. :class:`~fastNLP.core.drivers.paddle_driver.PaddleSingleDriver`：实现了
-       使用单卡和 ``cpu`` 训练的具体功能；
-    2. :class:`~fastNLP.core.drivers.paddle_driver.PaddleFleetDriver`：实现了使
-       用 ``fleet`` 分布式训练 API 进行集群式分布式训练的具体功能；
+    1. :class:`.PaddleSingleDriver`：实现了使用单卡和 ``cpu`` 训练的具体功能；
+    2. :class:`.PaddleFleetDriver`：实现了使用 ``fleet`` 分布式训练 API 进行集群
+       式分布式训练的具体功能；
 
     .. warning::
 
-        您不应当直接初始化该类，然后传入给 ``Trainer``，换句话说，您应当使用该类的子
-        类 ``PaddleSingleDriver`` 和 ``PaddleDDPDriver``，而不是该类本身。
+        您不应当直接初始化该类，然后传入给 :class:`.Trainer`，换句话说，您应当使用该
+        类的子类 :class:`.PaddleSingleDriver` 和 :class:`.PaddleFleetDriver`，而
+        不是该类本身。
 
     .. note::
 
-        您可以在使用 ``PaddleSingleDriver`` 和 ``PaddleFleetDriver`` 时使用
-        ``PaddleDriver`` 提供的接口。
+        您可以在使用 :class:`.PaddleSingleDriver` 和 :class:`.PaddleFleetDriver`
+        时使用 ``PaddleDriver`` 提供的接口。
 
     :param model: 训练时使用的 **PaddlePaddle** 模型
     :param fp16: 是否开启混合精度训练
@@ -101,8 +101,7 @@ class PaddleDriver(Driver):
             self.grad_scaler.update()
 
     def check_dataloader_legality(self, dataloader):
-        """检测 DataLoader 是否合法。支持的类型包括
-        :class:`~fastNLP.core.dataloaders.PaddleDataLoader`、
+        r"""检测 DataLoader 是否合法。支持的类型包括 :class:`.PaddleDataLoader`、
         :class:`paddle.io.DataLoader`。
 
         :param dataloder:
@@ -124,7 +123,7 @@ class PaddleDriver(Driver):
     @staticmethod
     def _check_optimizer_legality(optimizers):
         r"""
-        对于用户传入 trainer 的每一个 optimizer检测其合法性，必须为`paddle.\
+        对于用户传入 trainer 的每一个 optimizer 检测其合法性，必须为`paddle.\
         optimizer.Optimizer` 类型。
 
         :param optimizers: 需要检测的 `optimizers`。
@@ -249,8 +248,8 @@ class PaddleDriver(Driver):
             的文件。把 model 相关的内容放入到 ``FASTNLP_MODEL_FILENAME`` 文件中，
             将传入的 ``states`` 以及自身产生的其它状态一并保存在
             ``FASTNLP_CHECKPOINT_FILENAME`` 里面。
-        :param states: 由 :class:`~fastNLP.core.controllers.Trainer` 传入的一个
-            字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态。
+        :param states: 由 :class:`.Trainer` 传入的一个字典，其中已经包含了为了实现
+            断点重训所需要保存的其它对象的状态。
         :param dataloader: 正在使用的 dataloader。
         :param only_state_dict: 是否只保存模型的参数，当 ``should_save_model``
             为 ``False``，该参数无效。
@@ -339,8 +338,8 @@ class PaddleDriver(Driver):
         断点重训的加载函数，该函数会负责读取数据，并且恢复 **优化器** 、**sampler**
         的状态和 **模型** （如果 ``should_load_model`` 为 True）以及其它在
         :meth:`save_checkpoint` 函数中执行的保存操作，然后将一个 state 字典返回给
-        :class:`~fastNLP.core.controllers.Trainer字典的内容为函数
-        :meth:`save_checkpoint` 接受到的 ``states`` ）。
+        :class:`.Trainer` 字典的内容为函数 :meth:`save_checkpoint` 接受到的
+        ``states`` ）。
 
         该函数应该在所有 rank 上执行。
 
@@ -370,14 +369,14 @@ class PaddleDriver(Driver):
                 返回的 dataloader 还会产生的 batch 数量 + batch_idx_in_epoch =
                 原来不断点训练时的 batch 的总数
 
-              由于 ``返回的 dataloader 还会产生的 batch 数`` 在 ``batch_size``
+              由于 **返回的 dataloader 还会产生的 batch 数** 在 ``batch_size``
               与 ``drop_last`` 参数给定的情况下无法改变，因此只能通过调整
               ``batch_idx_in_epoch`` 这个值来使等式成立。一个简单的计算原则如下：
 
-                * drop_last 为 ``True`` 时，等同于 floor(sample_in_this_rank/
-                  batch_size) - floor(num_left_samples/batch_size)；
-                * drop_last 为 ``False`` 时，等同于 ceil(sample_in_this_rank/
-                  batch_size) - ceil(num_left_samples/batch_size)。
+              * drop_last 为 ``True`` 时，等同于 floor(sample_in_this_rank/
+                batch_size) - floor(num_left_samples/batch_size)；
+              * drop_last 为 ``False`` 时，等同于 ceil(sample_in_this_rank/
+                batch_size) - ceil(num_left_samples/batch_size)。
         """
         states = paddle.load(str(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME)))
 

@@ -22,13 +22,16 @@ from .utils import get_embeddings
 
 __all__ = [
     'Embedding',
+    'TokenEmbedding',
 ]
 
 
 class Embedding(Module):
     r"""
-    词向量嵌入，支持输入多种方式初始化。可以通过 ``self.num_embeddings`` 获取词表大
-    小; ``self.embedding_dim`` 获取 ``embedding`` 的维度。
+    词向量嵌入层，支持输入多种方式的初始化。
+
+    可以通过 ``self.num_embeddings`` 获取词表大小；``self.embedding_dim`` 获取
+    ``embedding`` 的维度。
 
     Example::
 
@@ -50,8 +53,8 @@ class Embedding(Module):
         得 ``<UNK>`` 这个 token 得到足够的训练，且会对网络有一定的 regularize 作
         用。设置该值时，必须同时设置 ``unk_index``。
     :param dropout: 对 Embedding 的输出的 dropout。
-    :param unk_index: drop word 时替换为的 index。**fastNLP** 的
-        :class:`fastNLP.Vocabulary`` 的 ``unk_index`` 默认为 1。
+    :param unk_index: drop word 时替换为的 index。**fastNLP** 的 :class:`.\
+        Vocabulary` 的 ``unk_index`` 默认为 1。
     """
 
     def __init__(self,
@@ -145,8 +148,15 @@ class Embedding(Module):
 
 class TokenEmbedding(Module):
     r"""
-    fastNLP中各种Embedding的基类
+    **fastNLP** 中各种 ``Embedding`` 的基类。
 
+    :param vocab: 词表。
+    :param word_dropout: 按照一定概率随机将 word 设置为 ``unk_index``，这样可以使
+        得 ``<UNK>`` 这个 token 得到足够的训练，且会对网络有一定的 regularize 作
+        用。不同 embedidng 会在相同的位置被设置为 ``<UNK>``。如果这里设置了
+        dropout，则组成的 embedding 就不要再设置 dropout 了。
+    :param dropout: 以多大的概率对 embedding 的表示进行 Dropout。0.1 即随机将 10%
+        的值置为 0。
     """
 
     def __init__(self, vocab, word_dropout=0.0, dropout=0.0):
@@ -196,8 +206,11 @@ class TokenEmbedding(Module):
     @property
     def requires_grad(self):
         r"""
-        Embedding的参数是否允许优化。True: 所有参数允许优化；False: 所有参数不允许
-        优化；None: 部分允许优化、部分不允许
+        Embedding 的参数是否允许优化。
+
+        - ``True``: 所有参数允许优化；
+        - ``False``: 所有参数不允许优化；
+        - ``None`: 部分允许优化、部分不允许
 
         :return:
         """
@@ -227,7 +240,7 @@ class TokenEmbedding(Module):
     @property
     def num_embeddings(self) -> int:
         r"""
-        这个值可能会大于实际的 embedding 矩阵的大小。
+        词表大小；这个值可能会大于实际的 embedding 矩阵的大小。
 
         :return:
         """
@@ -237,7 +250,7 @@ class TokenEmbedding(Module):
         r"""
         返回 embedding 的词典。
 
-        :return: Vocabulary
+        :return: :class:`.Vocabulary`
         """
         return self._word_vocab
 

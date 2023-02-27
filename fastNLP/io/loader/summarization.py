@@ -10,7 +10,9 @@ from .json import JsonLoader
 class ExtCNNDMLoader(JsonLoader):
     r"""
     **CNN / Daily Mail** 数据集的 **Loader**，用于 **extractive summarization
-    task** 任务。如果你使用了这个数据，请引用 https://arxiv.org/pdf/1506.03340.pdf
+    task** 任务。
+
+    如果你使用了这个数据，请引用 https://arxiv.org/pdf/1506.03340.pdf
 
     读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 

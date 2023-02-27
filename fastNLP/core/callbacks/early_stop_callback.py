@@ -7,14 +7,14 @@ __all__ = ['EarlyStopCallback']
 
 
 class EarlyStopCallback(HasMonitorCallback):
-    """用于 early stop 的 callback 。当监控的结果连续多少次没有变好便 raise 一个
+    """用于 early stop 的 ``Callback``。当监控的结果连续多少次没有变好便 raise 一个
     :class:`EarlyStopException`。
 
     :param monitor: 监控的 metric 值。
 
         * 为 ``None`` 时，
-          fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置
-          的 `monitor` 值（如果有设置）。
+          fastNLP 将尝试使用 :class:`.Trainer` 中设置的 `monitor` 值（如果有设
+          置）。
         * 为 ``str`` 时，
           fastNLP 将尝试直接使用该名称从 ``evaluation`` 的结果中寻找，如果最终在
           ``evaluation`` 结果中没有找到完全一致的名称，则将使用最长公共字符串算法

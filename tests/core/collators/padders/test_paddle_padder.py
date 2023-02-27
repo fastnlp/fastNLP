@@ -124,5 +124,15 @@ class TestPaddleTensorPadder:
         PaddleTensorPadder(ele_dtype='int64', dtype=int, pad_val=-1)
         PaddleTensorPadder(ele_dtype=int, dtype='int64', pad_val=-1)
 
-    def test_v1(self):
-        print(paddle.zeros((3, )).dtype)
+    def test_dtype_transfer(self, ):
+        result = PaddleTensorPadder.pad(
+            paddle.ones((3, 3), dtype='int32'),
+            pad_val=-100,
+            dtype=paddle.float32)
+        assert result.dtype == paddle.float32
+
+        result = PaddleTensorPadder.pad(
+            paddle.ones((3, 3), dtype='float32'),
+            pad_val=-100,
+            dtype=paddle.int32)
+        assert result.dtype == paddle.int32

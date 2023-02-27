@@ -13,7 +13,7 @@ class TransformerEncoder(nn.Module):
     :param d_model: 输入维度的大小，同时也是输出维度的大小。
     :param n_head: **多头注意力** head 的数目，需要能被 ``d_model`` 整除
     :param dim_ff: FFN 中间映射的维度
-    :param dropout: :class:`~fastNLP.modules.torch.decoder.SelfAttention` 和
+    :param dropout: :class:`~fastNLP.modules.torch.attention.SelfAttention` 和
         FFN 中的 dropout 的大小
     """
 

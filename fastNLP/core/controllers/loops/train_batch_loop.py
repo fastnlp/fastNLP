@@ -30,7 +30,7 @@ class TrainBatchLoop(Loop):
             您不需要自己主动地调用该方法，``Trainer`` 会负责调用该方法来完成训练过
             程；
 
-        :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
+        :param trainer: :class:`.Trainer` 实例；
         :param dataloader: 当前训练所使用的 ``dataloader``；
         """
         get_batch_indices = dataloader.get_batch_indices if callable(getattr(dataloader, 'get_batch_indices', None))\
@@ -78,7 +78,7 @@ class TrainBatchLoop(Loop):
         r"""
         针对一个 ``batch`` 的数据的训练过程；
 
-        :param trainer: :class:`~fastNLP.core.controllers.Trainer` 实例；
+        :param trainer: :class:`.Trainer` 实例；
         :param batch: 一个 ``batch`` 的数据；
         """
         outputs = trainer.train_step(batch)

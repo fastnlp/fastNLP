@@ -33,16 +33,14 @@ if _NEED_IMPORT_TORCH:
 
 class TorchFSDPDriver(TorchDDPDriver):
     r"""
-    实现对于 pytorch 自己实现的 fully sharded data parallel；请阅读
+    实现对于 pytorch 自己实现的 ``fully sharded data parallel``；请阅读
     `该文档 <https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.full_optim_state_dict>`_
     了解更多：
 
     .. note::
 
-        ``TorchFSDPDriver`` 大部分行为与 ``TorchDDPDriver`` 相同，如果您不了解
-        ``TorchDDPDriver``，您可以先阅读 :class:`~fastNLP.core.drivers.\
-        TorchDDPDriver`；
-
+        ``TorchFSDPDriver`` 大部分行为与 :class:`.TorchDDPDriver` 相同，如果您不
+        了解 DDP 的过程，可以查看 :class:`.TorchDDPDriver` 的文档。
     .. warning::
 
         ``TorchFSDPDriver`` 现在还不支持断点重训功能，但是支持保存模型和加载模型；
@@ -51,12 +49,12 @@ class TorchFSDPDriver(TorchDDPDriver):
         ``Trainer`` 时传入 ``torch_kwargs={"fsdp_kwargs": {'save_on_rank0':
         True/False, 'load_on_rank0': True/False}}`` 来指定保存模型的行为：
 
-            1. save/load_on_rank0 = True：表示在加载和保存模型时将所有 rank 上的模
-               型参数全部聚合到 rank0 上，注意这样可能会造成 OOM；
-            2. save/load_on_rank0 = False：表示每个 rank 分别保存加载自己独有的模
-               型参数；
+        1. ``save/load_on_rank0 = True``：表示在加载和保存模型时将所有 rank 上的模
+           型参数全部聚合到 rank0 上，注意这样可能会造成 OOM；
+        2. ``save/load_on_rank0 = False``：表示每个 rank 分别保存加载自己独有的模
+           型参数；
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数
+    :param model: 传入给 :class:`.Trainer` 的 ``model`` 参数
     :param parallel_device: 用于分布式训练的 ``gpu`` 设备
     :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``python -m torch.
         distributed.launch`` 启动的
@@ -71,14 +69,13 @@ class TorchFSDPDriver(TorchDDPDriver):
         * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.\
           amp.cuda.GradScaler` 的参数
     :kwargs:
-        * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
+        * *model_wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
           ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
-            core.utils.auto_param_call`。
+            关于该参数的详细说明，请参见 :class:`.Trainer` 和 :func:`~fastNLP.\
+            core.auto_param_call`。
 
         * *output_from_new_proc* (``str``) -- 应当为一个字符串，表示在多进程的
           driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一： ``["all",
@@ -245,7 +242,9 @@ class TorchFSDPDriver(TorchDDPDriver):
             self._has_ddpwrapped = True
 
     def unwrap_model(self):
-        r"""注意该函数因为需要在特定的时候进行调用，例如 ddp 在 get_model_call_fn
+        r"""获取原本模型。
+
+        注意该函数因为需要在特定的时候进行调用，例如 ddp 在 get_model_call_fn
         的时候，因此不能够删除；如果您使用该函数来获取原模型的结构信息，是可以的；但是
         如果您想要通过该函数来获取原模型实际的参数，是不可以的，因为在
         FullyShardedDataParallel 中模型被切分成了多个部分，而对于每个 gpu 上 的模
@@ -261,7 +260,7 @@ class TorchFSDPDriver(TorchDDPDriver):
             filepath: Union[str, Path],
             only_state_dict: bool = True,
             **kwargs):
-        """保存的模型到 ``filepath`` 中。
+        """保存模型到 ``filepath`` 中。
 
         :param filepath: 文件路径
         :param only_state_dict: 是否只保存权重；在 ``TorchFSDPDriver`` 中只能为

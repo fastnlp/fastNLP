@@ -22,14 +22,16 @@ class CanItemDataType(ABC):
 
 
 class ResultsMonitor:
-    r"""可用于监控某个数值，并通过 :meth:`is_better_results` 等接口检测结果是否变得
+    r"""监控某个数值并评估结果是否有所改善的监视器。
+
+    可用于监控某个数值，并通过 :meth:`is_better_results` 等接口检测结果是否变得
     更好。
 
     :param monitor: 监控的 metric 值。
 
         * 为 ``None`` 时，
-          fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置
-          的 `monitor` 值（如果有设置）。
+          fastNLP 将尝试使用 :class:`.Trainer` 中设置的 `monitor` 值（如果有设
+          置）。
         * 为 ``str`` 时，
           fastNLP 将尝试直接使用该名称从 ``evaluation`` 的结果中寻找，如果最终在
           ``evaluation`` 结果中没有找到完全一致的名称，则将使用最长公共字符串算法
@@ -202,8 +204,10 @@ class ResultsMonitor:
 
 
 class HasMonitorCallback(ResultsMonitor, Callback):
-    r"""该 callback 不直接使用，作为其它相关 callback 的父类使用，如果 callback
-    有使用 monitor 可以继承该函数里面实现了。
+    r"""对特定数值进行监控的 ``Callback``。
+
+    该 callback 不直接使用，作为其它相关 callback 的父类使用，如果 callback
+    有使用 monitor 可以继承该 ``Callback``。其已经实现了下面的功能：
 
     1. 判断 monitor 合法性；
     2. 在需要时，根据 trainer 的 monitor 设置自己的 monitor 名称。
@@ -211,8 +215,8 @@ class HasMonitorCallback(ResultsMonitor, Callback):
     :param monitor: 监控的 metric 值：
 
         * 为 ``None`` 时，
-          fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置
-          的 `monitor` 值（如果有设置）。
+          fastNLP 将尝试使用 :class:`.Trainer` 中设置的 `monitor` 值（如果有设
+          置）。
         * 为 ``str`` 时，
           fastNLP 将尝试直接使用该名称从 ``evaluation`` 的结果中寻找，如果最终在
           ``evaluation`` 结果中没有找到完全一致的名称，则将使用最长公共字符串算法
@@ -261,13 +265,15 @@ class HasMonitorCallback(ResultsMonitor, Callback):
 
 
 class ExecuteOnceBetterMonitor(HasMonitorCallback):
-    """当监控的 ``monitor`` 结果更好的时候，调用 ``execute_fn`` 函数。
+    r"""当结果变好后执行特定函数的监视器 ``Callback``。
+
+    当监控的 ``monitor`` 结果更好的时候，调用 ``execute_fn`` 函数。
 
     :param monitor: 监控的 metric 值：
 
         * 为 ``None`` 时，
-          fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置
-          的 `monitor` 值（如果有设置）。
+          fastNLP 将尝试使用 :class:`.Trainer` 中设置的 `monitor` 值（如果有设
+          置）。
         * 为 ``str`` 时，
           fastNLP 将尝试直接使用该名称从 ``evaluation`` 的结果中寻找，如果最终在
           ``evaluation`` 结果中没有找到完全一致的名称，则将使用最长公共字符串算法

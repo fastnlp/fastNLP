@@ -70,8 +70,8 @@ class Timers:
 
 
 class TimerCallback(Callback):
-    r"""这个 callback 的作用是打印训练过程中的相关时间信息，例如训练时长、
-    评测时长、 总时长等。"""
+    r"""打印训练过程中的相关时间信息如训练时长、评测时长、 总时长等信息的
+    ``Callback``。"""
 
     def __init__(self, print_every=-1, time_ndigit=3):
         """

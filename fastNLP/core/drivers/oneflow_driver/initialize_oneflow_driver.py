@@ -28,8 +28,8 @@ def initialize_oneflow_driver(driver: str,
     :param device: 该参数的格式与 ``Trainer`` 对参数 ``device`` 的要求一致
     :param model: 训练或者评测的具体的模型；
 
-    :return: 一个 :class:`~fastNLP.core.OneflowSingleDriver` 或
-        :class:`~fastNLP.core.OneflowDDPDriver` 实例；
+    :return: 一个 :class:`.OneflowSingleDriver` 或 :class:`.OneflowDDPDriver`
+        实例；
     """
     # world_size 和 rank
     if FASTNLP_BACKEND_LAUNCH in os.environ:

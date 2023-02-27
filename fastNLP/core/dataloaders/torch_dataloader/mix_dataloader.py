@@ -98,8 +98,16 @@ class _MixCollateFn:
 
 
 class MixDataLoader(DataLoader):
-    r"""针对以下四种情况提供的 ``MixDataLoader``，目前只支持 **pytorch** 框架的版
-    本，其中 mode 的取值范围为 ``['sequential', 'mix', 'polling', 'Sampler']``:
+    r"""能够混合加载数据集的 ``DataLoader``，仅支持 **pytorch** 框架。
+
+    ``MixDataLoader`` 能够根据参数 ``mode`` 不同而采取不同的混合取数策略，目前只支
+    持 **pytorch** 框架的版本。
+
+    :param datasets: 一个序列或者字典，其中包含了数个数据集对象。每个数据集可以是
+        :class:`.DataSet`、pytorch 的 :class:`Dataset`、hugginface 的数据集对
+        象，以及所有实现了 :meth:`__getitem__` 和 :meth:`__len__` 函数的对象。
+    :param mode: ``mode`` 控制 ``MixDataLoader`` 运行模式。``mode`` 的取值范围为
+        ``['sequential', 'mix', 'polling', 'Sampler']``：
 
         * 当 mode 为 ``'sequential'`` 时，``MixDataLoader``  将 ``datasets`` 的
           序列或者字典视为一个混合大数据集，按照 datasets 数据集序列或者字典的顺序一
@@ -116,22 +124,14 @@ class MixDataLoader(DataLoader):
           Sampler 必须将输入的 datasets 视为一个混合大数据集，其 index 范围为
           ``0<idx<len(datasets[0])+...+len(datasets[x])``, 然后参数
           ``sampler``, ``drop_last``, ``ds_ratio`` 均无效。
-
-    :param datasets: 一个序列或者字典，其中包含了数个数据集对象。每个数据集可以是
-        :class:`~fastNLP.core.dataset.DataSet`、pytorch 的 :class:`Dataset`、
-        hugginface 的数据集对象，以及所有实现了 :meth:`__getitem__` 和
-        :meth:`__len__` 函数的对象。
-    :param mode: ``mode`` 控制 ``MixDataLoader`` 运行模式。``mode`` 的取值范围为
-        ``['sequential', 'mix', 'polling', 'Sampler']``，每种模式的详细功能见上
-        文。
     :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的
         Callable 函数。其取值可以为 ``['auto', Callable, List[Callable],
         Dict[str, Callable]]``:
 
-        * collate_fn 为 ``'auto'`` 时，``MixDataLoader`` datasets 序列或者 dict
-          初始化一个 :class:`~fastNLP.core.collators.Collator`  作为其默认值，需
-          要注意的是只有当 datasets 包含的所以 dataset 的数据都为 ``List`` 或者
-          ``Dict`` 类型时才能使用。否则只能用户自己定义 collate_fn 。
+        * collate_fn 为 ``'auto'`` 时，``MixDataLoader`` 会为 datasets 序列或者
+          dict 初始化一个 :class:`.Collator`  作为其默认值，需要注意的是只有当
+          datasets 包含的所有 dataset 的数据都为 ``List`` 或者 ``Dict`` 类型时才能
+          使用。否则只能用户自己定义 collate_fn 。
         * collate_fn 为  :class:`Callable` 时，该 collate_fn 会被 datasets 序列
           或者dict 的所有数据所共享。该 Callable 函数应当接受一个 batch 参数作为输
           入，batch 是一个 List 对象且 List 中的每一条数据都是 dataset 的一条数据；
@@ -141,12 +141,10 @@ class MixDataLoader(DataLoader):
           到 ``datasets[key]`` 的数据集上。``collate_fn[key]`` 是一个 Callable
           对象。
 
-
     :param sampler: 取样器，应该是实现了 :meth:`__len__` 和 :meth:`__iter__`
-        方法的实例化对象，例如 fastNLP 的 :class:`~fastNLP.core.samplers.\
-        ReproducibleSampler`、pytorch 的 :class:`Sampler` 对象等。其
-        :meth:`__iter__` 方法每次都会返回 dataset 的一个下标 index ，其取值范围为
-        ``[None, str, Dict[str, Sampler]]``:
+        方法的实例化对象，例如 fastNLP 的 :class:`.ReproducibleSampler`、pytorch
+        的 :class:`Sampler` 对象等。其 :meth:`__iter__` 方法每次都会返回 dataset
+        的一个下标 index ，其取值范围为 ``[None, str, Dict[str, Sampler]]``:
 
         * sampler 为 ``None`` 时，``MixDataLoader`` 默认初始化 **pytorch** 的
           ``SequentialSampler`` 作为默认值。其功能时顺序返回 dataset 的下标。
@@ -158,7 +156,7 @@ class MixDataLoader(DataLoader):
         * sampler 为 ``Dict[str, Sampler]`` 时，``Sampler`` 为用户定义的实现了
           __len__() 和 __iter__() 的实例化对象。其每次 iter 必须返回一个 int 下
           标。Dict 的 str 必须和 datasets 的 key 一致。也即是 ``Dict[str,
-          Sampler]`` 为 datasets 字典的每个 dataset 初始化了一个 Sampler。
+          Sampler]`` 为 datasets 字典的每个 dataset 初始化了一个 ``Sampler``。
 
     :param num_workers: 当 ``num_workers > 0`` 时，``MixDataLoader`` 会开启
         ``num_workers`` 个子进程来处理数据，可以加快数据处理速度，但同时也会消耗大量
@@ -209,7 +207,7 @@ class MixDataLoader(DataLoader):
             if mode == 'mix':
                 raise ValueError(
                     f'mode: {mode} do not support collate_fn is Dict, '
-                    "please use callate_fn=Callable or 'auto'")
+                    "please use collate_fn=Callable or 'auto'")
             for key in datasets.keys():
                 if key not in collate_fn:
                     raise ValueError(
@@ -224,7 +222,7 @@ class MixDataLoader(DataLoader):
                 if type(ds[0]) != date_type or not (isinstance(
                         ds[0], List) or isinstance(ds[0], Mapping)):
                     raise ValueError(
-                        f'when you use callate_fn={collate_fn}, all dataset '
+                        f'when you use collate_fn={collate_fn}, all dataset '
                         f'must be list or dict. But dataset {idx - 1} data '
                         f'type is {date_type}, dataset {idx} data type is '
                         f'{type(ds[0])}')

@@ -19,11 +19,9 @@ __all__ = ['SeqLabeling', 'AdvSeqLabel', 'BiLSTMCRF']
 
 
 class BiLSTMCRF(nn.Module):
-    r"""
-    结构为
-    ``Embedding`` + :class:`BiLSTM <fastNLP.modules.torch.encoder.LSTM>` +
-    ``FC`` + ``Dropout`` + :class:`CRF <fastNLP.modules.torch.decoder.\
-    ConditionalRandomField>`。
+    r""":class:`BiLSTM <.LSTM>` 与 :class:`CRF <.torch.ConditionalRandomField>`
+    的组合模型。结构为 ``Embedding`` + :class:`BiLSTM <.LSTM>` + ``FC`` +
+    ``Dropout`` + :class:`CRF <.torch.ConditionalRandomField>`。
 
     :param embed: 支持以下几种输入类型：
 
@@ -135,22 +133,20 @@ class BiLSTMCRF(nn.Module):
 
 class SeqLabeling(nn.Module):
     r"""
-    一个基础的 Sequence labeling 的模型。
-
-    用于做 sequence labeling 的基础类。结构包含一层 ``Embedding``，一层
-    :class:`~fastNLP.modules.torch.encoder.LSTM` (单向，一层)，一层全连接层，以及
-    一层 :class:`CRF <fastNLP.modules.torch.decoder.ConditionalRandomField>`。
+    一个基础的 ``Sequence labeling`` 的模型，用于做 sequence labeling 的基础类。结
+    构包含一层 ``Embedding``，一层 :class:`~fastNLP.modules..torch.LSTM` (单向，
+    一层)，一层全连接层，以及一层 :class:`CRF <.fastNLP.modules.torch.\
+    ConditionalRandomField>`。
 
     :param embed: 支持以下几种输入类型：
 
-            - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个
-              词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
-            - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对
-              象，此时就以传入的对象作为 embedding；
-            - :class:`numpy.ndarray`，将使用传入的 ndarray 作为 Embedding 初始
-              化；
-            - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
-    :param hidden_size: :class:`fastNLP.modules.torch.encoder.LSTM` 隐藏层的大小
+        - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的
+          维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+        - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时
+          就以传入的对象作为 embedding；
+        - :class:`numpy.ndarray`，将使用传入的 ndarray 作为 Embedding 初始化；
+        - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+    :param hidden_size: :class:`~fastNLP.modules.torch.LSTM` 隐藏层的大小
     :param num_classes: 一共有多少类
     """
 
@@ -230,10 +226,8 @@ class SeqLabeling(nn.Module):
 
 class AdvSeqLabel(nn.Module):
     r"""
-    更复杂的 Sequence Labelling 模型。结构为 ``Embedding``, ``LayerNorm``,
-    :class:`BiLSTM <fastNLP.modules.torch.encoder.LSTM>` （两层），``FC``，
-    ``LayerNorm``，``Dropout``，``FC``，:class:`CRF <fastNLP.modules.torch.\
-    decoder.ConditionalRandomField>`。
+    更复杂的 Sequence Labelling 模型。结构为 ``Embedding`` + ``LayerNorm`` +
+    :class:`BiLSTM <.torch.LSTM>` （两层） + ``FC`` + ``LayerNorm`` + ``Dropout`` + ``FC`` + :class:`CRF <.torch.ConditionalRandomField>`。
 
     :param embed: 支持以下几种输入类型：
 

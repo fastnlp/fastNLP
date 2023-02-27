@@ -1,6 +1,3 @@
-r"""
-
-"""
 # isort: skip_file
 
 __all__ = [

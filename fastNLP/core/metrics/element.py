@@ -29,7 +29,7 @@ def _wrap_cal_value(func):
 
 
 class Element:
-    r"""保存 :class:`~fastNLP.core.metrics.Metric` 中计算的元素值的对象。
+    r"""保存 :class:`.Metric` 中计算的元素值的对象。
 
     :param name: 名称
     :param value: 元素的值
@@ -46,10 +46,10 @@ class Element:
         Tensor`；如果 ``'backend'`` 为 ``'paddle'`` 则该对象为 :class:`paddle.\
         Tensor`；如果 ``backend`` 为 ``'jittor'`` , 则该对象为 :class:`jittor.\
         Var`。一般情况下直接默认为 ``'auto'`` 就行了，**fastNLP** 会根据实际调用
-        :meth`Metric.update` 函数时传入的参数进行合理的初始化，例如当传入的参数中只
-        包含 :class:`torch.Tensor` 这一种 tensor 时（可以有其它非 tensor 类型的输
-        入）则认为 ``backend`` 为 ``'torch'``；只包含 :class:`jittor.Var` 这一种
-        tensor 时（可以有其它非 tensor 类型的输入）则认为 ``backend`` 为
+        :meth:`.Metric.update` 函数时传入的参数进行合理的初始化，例如当传入的参数中
+        只包含 :class:`torch.Tensor` 这一种 tensor 时（可以有其它非 tensor 类型的
+        输入）则认为 ``backend`` 为 ``'torch'``；只包含 :class:`jittor.Var` 这一
+        种 tensor 时（可以有其它非 tensor 类型的输入）则认为 ``backend`` 为
         ``'jittor'``。如果没有检测到任何一种 tensor ，就默认使用 :class:`float` 类
         型作为 element 。
     """

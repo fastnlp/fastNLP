@@ -25,7 +25,7 @@ class EvaluateBatchLoop(Loop):
         r"""
         需要返回在传入的 ``dataloader`` 中的 evaluation 结果
 
-        :param evaluator: :class:`~fastNLP.core.controllers.Evaluator` 对象
+        :param evaluator: :class:`.Evaluator` 对象
         :param dataloader: 当前需要进行评测的 ``dataloader``
         :return:
         """
@@ -69,7 +69,7 @@ class EvaluateBatchLoop(Loop):
         r"""
         针对一个 ``batch`` 的数据的评测过程；
 
-        :param evaluator: :class:`~fastNLP.core.controllers.Evaluator` 对象
+        :param evaluator: :class:`.Evaluator` 对象
         :param batch: 当前需要评测的一个 ``batch`` 的数据；
         """
         outputs = evaluator.evaluate_step(batch)  # 将batch输入到model中得到结果

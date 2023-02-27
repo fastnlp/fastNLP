@@ -126,6 +126,27 @@ def _get_beautiful_extra_string(extra_info_collection: dict,
 
 
 class ProgressCallback(HasMonitorCallback):
+    r"""在 **fastNLP** 中显示进度条的 ``Callback``。一般作为具体 progress_bar 的父
+    类被继承。
+
+    :param monitor: 监控的 metric 值。当检测到这个key的结果更好时，会打印出不同的颜
+        色进行提示。
+
+        * 为 ``None`` 时，
+          fastNLP 将尝试使用 :class:`.Trainer` 中设置的 `monitor` 值（如果有设
+          置）。
+        * 为 ``str`` 时，
+          fastNLP 将尝试直接使用该名称从 ``evaluation`` 的结果中寻找，如果最终在
+          ``evaluation`` 结果中没有找到完全一致的名称，则将使用最长公共字符串算法
+          从 ``evaluation`` 结果中找到最匹配的那个作为 ``monitor``。
+        * 为 :class:`Callable` 时，
+          则接受参数为 ``evaluation`` 的结果（字典类型），返回一个 ``float`` 值作
+          为 ``monitor`` 的结果，如果当前结果中没有相关的 ``monitor`` 值则返回
+          ``None``。
+
+    :param larger_better: 是否是 monitor 的结果越大越好。
+    :param must_have_monitor: 是否强制要求传入 ``monitor``。
+    """
 
     def __init__(self, monitor, larger_better, must_have_monitor=False):
         super(ProgressCallback, self).__init__(
@@ -179,10 +200,12 @@ def choose_progress_callback(
 
 
 class RichCallback(ProgressCallback):
-    r"""在训练过程中打印 *rich* progress bar 的 callback 。在 Trainer 中，默认就会
-    使用这个 callback 来显示进度。如果需要定制这个 Callback 的 参数，请通过实例化本
-    Callback 并传入到 Trainer 中实现。在打印 evaluate 的结果时，不会打印名称以 "_"
-    开头的内容。
+    r"""在训练过程中打印 *rich* progress bar 的 ``Callback``，也是在 :class:`.\
+    Trainer` 中默认使用的进度条。
+
+    这个 callback 来显示进度。如果需要定制这个 Callback 的 参数，请通过实例化本
+    Callback 并传入到 :class:`.Trainer` 中实现。在打印 evaluate 的结果时，不会打印
+    名称以 "_"开头的内容。
 
     :param print_every: 多少个 batch 更新一次显示。
     :param loss_round_ndigit: 显示的 loss 保留多少位有效数字
@@ -190,8 +213,8 @@ class RichCallback(ProgressCallback):
         色进行提示。
 
         * 为 ``None`` 时，
-          fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置
-          的 `monitor` 值（如果有设置）。
+          fastNLP 将尝试使用 :class:`.Trainer` 中设置的 `monitor` 值（如果有设
+          置）。
         * 为 ``str`` 时，
           fastNLP 将尝试直接使用该名称从 ``evaluation`` 的结果中寻找，如果最终在
           ``evaluation`` 结果中没有找到完全一致的名称，则将使用最长公共字符串算法
@@ -210,10 +233,10 @@ class RichCallback(ProgressCallback):
           则打印出来。
         * 为 ``Sequence[str]`` 时，与 ``str`` 类似，但是可以打印多个内容。
         * 为 ``None`` 时，进度条不进行额外信息的展示。
-        * 为 :class:`~fastNLP.core.callbacks.ExtraInfoStatistics` 及其子类时，必
-          须实现 ``update`` 和 ``get_stat`` 方法，在未进行打印的轮次，将额外信息相
-          加累积，并在输出前求平均。可以手动重写 ``update`` 和 ``get_stat`` 方法来
-          实现自己的累积平均方式。
+        * 为 :class:`ExtraInfoStatistics` 及其子类时，必须实现 ``update`` 和
+          ``get_stat`` 方法，在未进行打印的轮次，将额外信息相加累积，并在输出前求平
+          均。可以手动重写 ``update`` 和 ``get_stat`` 方法来实现自己的累积平均方
+          式。
     """
 
     def __init__(self,
@@ -360,7 +383,9 @@ class RichCallback(ProgressCallback):
 
 
 class RawTextCallback(ProgressCallback):
-    r"""通过向命令行打印进度的方式显示。在打印 evaluate 的结果时，不会打印名称以 "_"
+    r"""在命令行中以文本形式输出进度的 ``Callback``。
+
+    通过向命令行打印进度的方式显示。在打印 evaluate 的结果时，不会打印名称以 "_"
     开头的内容。
 
     :param print_every: 多少个 batch 更新一次显示。
@@ -369,8 +394,8 @@ class RawTextCallback(ProgressCallback):
         色进行提示。
 
         * 为 ``None`` 时，
-          fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置
-          的 `monitor` 值（如果有设置）。
+          fastNLP 将尝试使用 :class:`.Trainer` 中设置的 `monitor` 值（如果有设
+          置）。
         * 为 ``str`` 时，
           fastNLP 将尝试直接使用该名称从 ``evaluation`` 的结果中寻找，如果最终在
           ``evaluation`` 结果中没有找到完全一致的名称，则将使用最长公共字符串算法
@@ -388,10 +413,10 @@ class RawTextCallback(ProgressCallback):
           则打印出来。
         * 为 ``Sequence[str]`` 时，与 ``str`` 类似，但是可以打印多个内容。
         * 为 ``None`` 时，进度条不进行额外信息的展示。
-        * 为 :class:`~fastNLP.core.callbacks.ExtraInfoStatistics` 及其子类时，必
-          须实现 ``update`` 和 ``get_stat`` 方法，在未进行打印的轮次，将额外信息相
-          加累积，并在输出前求平均。可以手动重写 ``update`` 和 ``get_stat`` 方法来
-          实现自己的累积平均方式。
+        * 为 :class:`ExtraInfoStatistics` 及其子类时，必须实现 ``update`` 和
+          ``get_stat`` 方法，在未进行打印的轮次，将额外信息相加累积，并在输出前求平
+          均。可以手动重写 ``update`` 和 ``get_stat`` 方法来实现自己的累积平均方
+          式。
     """
 
     def __init__(self,
@@ -488,10 +513,12 @@ class RawTextCallback(ProgressCallback):
 
 
 class TqdmCallback(ProgressCallback):
-    r"""在训练过程中打印 *tqdm* progress bar 的 callback 。在 Trainer 中，如果设置
-    了 ``progress_bar='tqdm'`` 就会使用这个 callback 来显示进度。如果需要定制这个
-    Callback 的参数，请通过实例化本 Callback 并传入到 Trainer 中实现。同时在打印
-    evaluate 的结果时，不会打印名称以 "_" 开头的内容。
+    r"""在训练过程中打印 *tqdm* progress bar 的 ``Callback``。
+
+    在 :class:`.Trainer` 中，如果设置了 ``progress_bar='tqdm'`` 就会使用
+    ``TqdmCallback`` 来显示进度。如果需要定制这个 Callback 的参数，请通过实例化本
+    Callback 并传入到 Trainer 中实现。同时在打印 evaluate 的结果时，不会打印名称以
+    "_" 开头的内容。
 
     :param print_every: 多少个 batch 更新一次显示。
     :param loss_round_ndigit: 显示的 loss 保留多少位有效数字
@@ -499,8 +526,8 @@ class TqdmCallback(ProgressCallback):
         色进行提示。
 
         * 为 ``None`` 时，
-          fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置
-          的 `monitor` 值（如果有设置）。
+          fastNLP 将尝试使用 :class:`.Trainer` 中设置的 `monitor` 值（如果有设
+          置）。
         * 为 ``str`` 时，
           fastNLP 将尝试直接使用该名称从 ``evaluation`` 的结果中寻找，如果最终在
           ``evaluation`` 结果中没有找到完全一致的名称，则将使用最长公共字符串算法
@@ -518,10 +545,10 @@ class TqdmCallback(ProgressCallback):
           则打印出来。
         * 为 ``Sequence[str]`` 时，与 ``str`` 类似，但是可以打印多个内容。
         * 为 ``None`` 时，进度条不进行额外信息的展示。
-        * 为 :class:`~fastNLP.core.callbacks.ExtraInfoStatistics` 及其子类时，必
-          须实现 ``update`` 和 ``get_stat`` 方法，在未进行打印的轮次，将额外信息相
-          加累积，并在输出前求平均。可以手动重写 ``update`` 和 ``get_stat`` 方法来
-          实现自己的累积平均方式。
+        * 为 :class:`ExtraInfoStatistics` 及其子类时，必须实现 ``update`` 和
+          ``get_stat`` 方法，在未进行打印的轮次，将额外信息相加累积，并在输出前求平
+          均。可以手动重写 ``update`` 和 ``get_stat`` 方法来实现自己的累积平均方
+          式。
     """
 
     def __init__(self,

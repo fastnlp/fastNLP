@@ -61,12 +61,12 @@ class CNNCharEmbedding(TokenEmbedding):
     :param pre_train_char_embed: 可以有两种方式调用预训练好的
         :class:`CNNCharEmbedding` ：
 
-            1. 传入 embedding 文件夹（文件夹下应该只有一个以 **.txt** 作为后缀的文
-               件）或文件路径；
-            2. 传入 embedding 的名称，第二种情况将自动查看缓存中是否存在该模型，没有
-               的话将自动下载；
-            3. 如果输入为 ``None`` 则使用 ``embedding_dim`` 的维度随机初始化一个
-               embedding；
+        1. 传入 embedding 文件夹（文件夹下应该只有一个以 **.txt** 作为后缀的文件）
+           或文件路径；
+        2. 传入 embedding 的名称，第二种情况将自动查看缓存中是否存在该模型，没有的话
+           将自动下载；
+        3. 如果输入为 ``None`` 则使用 ``embedding_dim`` 的维度随机初始化一个
+           embedding；
     :param requires_grad: 是否更新权重
     :param include_word_start_end: 是否在每个 word 开始的 character 前和结束的
         character 增加特殊标示符号
@@ -240,12 +240,12 @@ class LSTMCharEmbedding(TokenEmbedding):
     :param pre_train_char_embed: 可以有两种方式调用预训练好的
         :class:`LSTMCharEmbedding` ：
 
-            1. 传入 embedding 文件夹（文件夹下应该只有一个以 **.txt** 作为后缀的文
-               件）或文件路径；
-            2. 传入 embedding 的名称，第二种情况将自动查看缓存中是否存在该模型，没有
-               的话将自动下载；
-            3. 如果输入为 ``None`` 则使用 ``embedding_dim`` 的维度随机初始化一个
-               embedding；
+        1. 传入 embedding 文件夹（文件夹下应该只有一个以 **.txt** 作为后缀的文件）
+           或文件路径；
+        2. 传入 embedding 的名称，第二种情况将自动查看缓存中是否存在该模型，没有的话
+           将自动下载；
+        3. 如果输入为 ``None`` 则使用 ``embedding_dim`` 的维度随机初始化一个
+           embedding；
     :param requires_grad: 是否更新权重
     :param include_word_start_end: 是否在每个 word 开始的 character 前和结束的
         character 增加特殊标示符号

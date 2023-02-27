@@ -29,27 +29,27 @@ __all__ = ['OneflowDDPDriver']
 
 class OneflowDDPDriver(OneflowDriver):
     r"""
-    ``OneflowDDPDriver`` 实现了动态图下使用 ``DistributedDataParallel`` 进行的数
-    据并行分布式训练。
+    在 oneflow 动态图下使用 ``DistributedDataParallel`` 进行数据并行分布式训练的
+    ``Driver``。
 
     .. note::
 
-        您在绝大多数情况下不需要自己使用到该类，通过向 ``Trainer`` 传入正确的参数，
-        您可以方便快速地部署您的分布式训练。
+        您在绝大多数情况下不需要自己使用到该类，通过向 :class:`.Trainer` 传入正确的
+        参数，您可以方便快速地部署您的分布式训练。
 
         ``OneflowDDPDriver`` 目前支持两种启动方式：
 
-            1. 用户不做任何处理，通过运行 ``python -m oneflow.distributed.launch
-               --nproc_per_node 2 train.py`` 启动；
-            2. 用户将模型通过 ``DistributedDataParallel`` 处理后，通过运行命令
-              ``python -m oneflow.distributed.launch --nproc_per_node 2
-              train.py`` 启动；
+        1. 用户不做任何处理，通过运行 ``python -m oneflow.distributed.launch
+           --nproc_per_node 2 train.py`` 启动；
+        2. 用户将模型通过 ``DistributedDataParallel`` 处理后，通过运行命令
+           ``python -m oneflow.distributed.launch --nproc_per_node 2
+           train.py`` 启动；
 
         注意多机的启动强制要求用户在每一台机器上使用 ``python -m oneflow.
         distributed.launch`` 启动；因此我们不会在 ``OneflowDDPDriver`` 中保存任何
         当前有多少台机器的信息。
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数
+    :param model: 传入给 :class:`.Trainer` 的 ``model`` 参数
     :param parallel_device: 该参数无效，**fastNLP** 会自动获取当前进程的设备
     :param fp16: 是否开启 fp16 训练；目前该参数无效
     :param oneflow_kwargs:
@@ -61,9 +61,8 @@ class OneflowDDPDriver(OneflowDriver):
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
-            core.utils.auto_param_call`。
+            关于该参数的详细说明，请参见 :class:`.Trainer` 和 :func:`~fastNLP.\
+            core.auto_param_call`。
 
         * *output_from_new_proc* (``str``) -- 应当为一个字符串，表示在多进程的
           driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一： ``["all",

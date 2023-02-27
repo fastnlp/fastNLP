@@ -31,17 +31,16 @@ class DeepSpeedDriver(TorchDDPDriver):
 
     .. note::
 
-        您在绝大多数情况下不需要自己使用到该类，通过向 ``Trainer`` 传入正确的参数，
-        您可以方便快速地部署您的分布式训练；
+        您在绝大多数情况下不需要自己使用到该类，通过向 :class:`.Trainer` 传入正确的
+        参数，您可以方便快速地部署您的分布式训练；
 
         ``DeepSpeedDriver`` 目前支持的三种启动方式：
 
-            1. 用户自己不进行任何操作，直接使用我们的 ``Trainer``，这时是由我们自己
-               使用 ``open_subprocesses`` 拉起多个进程，然后 ``DeepSpeedDriver``
-               自己通过调用 ``deepspeed.initialize`` 来初始化模型和通信组；（情况
-               A）
+        1. 用户自己不进行任何操作，直接使用我们的 :class:`.Trainer`，这时是由我们自
+        自己使用 ``open_subprocesses`` 拉起多个进程，然后 ``DeepSpeedDriver`` 自
+        己通过调用 ``deepspeed.initialize`` 来初始化模型和通信组；（情况A）
 
-            .. code-block::
+           .. code-block::
 
                 trainer = Trainer(
                     ...
@@ -50,31 +49,30 @@ class DeepSpeedDriver(TorchDDPDriver):
                 )
                 trainer.run()
 
-            通过运行 ``python train.py`` 启动；
+           通过运行 ``python train.py`` 启动；
 
-            2. 用户同样不在 ``Trainer`` 之外初始化 ``deepspeed``，但是用户自己使
-               用 ``python -m torch.distributed.launch`` 拉起来创建多个进程，这时
-               我们仍旧会通过调用 ``model.initialize`` 来初始化 ``ddp`` 的通信组；
-               （情况 B）
+        2. 用户同样不在 ``Trainer`` 之外初始化 ``deepspeed``，但是用户自己使用
+           ``python -m torch.distributed.launch`` 拉起来创建多个进程，这时我们仍
+           旧会通过调用 ``model.initialize`` 来初始化 ``ddp`` 的通信组；（情况 B）
 
-            .. code-block::
+           .. code-block::
 
-                trainer = Trainer(
-                    ...
-                    driver='deepspeed',
-                    # fastNLP 会忽略传入的 device，并根据 local_rank 自动分配
-                    device=None,
-                )
-                trainer.run()
+               trainer = Trainer(
+                   ...
+                   driver='deepspeed',
+                   # fastNLP 会忽略传入的 device，并根据 local_rank 自动分配
+                   device=None,
+               )
+               trainer.run()
 
-            通过运行 ``deepspeed train.py`` 启动；
+           通过运行 ``deepspeed train.py`` 启动；
 
-            3. 用户自己在外面初始化 ``deepspeed``，并且通过命令 ``deepspeed
-               train.py`` 拉起，这时无论是多个进程的拉起和通信组的建立都由用户自己操
-               作，我们只会在 ``driver.setup`` 的时候对 ``DeepSpeedDriver`` 设置
-               一些必要的属性值；（情况 C）
+        3. 用户自己在外面初始化 ``deepspeed``，并通过命令 ``deepspeed train.py``
+           拉起，这时无论是多个进程的拉起和通信组的建立都由用户自己操作，我们只会在
+           ``driver.setup`` 的时候对 ``DeepSpeedDriver`` 设置一些必要的属性值；
+           （情况 C）
 
-            .. code-block::
+           .. code-block::
 
                 import deepspeed
 
@@ -89,9 +87,9 @@ class DeepSpeedDriver(TorchDDPDriver):
                 )
                 trainer.run()
 
-            通过运行 ``deepspeed train.py`` 启动。
+           通过运行 ``deepspeed train.py`` 启动。
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数。
+    :param model: 传入给 :class:`.Trainer` 的 ``model`` 参数。
     :param parallel_device: 用于分布式训练的 ``gpu`` 设备。
     :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``deepspeed`` 启动的。
     :param fp16: 是否开启 fp16 训练。
@@ -99,41 +97,39 @@ class DeepSpeedDriver(TorchDDPDriver):
         * *strategy* -- 使用 ZeRO 优化的策略，默认为 ``deepspeed``；目前仅支持以下
           值：
 
-            * ``deepspeed`` -- 使用 ZeRO 的第二阶段，等同于
-              ``deepspeed_stage_2``；
-            * ``deepspeed_stage_1`` -- 使用 ZeRO 的第一阶段，仅将 ``optimizer``
-              的状态分散到不同设备上；
-            * ``deepspeed_stage_2`` -- 使用 ZeRO 的第二阶段，将 ``optimizer``
-              和 **梯度** 分散到不同设备上；
-            * ``deepspeed_stage_2_offload`` -- 使用 ZeRO 的第二阶段，并且借助
-              cpu 的内存来进一步节约显存；
-            * ``deepspeed_stage_3`` -- 使用 ZeRO 的第三阶段，将 ``optimizer`` 、
-              **梯度** 和 **模型** 分散到不同设备上；
-            * ``deepspeed_stage_3_offload`` -- 使用 ZeRO 的第三阶段，并且借助
-              cpu 的内存来进一步节约显存；
-            * ``deepspeed_stage_3_offload_nvme`` -- 使用 ZeRO 的第三阶段，并且借
-              助 NVMe 硬盘来进一步节约显存；
+          * ``deepspeed`` -- 使用 ZeRO 的第二阶段，等同于 ``deepspeed_stage_2``；
+          * ``deepspeed_stage_1`` -- 使用 ZeRO 的第一阶段，仅将 ``optimizer`` 的
+            状态分散到不同设备上；
+          * ``deepspeed_stage_2`` -- 使用 ZeRO 的第二阶段，将 ``optimizer`` 和
+            **梯度** 分散到不同设备上；
+          * ``deepspeed_stage_2_offload`` -- 使用 ZeRO 的第二阶段，并且借助 cpu
+            的内存来进一步节约显存；
+          * ``deepspeed_stage_3`` -- 使用 ZeRO 的第三阶段，将 ``optimizer``、
+            **梯度** 和 **模型** 分散到不同设备上；
+          * ``deepspeed_stage_3_offload`` -- 使用 ZeRO 的第三阶段，并且借助 cpu
+            的内存来进一步节约显存；
+          * ``deepspeed_stage_3_offload_nvme`` -- 使用 ZeRO 的第三阶段，并且借助
+            NVMe 硬盘来进一步节约显存；
         * *logging_level* -- ``deepspeed`` 库的日志等级，默认为 **logging.
           ERROR**。
         * *config* -- ``deepspeed`` 的各项设置；**FastNLP** 允许用户传入自己的设置
           以增强灵活性，但这会使参数中的 ``optimizer`` 、``strategy`` 、 ``fp16``
           等失效，即当这个参数存在时，**FastNLP** 会用该参数覆盖其它的设置。
-        * *accumulation_steps* -- 即在 :class:`~fastNLP.core.controllers.\
-          Trainer` 传入的 ``accumulation_steps``。deepspeed 会将 ``config`` 的
-          ``gradient_accumulation_steps`` 设置为该值。
-        * *train_dataloader* -- 即在 :class:`~fastNLP.core.controllers.\
-          Trainer` 传入的 ``train_dataloader``。``deepspeed`` 需要通过它来获取数
-          据的 ``batch_size`` 用于设置 ``train_micro_batch_size_per_gpu``。如果
-          没有传入的话，则会设置为 **1**。
     :kwargs:
-        * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
+        * *accumulation_steps* -- 即在 :class:`~fastNLP.core.Trainer` 初始化时传
+          入的  ``accumulation_steps``。deepspeed 会将 ``config`` 的
+          ``gradient_accumulation_steps`` 设置为该值。
+        * *train_dataloader* -- 即在 :class:`~fastNLP.core.Trainer` 传入的
+          ``train_dataloader``。``deepspeed`` 需要通过它来获取数据的
+          ``batch_size`` 用于设置 ``train_micro_batch_size_per_gpu``。如果
+          没有传入的话，则会设置为 **1**。
+        * *model_wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
           ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
-            core.utils.auto_param_call`。
+            关于该参数的详细说明，请参见 :class:`.Trainer` 和 :func:`~fastNLP.\
+            core.auto_param_call`。
 
         * *output_from_new_proc* (``str``) -- 应当为一个字符串，表示在多进程的
           driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一： ``["all",
@@ -238,9 +234,9 @@ class DeepSpeedDriver(TorchDDPDriver):
         self._has_setup = False
         # 判断传入的模型是否经过 _has_ddpwrapped 包裹；
         self._has_ddpwrapped = False
-        self.accumulation_steps = self._ds_kwargs.get('accumulation_steps', 1)
+        self.accumulation_steps = kwargs.get('accumulation_steps', 1)
         # 获取 batch_size 以设置 train_micro_batch_size_per_gpu 参数
-        train_dl = self._ds_kwargs.get('train_dataloader', None)
+        train_dl = kwargs.get('train_dataloader', None)
         if train_dl is not None:
             self.train_micro_batch_size = self.get_dataloader_args(
                 train_dl).batch_size
@@ -268,8 +264,8 @@ class DeepSpeedDriver(TorchDDPDriver):
         r"""
         准备分布式环境，该函数主要做以下两件事情：
 
-            1. 开启多进程，每个 gpu 设备对应单独的一个进程；
-            2. 使用 ``deepspeed.initialize`` 包裹模型；
+        1. 开启多进程，每个 gpu 设备对应单独的一个进程；
+        2. 使用 ``deepspeed.initialize`` 包裹模型；
         """
         if len(self.optimizers) != 1:
             raise ValueError(
@@ -541,8 +537,8 @@ class DeepSpeedDriver(TorchDDPDriver):
             的文件。把 model 相关的内容放入到 ``FASTNLP_MODEL_FILENAME`` 文件中，
             将传入的 ``states`` 以及自身产生的其它状态一并保存在
             ``FASTNLP_CHECKPOINT_FILENAME`` 里面。
-        :param states: 由 :class:`~fastNLP.core.controllers.Trainer` 传入的一个
-            字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态。
+        :param states: 由 :class:`.Trainer` 传入的一个字典，其中已经包含了为了实现
+            断点重训所需要保存的其它对象的状态。
         :param dataloader: 正在使用的 dataloader。
         :param only_state_dict: 是否只保存模型的参数。在 ``DeepSpeedDriver`` 中该
             参数无效。
@@ -577,8 +573,8 @@ class DeepSpeedDriver(TorchDDPDriver):
         断点重训的加载函数，该函数会负责读取数据，并且恢复 **优化器** 、**sampler**
         的状态和 **模型** （如果 ``should_load_model`` 为 True）以及其它在
         :meth:`save_checkpoint` 函数中执行的保存操作，然后将一个 state 字典返回给
-        :class:`~fastNLP.core.controllers.Trainer字典的内容为函数
-        :meth:`save_checkpoint` 接受到的 ``states`` ）。
+        :class:`.Trainer` 字典的内容为函数 :meth:`save_checkpoint` 接受到的
+        ``states`` ）。
 
         该函数应该在所有 rank 上执行。
 
@@ -604,14 +600,14 @@ class DeepSpeedDriver(TorchDDPDriver):
                 返回的 dataloader 还会产生的 batch 数量 + batch_idx_in_epoch =
                 原来不断点训练时的 batch 的总数
 
-              由于 ``返回的 dataloader 还会产生的 batch 数`` 在 ``batch_size``
+              由于 **返回的 dataloader 还会产生的 batch 数** 在 ``batch_size``
               与 ``drop_last`` 参数给定的情况下无法改变，因此只能通过调整
               ``batch_idx_in_epoch`` 这个值来使等式成立。一个简单的计算原则如下：
 
-                * drop_last 为 ``True`` 时，等同于 floor(sample_in_this_rank/
-                  batch_size) - floor(num_left_samples/batch_size)；
-                * drop_last 为 ``False`` 时，等同于 ceil(sample_in_this_rank/
-                  batch_size) - ceil(num_left_samples/batch_size)。
+              * drop_last 为 ``True`` 时，等同于 floor(sample_in_this_rank/
+                batch_size) - floor(num_left_samples/batch_size)；
+              * drop_last 为 ``False`` 时，等同于 ceil(sample_in_this_rank/
+                batch_size) - ceil(num_left_samples/batch_size)。
         """
         # 1. 加载模型状态；
         if not should_load_model:

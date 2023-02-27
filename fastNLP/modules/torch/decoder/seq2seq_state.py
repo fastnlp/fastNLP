@@ -79,8 +79,8 @@ class State:
 
 class LSTMState(State):
     r"""
-    :class:`~fastNLP.modules.torch.decoder.LSTMSeq2SeqDecoder` 对应的
-    :class:`State`，保存 ``encoder`` 的输出以及 ``LSTM`` 解码过程中的一些中间状态
+    :class:`.LSTMSeq2SeqDecoder` 对应的 :class:`State`，保存 ``encoder`` 的输出
+    以及 ``LSTM`` 解码过程中的一些中间状态
 
     :param encoder_output: ``encoder`` 的输出，形状为 ``[batch_size,
         src_seq_len, encode_output_size]``
@@ -103,11 +103,10 @@ class LSTMState(State):
     @property
     def input_feed(self) -> torch.FloatTensor:
         r"""
-        :class:`~fastNLP.modules.torch.decoder.LSTMSeq2SeqDecoder` 中每个时刻的
-        输入会把上个 token 的 embedding 和 ``input_feed`` 拼接起来输入到下个时刻，
-        在 :class:`~fastNLP.modules.torch.decoder.LSTMSeq2SeqDecoder` 不使用
-        ``attention`` 时，``input_feed`` 即上个时刻的 ``hidden state``，否则是
-        ``attention layer`` 的输出。
+        :class:`.LSTMSeq2SeqDecoder` 中每个时刻的输入会把上个 token 的 embedding
+        和 ``input_feed`` 拼接起来输入到下个时刻，在 :class:`.LSTMSeq2SeqDecoder`
+        不使用 ``attention`` 时，``input_feed`` 即上个时刻的 ``hidden state``，否
+        则是 ``attention layer`` 的输出。
 
         :return: ``[batch_size, hidden_size]``
         """
@@ -127,8 +126,7 @@ class LSTMState(State):
 
 
 class TransformerState(State):
-    r"""与 :class:`~fastNLP.modules.torch.decoder.TransformerSeq2SeqDecoder` 对
-    应的 :class:`State`。
+    r"""与 :class:`.TransformerSeq2SeqDecoder` 对应的 :class:`State`。
 
     :param encoder_output: ``encoder`` 的输出，形状为 ``[batch_size,
         encode_max_len, encode_output_size]``，

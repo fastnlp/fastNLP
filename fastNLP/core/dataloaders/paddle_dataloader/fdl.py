@@ -47,18 +47,19 @@ class _PaddleDataset(Dataset):
 
 
 class PaddleDataLoader(DataLoader):
-    r"""``PaddleDataLoader`` 是专门提供给 ``paddle`` 框架的 ``DataLoader``，其集
-    成了 **fastNLP** 的 ``Collator`` （具体详见 :class:`~fastNLP.core.\
-    collators.Collator`），并对 ``paddle`` 的 ``DataLoader`` 进行了 封装，使得其
-    具备以下功能：
+    r"""提供给 ``paddle`` 框架使用的 ``DataLoader`` 类。
+
+    ``PaddleDataLoader`` 是专门提供给 ``paddle`` 框架的 ``DataLoader``，其集成了
+    **fastNLP** 的 ``Collator`` （具体详见 :class:`.Collator`），并对 paddle 的
+    ``DataLoader`` 进行了封装，使得其具备以下功能：
 
     1. ``PaddleDataLoader`` 支持输入的 dataset 是无框架的，只要实现了 __getitem__
-       () 和 __len__() 即可，当不使用  :class:`~fastNLP.core.dataset.DataSet` 时
-       也不需要传入 collate_fn, 只要只需要将 ``collate_fn='auto'`` 就能够自动
-       探测数据的类型并判断能否 pad 。此时可以调用 ``set_pad`` 和 ``set_ignore``
-       方法来设置 field 的 pad_val 或者忽略某个 field 的 pad 操作。
+       () 和 __len__() 即可，当不使用  :class:`~fastNLP.core.DataSet` 时也不需要
+       传入 collate_fn，只需要将 ``collate_fn='auto'`` 就能够自动探测数据的类型并
+       判断能否 pad 。此时可以调用 :meth:`set_pad` 和 :meth:`set_ignore` 方法来设
+       置 field 的 pad_val 或者忽略某个 field 的 pad 操作。
 
-        Example::
+       Example::
 
             from fastNLP import PaddleDataLoader
             class MyDataset:
@@ -79,17 +80,17 @@ class PaddleDataLoader(DataLoader):
     2. 当 collate_fn 为 ``None`` 时，``PaddleDataLoader`` 默认使用 ``paddle`` 自
        带的 ``default_collate_fn`` 作为 collate_fn 的值。
 
-        .. note::
-            当传入的 dataset 为 fastNLP 的 DataSet 时，collate_fn 不能为 None。默
-            认可以是 "auto"或者自定义 callable 函数。
+    .. note::
+        当传入的 dataset 为 fastNLP 的 DataSet 时，collate_fn 不能为 None。默认可
+        以是 "auto"或者自定义 callable 函数。
 
     3. 当 collate_fn 为 :class:`Callable` 时，该 Callable 函数应当接受一个 batch
        参数作为输入，batch 是一个 List 对象且 List 中的每一条数据都是 dataset 的一
        条数据；该 Callable 函数还应当返回一个对象。
 
-    :param dataset: 需要遍历的数据集，可以是 :class:`~fastNLP.core.dataset.\
-        DataSet`、paddle 的 :class:`Dataset`、hugginface 的数据集对象，以及所有
-        实现了 :meth:`__getitem__` 和 :meth:`__len__` 函数的数据集对象。
+    :param dataset: 需要遍历的数据集，可以是 :class:`~fastNLP.core.DataSet`、
+        paddle 的 :class:`Dataset`、hugginface 的数据集对象，以及所有实现了
+        :meth:`__getitem__` 和 :meth:`__len__` 函数的数据集对象。
     :param feed_list: feed Tensor list.
         这个张量能被 ``paddle.static.data`` 创建。如果 :attr:`return_list` 是
         ``False``, 那么 :attr:`feed_list` 应该被设置。默认为 ``None``。
@@ -104,11 +105,11 @@ class PaddleDataLoader(DataLoader):
         :attr:`return_list` 只能在动态图情况下设置为 ``True``。默认值为
         ``True``。
     :param batch_sampler: 批量取出数据的采样器，如 :class:`~fastNLP.core.\
-        samplers.ReproducibleBatchSampler`、paddle 的 :class:`BatchSampler` 对
-        象，以及所有实现了 :meth:`__len__` 和 :meth:`__iter__` 的对象。其
-        :meth:`__iter__` 方法每次都会返回一个 List 对象，List 中的值为 dataset 的
-        下标 index ；默认为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``、
-        ``sampler``、``shuffle`` 均失效。
+        ReproducibleBatchSampler`、oneflow 的 :class:`BatchSampler` 对象，以及所
+        有实现了 :meth:`__len__` 和 :meth:`__iter__` 的对象。其 :meth:`__iter__`
+        方法每次都会返回一个 List 对象，List 中的值为 dataset 的下标 index ；默认
+        为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``、``sampler``、
+        ``shuffle`` 均失效。
     :param batch_size: 批次大小，默认为 ``16`` 且当 ``batch_sampler`` 为 None 有
         效。
     :param shuffle: 是否打乱数据集，默认为 ``None``, 如果传入的 ``ds_or_db`` 可以
@@ -119,12 +120,12 @@ class PaddleDataLoader(DataLoader):
     :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的
         Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``。
 
-        * callate_fn 为 ``None`` 时，需要注意的是此时传进来的 dataset 类型不能为
+        * collate_fn 为 ``None`` 时，需要注意的是此时传进来的 dataset 类型不能为
           :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None``
           时，``PaddleDataLoader`` 调用默认的 Paddle 框架的 ``DataLoader`` 自带
-          的 `default_collate_fn` 作为 callate_fn 的默认值，其无法处理
+          的 `default_collate_fn` 作为 collate_fn 的默认值，其无法处理
           :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
-        * callate_fn 为 ``'auto'`` 时，``PaddleDataLoader`` 使用
+        * collate_fn 为 ``'auto'`` 时，``PaddleDataLoader`` 使用
           :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。
           此时可以配套使用 :meth:`set_pad` 和 :meth:`set_ignore` 方法来设置
           pad_val 或 忽略某个 field 的检测。
@@ -242,7 +243,7 @@ class PaddleDataLoader(DataLoader):
                 dtype=None,
                 backend=None,
                 pad_fn: Optional[Callable] = None) -> Collator:
-        """如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
+        r"""如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
         :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.\
             __getitem__` 方法返回的是字典类型，则可以直接使用对应的 field 的 key 来
@@ -299,12 +300,12 @@ class PaddleDataLoader(DataLoader):
 
             dataloader.set_ignore('field1', 'field2')
 
-        :param field_names: field_name: 需要调整的 field 的名称。如果
-            :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
-            field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如
-            ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.\
-            __getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表
-            示序列中第 **0** 个和第 **1** 个元素。
+        :param field_names: 需要调整的 field 的名称。如果 :meth:`Dataset.\
+            __getitem__` 方法返回的是字典类型，则可以直接使用对应的 field 的 key 来
+            表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b':
+            1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.__getitem__`
+            返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表示序列中第
+            **0** 个和第 **1** 个元素。
         :return: 使用的 collator
         """
         collator = self._get_collator()
@@ -336,17 +337,17 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
                               persistent_workers=False,
                               non_train_batch_size: Optional[int] = None) \
         -> Union[Dict[str, PaddleDataLoader], PaddleDataLoader]:
-    r"""``prepare_paddle_dataloader`` 的功能是将输入的单个或多个 dataset 同时转为
-    :class:`PaddleDataLoader` 对象，详见 :class:`PaddleDataLoader` 的说明。根据
-    ds_or_db 的类型 ``[DataSet, DataBundle, Dict[name, Dataset]]`` 不同而有
-    不同返回结果，具体如下:
+    r"""将输入的单个或多个 dataset 同时转为 :class:`PaddleDataLoader` 对象，根据
+    ``ds_or_db`` 的类型不同而有不同返回结果。
 
-        * 当 ds_or_db 为 ``DataSet`` 时，``prepare_paddle_dataloader`` 会将除了
-          non_train_batch_size 和 non_train_sampler 以外的参数来实例化一个
-          :class:`PaddleDataLoader` 对象并返回。详见 :class:`~fastNLP.core.\
-          dataloaders.PaddleDataLoader`。
-        * 当 ds_or_db 为 :class:`~fastNLP.io.DataBundle` 时，
-          ``prepare_paddle_dataloader`` 会遍历 ``DataBundle`` 的数据集的
+    :param ds_or_db: 可以有以下三种取值：
+
+        * 当 ds_or_db 为 :class:`.DataSet` 等数据集类型时，
+          ``prepare_paddle_dataloader`` 会将使用的除了 non_train_batch_size 和
+          non_train_sampler 以外的参数来实例化一个 :class:`PaddleDataLoader` 对象
+          并返回。详见 :class:`PaddleDataLoader`。
+        * 当 ds_or_db 为 :class:`.DataBundle` 时，
+          ``prepare_paddle_dataloader`` 会遍历 :class:`.DataBundle` 的数据集的
           key-value 来创建不同的 :class:`PaddleDataLoader` 对象；当 key 中包含
           ``'train'`` 字符串时，``prepare_Paddle_dataloader`` 默认该 value 为训
           练数据集，会将 ``batch_size`` 和 ``sampler`` 作为参数，其他 key 不包含
@@ -362,16 +363,6 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
           数。最终根据  ``key: PaddleDataLoader`` 组成 ``Dict[key,
           PaddleDataLoader]`` 的字典返回。
 
-    :param ds_or_db: 可以有以下三种取值，
-
-        * ds_or_db 为 :class:`~fastNLP.io.DataBundle`, 返回值为 ``Dict[str,
-          PaddleDataLoader]`` 的字典；
-        * ds_or_db 为 ``Dict[str, DataSet]`` 字典，返回值为 ``Dict[str,
-          PaddleDataLoader]`` 的字典；
-        * ds_or_db 为实现了 :meth:`__getitem__` 和 :meth:`__len__` 的对象，详细可
-          参考 :class:`PaddleDataLoader` 中关于参数 ``dataset`` 的说明。返回值为
-          :class:`PaddleDataLoader`
-
     :param feed_list: feed Tensor list. 这个张量能被 ``paddle.static.data`` 创
         建。如果 :attr:`return_list` 是 ``False``, 那么 :attr:`feed_list`
         应该被设置。默认为 ``None``。
@@ -386,11 +377,11 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
         :attr:`return_list` 只能在动态图情况下设置为 ``True``。默认值为
         ``True``。
     :param batch_sampler: 批量取出数据的采样器，如 :class:`~fastNLP.core.\
-        samplers.ReproducibleBatchSampler`、paddle 的 :class:`BatchSampler` 对
-        象，以及所有实现了 :meth:`__len__` 和 :meth:`__iter__` 方法的对象。其
-        :meth:`__iter__` 方法每次都会返回一个 List 对象，List 中的值为 dataset 的
-        下标 index ；默认为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``、
-        ``sampler``、``shuffle`` 均失效。
+        ReproducibleBatchSampler`、paddle 的 :class:`BatchSampler` 对象，以及所
+        有实现了 :meth:`__len__` 和 :meth:`__iter__` 的对象。其 :meth:`__iter__`
+        方法每次都会返回一个 List 对象，List 中的值为 dataset 的下标 index ；默认
+        为 ``None``，当其不为 ``None`` 时，参数 ``bacth_size``、``sampler``、
+        ``shuffle`` 均失效。
     :param batch_size: 批次大小，默认为 ``16`` 且当 batch_sampler 为 None 有效。
     :param shuffle: 是否打乱数据集，默认为 ``None``, 如果传入的 ``ds_or_db`` 可以
         判断出哪个是 ``'train'`` 则设置其 shuffle 为 ``True``，其它的为 False 。
@@ -400,19 +391,17 @@ def prepare_paddle_dataloader(ds_or_db, feed_list=None, places=None,
     :param collate_fn: 用于从 dataset 取到的一个 batch 数据进行打包处理的
         Callable 函数，其值应该为以下三个: ``[None, "auto", Callable]``。
 
-        * callate_fn 为 ``None`` 时，需要注意的是此时传进来的 dataset 类型不能为
-          :class:`~fastNLP.core.dataset.DataSet` , 当 collate_fn 为 ``None``
-          时，:class:`PaddleDataLoader` 调用 Paddle 框架的 ``DataLoader`` 自带
-          的 `default_collate_fn` 作为 callate_fn 的默认值，其无法处理
-          :class:`~fastNLP.core.dataset.DataSet` 的dataset对象。
-        * callate_fn 为 ``'auto'`` 时，:class:`PaddleDataLoader` 使用
-          :class:`~fastNLP.core.collators.Collator` 作为 collate_fn 的默认值。此
-          时可以配套使用 :class:`PaddleDataLoader` 的 :meth:``PaddleDataLoader.\
-          set_pad` 和 :meth:``PaddleDataLoader.set_ignore` 方法来设置 pad_val
-          或忽略某个 field 的检测。
-        * collate_fn 为 :class:`Callable` 时，该 Callable 函数应当接受一个
-          batch 参数作为输入，batch 是一个 List 对象且 List 中的每一条数据都是
-          dataset 的一条数据；该 Callable 函数还应当返回一个对象。
+        * collate_fn 为 ``None`` 时，需要注意的是此时传进来的 dataset 类型不能为
+          :class:`.DataSet`，此时 ``PaddleDataLoader`` 会调用默认的 paddle 框
+          架的 ``DataLoader`` 自带的 ``collate_batch`` 作为 collate_fn 的默认值，
+          不过需要注意的是其无法处理 :class:`.DataSet` 的 dataset 对象。
+        * collate_fn 为 ``'auto'`` 时，``PaddleDataLoader`` 将会使用 fastNLP 的
+          :class:`~fastNLP.core.Collator` 作为 collate_fn 的默认值。此时可以配套
+          使用 :meth:`PaddleDataLoader.set_pad` 和 :meth:`PaddleDataLoader.\
+          set_ignore` 方法来设置 pad_val 或忽略某个 field 的检测。
+        * collate_fn 为 :class:`Callable` 时，该 Callable 函数应当接受一个 batch
+          参数作为输入，batch 是一个 List 对象且 List 中的每一条数据都是 dataset
+          的一条数据；该 Callable 函数还应当返回一个对象。
 
     :param num_workers: 当 ``num_workers > 0`` 时，:class:`PaddleDataLoader` 会
         开启 ``num_workers`` 个子进程来处理数据，可以加快数据处理速度，但同时也消耗

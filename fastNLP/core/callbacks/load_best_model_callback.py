@@ -14,14 +14,15 @@ __all__ = ['LoadBestModelCallback']
 
 
 class LoadBestModelCallback(HasMonitorCallback):
-    """保存最佳的 monitor 值最佳的模型，并在训练结束的时候重新加载模型，默认会在加载
-    之后删除权重文件。仅在训练正常结束的时候才能加载最好的模型。
+    """保存 monitor 值最佳的模型，并在训练结束的时候重新加载模型的 ``Callbcak``。
+
+    默认会在加载之后删除权重文件。仅在训练正常结束的时候才能加载最好的模型。
 
     :param monitor: 监控的 metric 值。
 
         * 为 ``None`` 时，
-          fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置
-          的 `monitor` 值（如果有设置）。
+          fastNLP 将尝试使用 :class:`.Trainer` 中设置的 `monitor` 值（如果有设
+          置）。
         * 为 ``str`` 时，
           fastNLP 将尝试直接使用该名称从 ``evaluation`` 的结果中寻找，如果最终在
           ``evaluation`` 结果中没有找到完全一致的名称，则将使用最长公共字符串算法

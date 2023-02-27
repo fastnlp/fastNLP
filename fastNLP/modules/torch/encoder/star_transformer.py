@@ -56,6 +56,7 @@ class StarTransformer(nn.Module):
 
     def forward(self, data: torch.FloatTensor, mask: torch.ByteTensor):
         r"""
+
         :param data: 输入序列，形状为 ``[batch_size, length, hidden]``。
         :param mask: 输入序列的 padding mask，形状为 ``[batch_size, length]``，
             为 **0** 的地方为 padding。

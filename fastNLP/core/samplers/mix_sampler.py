@@ -18,8 +18,8 @@ class MixSampler:
     """所有 mix_sampler 的基类。
 
     :param dataset: 一个字典，每个元素都是一个实现了 __getitem__ 和 __len__ 的数据
-        容器，如 :class:`~fastNLP.core.dataset.DataSet`、huggingface 的数据集对
-        象或 pytorch、paddle、oneflow、jittor 框架的 :class:`Dataset` 对象。
+        容器，如 :class:`.DataSet`、huggingface 的数据集对象或 pytorch、paddle、
+        oneflow、jittor 框架的 :class:`Dataset` 对象。
     :param batch_size: ``dataset`` 的批次大小，所有 ``dataset`` 均采用该
         ``batch_size`` 作为批次大小
     :param sampler: 实例化好的 ``sampler``，每个 ``dataset`` 对应一个
@@ -31,11 +31,11 @@ class MixSampler:
         * ds_ratio 为 ``None``, datasets 数据集序列或字典不进行数据扩充处理；
         * ds_ratio 为 ``'truncate_to_least'``, datasets 数据集序列或字典会计算得
           到 datasets序列中 dataset 最断长度 ``mix_len``，其他数据集会被切断到最短
-          长度 ``mix_len``。这种切断不是物理上切断，``MixDataLoader`` 会根据
-          sampler 不同来采样数据集到指定的最短长度 ``mix_len``；
+          长度 ``mix_len``。这种切断不是物理上切断，``MixSampler`` 会根据 sampler
+          不同来采样数据集到指定的最短长度 ``mix_len``；
         * ds_ratio 为 ``'pad_to_most'``, datasets 数据集序列或字典会计算得到
           datasets序列中 dataset 最大长度 ``max_len``, 其他其他数据集会扩充到最大
-          长度 ``mix_len``。这种扩充不是物理上扩充，``MixDataLoader`` 会根据
+          长度 ``mix_len``。这种扩充不是物理上扩充，``MixSampler`` 会根据
           sampler 不同来重采样 dataset 到指定的最大长度 ``max_len``；
         * ds_ratio 为 ``Dict[str, float]`` 时，datasets 类型也必须为 ``Dict
           [str, DataSet]``, 其 key 一一对应。``ds_ratio`` 的 value 是任意大于 0
@@ -170,9 +170,8 @@ class InnerSampler:
 
 
 class DopedSampler(MixSampler):
-    r"""定制给 :class:`~fastNLP.core.dataloaders.MixDataLoader` 的
-    ``BatchSampler``，其功能是将传入的 ``datasets`` 字典混合采样组成一个个 batch
-    返回。"""
+    r"""定制给 :class:`.MixDataLoader` 的 ``BatchSampler``，其功能是将传入的
+    ``datasets`` 字典混合采样组成一个个 batch 返回。"""
 
     def __init__(self,
                  dataset: Dict,
@@ -328,9 +327,10 @@ class DopedSampler(MixSampler):
 
 
 class MixSequentialSampler(MixSampler):
-    r"""定制给 :class:`~fastNLP.core.dataloaders.MixDataLoader` 的
-    ``BatchSampler``，其功能是将传入的 ``datasets`` 按顺序采样并返回 index，只有上
-    一个 dataset 处理结束后才会处理下一个。"""
+    r"""定制给 :class:`.MixDataLoader` 的 ``BatchSampler``，其功能是将传入的
+    ``datasets`` 按顺序采样并返回 index，只有上一个 dataset 处理结束后才会处理下一
+    个。
+    """
 
     def __init__(self,
                  dataset: Dict,
@@ -478,9 +478,9 @@ class MixSequentialSampler(MixSampler):
 
 
 class PollingSampler(MixSampler):
-    r"""定制给 :class:`~fastNLP.core.dataloaders.MixDataLoader` 的
-    ``BatchSampler``，其功能是将传入的 ``datasets`` 轮流采样并返回 index，处理结束
-    上个 dataset 的一个 batch 后会处理下一个。"""
+    r"""定制给 :class:`.MixDataLoader` 的 ``BatchSampler``，其功能是将传入的
+    ``datasets`` 轮流采样并返回 index，处理结束上个 dataset 的一个 batch 后会处理
+    下一个。"""
 
     def __init__(self,
                  dataset: Dict,

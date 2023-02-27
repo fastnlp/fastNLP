@@ -4,7 +4,8 @@ __all__ = ['LRSchedCallback']
 
 
 class LRSchedCallback(Callback):
-    """根据 ``step_on`` 参数在合适的时机调用 scheduler 的 step 函数。
+    r"""根据 ``step_on`` 参数在合适的时机调用 :meth:`scheduler.step` 的
+    ``Callback``。
 
     :param scheduler: 实现了 :meth:`step` 函数的对象；
     :param step_on: 可选 ``['batch'，'epoch']`` 表示在何时调用 scheduler 的

@@ -16,7 +16,9 @@ __all__ = [
 
 class MNLILoader(Loader):
     r"""
-    **MNLI** 数据集的 **Loader**，如果您使用了这个数据，请引用
+    **MNLI** 数据集的 **Loader**。
+
+    如果您使用了这个数据，请引用：
 
         https://www.nyu.edu/projects/bowman/multinli/paper.pdf
 
@@ -129,7 +131,9 @@ class MNLILoader(Loader):
 
 class SNLILoader(JsonLoader):
     r"""
-    **SNLI** 数据集的 **Loader**，如果您的文章使用了这份数据，请引用
+    **SNLI** 数据集的 **Loader**。
+
+    如果您的文章使用了这份数据，请引用：
 
         http://nlp.stanford.edu/pubs/snli_paper.pdf
 
@@ -207,7 +211,9 @@ class SNLILoader(JsonLoader):
 
 class QNLILoader(JsonLoader):
     r"""
-    **QNLI** 数据集的 **Loader**，如果您的实验使用到了该数据，请引用
+    **QNLI** 数据集的 **Loader**。
+
+    如果您的实验使用到了该数据，请引用：
 
         https://arxiv.org/pdf/1809.05053.pdf
 
@@ -279,7 +285,9 @@ class QNLILoader(JsonLoader):
 
 class RTELoader(Loader):
     r"""
-    **RTE** 数据集的 **Loader**，如果您使用了该数据，请引用 **GLUE Benchmark** ：
+    **RTE** 数据集的 **Loader**。
+
+    如果您使用了该数据，请引用 **GLUE Benchmark** ：
 
         https://openreview.net/pdf?id=rJ4km2R5t7
 
@@ -351,6 +359,7 @@ class RTELoader(Loader):
 class QuoraLoader(Loader):
     r"""
     **Quora matching** 任务的数据集 **Loader**。
+
     支持读取的文件中的内容应该有以下的形式：以制表符分隔，且前三列一定分别为
     **label**，**句子1**，**句子2**。
 
@@ -411,7 +420,9 @@ class QuoraLoader(Loader):
 
 class CNXNLILoader(Loader):
     r"""
-    **XNLI Chinese** 数据集的 **Loader**，该数据取自 https://arxiv.org/abs/1809.05053 ，在 https://arxiv.org/pdf/1905.05526.pdf
+    **XNLI Chinese** 数据集的 **Loader**。
+
+    该数据取自 https://arxiv.org/abs/1809.05053 ，在 https://arxiv.org/pdf/1905.05526.pdf
     、 https://arxiv.org/pdf/1901.10125.pdf 和 https://arxiv.org/pdf/1809.05053.pdf 有使用。
 
     该数据集为中文句对 NLI（本为 ``multi-lingual`` 的数据集，但是这里只取了中文的数据集）。原句子已被
@@ -528,7 +539,9 @@ class CNXNLILoader(Loader):
 
 class BQCorpusLoader(Loader):
     r"""
-    **BQ Corpus** 数据集的 **Loader**。句子对二分类任务，判断是否具有相同的语义。原始数据结构为::
+    **BQ Corpus** 数据集的 **Loader**。句子对二分类任务，判断是否具有相同的语义。
+
+    原始数据结构为::
 
         sentence1,sentence2,label
         综合评分不足什么原因,综合评估的依据,0
@@ -578,7 +591,9 @@ class BQCorpusLoader(Loader):
 
 class LCQMCLoader(Loader):
     r"""
-    **LCQMC** 数据集的 **Loader**，该数据集用于句对匹配（question matching）。原始数据为::
+    **LCQMC** 数据集的 **Loader**，该数据集用于句对匹配（question matching）。
+
+    原始数据为::
 
         喜欢打篮球的男生喜欢什么样的女生	爱打篮球的男生喜欢什么样的女生	1
         您帮我设计小说的封面吧	谁能帮我给小说设计个封面？	0

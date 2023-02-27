@@ -23,27 +23,26 @@ __all__ = ['Seq2SeqModel', 'TransformerSeq2SeqModel', 'LSTMSeq2SeqModel']
 
 
 class Seq2SeqModel(nn.Module):
-    r"""可以用于在 :class:`~fastNLP.core.controllers.Trainer` 中训练的
-    **Seq2Seq模型**。正常情况下，继承了该函数之后，只需要实现 classmethod
-    ``build_model`` 即可。如果需要使用该模型进行生成，需要把该模型输入到
-    :class:`~fastNLP.models.torch.SequenceGeneratorModel` 中。在本模型中，
-    :meth:`forward` 会把 encoder 后的结果传入到 decoder 中，并将 decoder 的输出
-    输出出来。
+    r"""可以用于在 :class:`.Trainer` 中训练的 **Seq2Seq模型**。
 
-    :param encoder: :class:`~fastNLP.modules.torch.encoder.Seq2SeqEncoder` 对
-        象，需要实现对应的 :meth:`forward` 函数，接受两个参数，第一个是大小为
-        ``[batch_size, max_len]`` 的 source tokens, 第二个为 ``[batch_size,]``
-        的 source 的长度；需要返回两个 tensor：
+    正常情况下，继承了该类之后，只需要实现 classmethod ``build_model`` 即可。如果需
+    要使用该模型进行生成，需要把该模型输入到 :class:`.SequenceGeneratorModel` 中。
+    在本模型中，:meth:`forward` 会把 ``encoder`` 后的结果传入到 ``decoder`` 中，并
+    将 decoder 的输出输出出来。
 
-            - ``encoder_outputs`` : ``[batch_size, max_len, hidden_size]``
-            - ``encoder_mask`` :  ``[batch_size, max_len]``，为 **0** 的地方为
-              pad。
+    :param encoder: :class:`~fastNLP.modules.torch.Seq2SeqEncoder` 对象。
+        需要实 :meth:`forward` 函数，接受两个参数，第一个是大小为 ``[batch_size,
+        max_len]`` 的 source tokens, 第二个为 ``[batch_size,]`` 的 source 的长
+        度；需要返回两个张量：
+
+        - ``encoder_outputs`` : ``[batch_size, max_len, hidden_size]``
+        - ``encoder_mask`` :  ``[batch_size, max_len]``，为 **0** 的地方为 pad。
         如果encoder的输出或者输入有变化，可以重载本模型的 :meth:`prepare_state` 函
         数或者 :meth:`forward` 函数。
-    :param decoder: :class:`~fastNLP.modules.torch.decoder.Seq2SeqEncoder` 对
-        象，需要实现 :meth:`init_state` 函数，需要接受两个参数，分别为上述的
-        ``encoder_outputs`` 和 ``encoder_mask``。若decoder需要更多输入，请重载当
-        前模型的 :meth:`prepare_state` 或 :meth:`forward` 函数。
+    :param decoder: :class:`~fastNLP.modules.torch.Seq2SeqDecoder` 对象。
+        需要实现 :meth:`init_state` 函数，接受两个参数，分别为上述 ``encoder`` 输
+        出的 ``encoder_outputs`` 和 ``encoder_mask``。若 ``decoder`` 需要更多输
+        入，请重载当前模型的 :meth:`prepare_state` 或 :meth:`forward` 函数。
     """
 
     def __init__(self, encoder: Seq2SeqEncoder, decoder: Seq2SeqDecoder):
@@ -121,10 +120,10 @@ class Seq2SeqModel(nn.Module):
 
 
 class TransformerSeq2SeqModel(Seq2SeqModel):
-    r"""Encoder 为 :class:`~fastNLP.modules.torch.encoder.\
-    TransformerSeq2SeqEncoder`，decoder 为 :class:`~fastNLP.modules.torch.\
-    decoder.TransformerSeq2SeqDecoder` 的 :class:`Seq2SeqModel`，通过
-    :meth:`build_model` 方法初始化。
+    r"""Encoder 为 :class:`~fastNLP.modules.torch.TransformerSeq2SeqEncoder`，
+    decoder 为 :class:`~fastNLP.modules.torch.TransformerSeq2SeqDecoder` 的
+    :class:`Seq2SeqModel`。通过 :meth:`build_model` 方法初始化。
+    :class:`TransformerSeq2SeqEncoder`
     """
 
     def __init__(self, encoder, decoder):
@@ -233,11 +232,9 @@ class TransformerSeq2SeqModel(Seq2SeqModel):
 
 
 class LSTMSeq2SeqModel(Seq2SeqModel):
-    r"""
-    使用 :class:`~fastNLP.modules.torch.encoder.LSTMSeq2SeqEncoder` 和
-    :class:`~fastNLP.modules.torch.decoder.LSTMSeq2SeqDecoder` 的
-    :class:`Seq2SeqModel`，通过 :meth:`build_model` 方法初始化。
-
+    r"""Encoder 为 :class:`~fastNLP.modules.torch.LSTMSeq2SeqEncoder` ，
+    decoder 为 :class:`~fastNLP.modules.torch.LSTMSeq2SeqDecoder` 的
+    :class:`Seq2SeqModel`。通过 :meth:`build_model`方法初始化。
     """
 
     def __init__(self, encoder, decoder):

@@ -88,17 +88,18 @@ def _get_backend() -> str:
 
 
 class Collator:
-    r"""用于 pad 数据的对象。会自动将所有能够 pad （由 fastNLP 根据数据判定能否
-    pad ）的数据都进行 pad 操作，默认 pad 的值为 0。判定一个 field 是否可以 pad
-    的方式为：
+    r"""``fastNLP`` 中用于 pad 数据的对象。
 
-        1. 当前这个 field 是否所有对象都是一样的数据类型；比如，如果某 field 的数据
-           有些是 float ，有些是 int ，则该 field 将被判定为不可 pad 类型；
-        2. 当前这个 field 是否每个 sample 都具有一样的深度；比如，如果某 field 的数
-           据转为 batch 类型后为 ``[1, [1,2]]``, 则会被判定为不可 pad ，因为第一个
-           sample 与 第二个 sample 深度不同；
-        3. 当前这个 field 的类型是否是可以 pad （例如 str 类型的数据）。可以通过设
-           置 ``logger.setLevel('debug')`` 来打印是判定不可 pad 的原因。
+    ``Collator`` 会自动将所有能够 pad （由 ``fastNLP`` 根据数据判定能否pad ）的数
+    据都进行 pad 操作，默认 pad 的值为 0。判定一个 field 是否可以 pad 的方式为：
+
+    1. 当前这个 field 是否所有对象都是一样的数据类型；比如，如果某 field 的数据有些
+       是 float ，有些是 int ，则该 field 将被判定为不可 pad 类型；
+    2. 当前这个 field 是否每个 sample 都具有一样的深度；比如，如果某 field 的数据转
+       为 batch 类型后为 ``[1, [1,2]]``, 则会被判定为不可 pad ，因为第一个 sample
+       与 第二个 sample 深度不同；
+    3. 当前这个 field 的类型是否是可以 pad （例如 str 类型的数据）。可以通过设置
+       ``logger.setLevel('debug')`` 来打印是判定不可 pad 的原因。
 
     .. note::
 
@@ -111,17 +112,17 @@ class Collator:
 
         补充 code example 。
 
-    若需要将某个本可以 pad 的 field 设置为不可 pad ，则可以通过 :meth:`~fastNLP.\
-    Collator.set_pad` 的 ``pad_val`` 设置为 ``None`` 实现。
-    如果需要某些 field 不要包含在 pad 之后的结果中，可以使用 :meth:`~fastNLP.\
-    Collator.set_ignore` 进行设置。
+    若需要将某个本可以 pad 的 field 设置为不可 pad ，则可以通过 :meth:`.Collator.\
+    set_pad` 的 ``pad_val`` 设置为 ``None`` 实现；
+    如果需要某些 field 不要包含在 pad 之后的结果中，可以使用 :meth:`.Collator.\
+    set_ignore` 进行设置。
 
-    Collator 在第一次进行 pad 的时候自动根据设置以及数据情况，为每个 field 获取一个
-    padder ，在之后的每次调用中，都将使用对应的 Padder 给对应的 field 。由于
-    Collator 只能在某个 field 内进行 pad ，如果 pad 操作需要同时操作多个 field ，请
-    不要使用 Collator 。
+    ``Collator`` 在第一次进行 pad 的时候自动根据设置以及数据情况，为每个 field 获取
+    一个 :class:`.Padder` ，在之后的每次调用中，都将使用对应的 :class:`.Padder` 给
+    对应的 field 。由于 ``Collator`` 只能在某个 field 内进行 pad ，如果 pad 操作需
+    要同时操作多个 field ，请不要使用 ``Collator``。
 
-    :param backend: 对于可以 pad 的 field，使用哪种 tensor，支持 ``['torch',
+    :param backend: 对于可以 pad 的 field 使用哪种 tensor，支持 ``['torch',
         'jittor','paddle','oneflow','numpy','raw', 'auto', None]``。若为
         ``'auto'``，则在进行 pad 的时候会根据调用的环境决定其 ``backend``。该参数
         对不能进行 pad 的数据没有影响，无法 pad 的数据返回一定是 :class:`list`。
@@ -351,18 +352,18 @@ class Collator:
         self.backend = backend
 
     def set_ignore(self, *field_names) -> 'Collator':
-        r"""如果有的内容不希望输出，可以在此处进行设置，被设置的 field 将在 batch 的
+        r"""如果不希望输出某些内容，可以在此处进行设置，被设置的 field 将在 batch 的
         输出中被忽略:
 
             >>> collator = Collator().set_ignore('field1', 'field2')
 
-        :param field_names: field_name: 需要调整的 field 的名称。如果
-            :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
-            field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如
-            ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.\
-            __getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表
-            示序列中第 **0** 或 **1** 个元素。
-        :return: Collator 自身；
+        :param field_names: 需要调整的 field 的名称。如果 :meth:`Dataset.\
+            __getitem__` 方法返回的是字典类型，则可以直接使用对应的 field 的 key 来
+            表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b':
+            1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.__getitem__`
+            返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表示序列中第
+            **0** 个和第 **1** 个元素。
+        :return: :class:`Collator` 自身；
         """
         self._renew()
         input_field_names = [(field, field) if isinstance(field, tuple) else

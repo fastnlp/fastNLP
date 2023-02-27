@@ -12,7 +12,9 @@ __all__ = ['CheckpointCallback']
 
 
 class CheckpointCallback(Callback):
-    r"""保存 checkpoint 的  callback ，其保存的文件目录以及文件名命名规则如下::
+    r"""用于保存断点 ``checkpoint`` 的 ``Callback``。
+
+    其保存的文件目录以及文件名命名规则如下::
 
         - folder/
             - YYYY-mm-dd-HH_MM_SS_fffff/  # 自动根据当前脚本的启动时间创建的
@@ -31,8 +33,8 @@ class CheckpointCallback(Callback):
     :param monitor: 监控的 metric 值。
 
         * 为 ``None`` 时，
-          fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置
-          的 `monitor` 值（如果有设置）。
+          fastNLP 将尝试使用 :class:`.Trainer` 中设置的 `monitor` 值（如果有设
+          置）。
         * 为 ``str`` 时，
           fastNLP 将尝试直接使用该名称从 ``evaluation`` 的结果中寻找，如果最终在
           ``evaluation`` 结果中没有找到完全一致的名称，则将使用最长公共字符串算法
@@ -51,19 +53,19 @@ class CheckpointCallback(Callback):
         保存。如果为 ``False`` 则不会保存 ``{save_object}-last`` 文件
     :param topk: 保存 monitor 结果中的 ``topk`` 个。
     :param on_exceptions: 在出异常信息时，是否保存。传入需要捕获的异常的类。默认将捕
-        获 :class:`~fastNLP.core.callbacks.EarlyStopException`。
+        获 :class:`.EarlyStopException`。
     :param larger_better: monitor 的值是否时越大越好。
-    :param only_state_dict: 保存时是否只保存 state_dict 。当``model_save_fn`` 不
-        为 ``None`` 时，该参数无效。
+    :param only_state_dict: 保存时是否只保存 state_dict 。当 ``model_save_fn``
+        不为 ``None`` 时，该参数无效。
     :param model_save_fn: 个性化的保存函数，当触发保存操作时，就调用这个函数。这个函
         数应当接受一个文件夹作为参数，不返回任何东西。如果传入了 ``model_save_fn``
         函数，fastNLP 将不再进行模型相关的保存。在多卡场景下，我们只在 rank 0 上会运
         行该函数。
     :param save_object: 可选 ``['trainer', 'model']``，表示在保存时的保存对象为
         ``trainer+model`` 还是 只是 ``model``。如果保存 ``trainer`` 对象的话，将
-        会保存 :class:`~fastNLP.core.controllers.Trainer` 的相关状态，之后可以通
-        过 :meth:`Trainer.load_checkpoint` 加载该断点继续进行训练。如果保存的是
-        ``Model`` 对象，则可以通过 :meth:`Trainer.load_model` 加载该模型权重。
+        会保存 :class:`.Trainer` 的相关状态，之后可以通过 :meth:`.Trainer.\
+        load_checkpoint` 加载该断点继续进行训练。如果保存的是 ``Model`` 对象，则可
+        以通过 :meth:`.Trainer.load_model` 加载该模型权重。
     :param save_evaluate_results: 是否保存 evaluate 的结果。如果为 ``True``，
         在保存 topk 模型的文件夹中将额外保存一个 ``fastnlp_evaluate_results.json``
         文件，记录当前的 results。仅在设置了 ``topk`` 的场景下有用，默认为

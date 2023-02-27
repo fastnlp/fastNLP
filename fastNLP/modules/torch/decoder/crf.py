@@ -27,10 +27,10 @@ def allowed_transitions(
     :param include_start_end: 是否包含开始与结尾的转换。比如在 ``bio`` 中，
         ``b/o`` 可以在开头，但是 ``i`` 不能在开头；
 
-            - 为 ``True`` -- 返回的结果中会包含 ``(start_idx, b_idx),
-              (start_idx, o_idx)``，但是不包含 ``(start_idx, i_idx)``；其中
-              ``start_idx=len(id2label)``，``end_idx=len(id2label)+1``；
-            - 为 ``False`` , 返回的结果中不含与开始结尾相关的内容；
+        - 为 ``True`` -- 返回的结果中会包含 ``(start_idx, b_idx), (start_idx,
+          o_idx)``，但是不包含 ``(start_idx, i_idx)``；其中 ``start_idx=len
+          (id2label)``，``end_idx=len(id2label)+1``；
+        - 为 ``False`` , 返回的结果中不含与开始结尾相关的内容；
     :return: 一系列元组构成的列表，内部的 :class:`Tuple` 是可以进行跳转的
         ``(from_tag_id, to_tag_id)``。
     """
@@ -200,7 +200,7 @@ class ConditionalRandomField(nn.Module):
     :param include_start_end_trans: 是否考虑各个 tag 作为开始以及结尾的分数。
     :param allowed_transitions: 内部的 ``Tuple[from_tag_id(int), to_tag_id
         (int)]`` 视为允许发生的跃迁，其他没有包含的跃迁认为是禁止跃迁，可以通过
-        :func:`allowed_transitions` 函数得到；如果为 ``None``，则所有跃迁均为合
+        :func:`.allowed_transitions` 函数得到；如果为 ``None``，则所有跃迁均为合
         法。
     """
 
@@ -339,16 +339,16 @@ class ConditionalRandomField(nn.Module):
             认为是 padding。如果为 ``None``，则认为没有 padding。
         :param unpad: 是否将结果删去 padding：
 
-                - 为 ``False`` 时，返回的是 ``[batch_size, max_len]`` 的张量
-                - 为 ``True`` 时，返回的是 :class:`List` [:class:`List` [
-                  :class:`int` ]], 内部的 :class:`List` [:class:`int` ] 为每个
-                  sequence 的 label ，已经除去 pad 部分，即每个 :class:`List` [
-                  :class:`int` ] 的长度是这个 sample 的有效长度。
+            - 为 ``False`` 时，返回的是 ``[batch_size, max_len]`` 的张量
+            - 为 ``True`` 时，返回的是 :class:`List` [:class:`List` [
+              :class:`int` ]], 内部的 :class:`List` [:class:`int` ] 为每个
+              sequence 的 label ，已经除去 pad 部分，即每个 :class:`List` [
+              :class:`int` ] 的长度是这个 sample 的有效长度。
         :return:  (paths, scores)。
 
-                - ``paths`` -- 解码后的路径，其值参照 ``unpad`` 参数。
-                - ``scores`` -- :class:`torch.FloatTensor`，形状为
-                  ``[batch_size,]``，对应每个最优路径的分数。
+            - ``paths`` -- 解码后的路径，其值参照 ``unpad`` 参数。
+            - ``scores`` -- :class:`torch.FloatTensor`，形状为
+              ``[batch_size,]``，对应每个最优路径的分数。
 
         """
         batch_size, max_len, n_tags = logits.size()

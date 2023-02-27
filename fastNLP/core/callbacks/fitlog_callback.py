@@ -12,18 +12,21 @@ __all__ = ['FitlogCallback']
 
 
 class FitlogCallback(HasMonitorCallback):
-    r"""自动记录 ``evaluation`` 结果到 ``fitlog`` 中。会自动记录每次 ``evaluate``
+    r"""将 ``evaluation`` 结果记录至 ``fitlog`` 的 ``Callback``。需要安装
+    :mod:`fitlog`。
+
+    自动记录 ``evaluation`` 结果到 ``fitlog`` 中。会自动记录每次 ``evaluate``
     后的结果；同时会根据 ``monitor`` 记录最好的结果。另外，会自动将非 ``rank 0`` 上
     的 ``fitlog`` 设置为 ``debug`` 状态。同时还会在 ``fitlog`` 的 ``other`` 列中
     记录 一个 ``launch_time``，可以通过这个数值找到当前这个脚本的在 save_folder
-    （如果有使用其它需要保存模型的 ``Callback``，例如 :class:`~fastNLP.core.\
-    callbacks.CheckpointCallback`）下的文件夹名称。
+    （如果有使用其它需要保存模型的 ``Callback`` 如 :class:`.CheckpointCallback`）
+    下的文件夹名称。
 
     :param monitor: 监控的 metric 值。
 
         * 为 ``None`` 时，
-          fastNLP 将尝试使用 :class:`~fastNLP.core.controllers.Trainer` 中设置
-          的 `monitor` 值（如果有设置）。
+          fastNLP 将尝试使用 :class:`.Trainer` 中设置的 `monitor` 值（如果有设
+          置）。
         * 为 ``str`` 时，
           fastNLP 将尝试直接使用该名称从 ``evaluation`` 的结果中寻找，如果最终在
           ``evaluation`` 结果中没有找到完全一致的名称，则将使用最长公共字符串算法

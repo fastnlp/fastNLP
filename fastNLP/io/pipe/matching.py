@@ -36,8 +36,9 @@ __all__ = [
 
 class MatchingBertPipe(Pipe):
     r"""
-    **Matching** 任务的 Bert pipe ，处理之后 :class:`~fastNLP.core.DataSet` 中的
-    内容如下：
+    **Matching** 任务的 **Bert Pipe** 。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table::
        :header: "raw_words1", "raw_words2", "target", "words", "seq_len"
@@ -182,7 +183,7 @@ class MatchingBertPipe(Pipe):
 
 
 class RTEBertPipe(MatchingBertPipe):
-    """处理 **RTE** 数据。
+    """处理 **RTE** 数据的 **Bert Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -194,7 +195,7 @@ class RTEBertPipe(MatchingBertPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -204,7 +205,7 @@ class RTEBertPipe(MatchingBertPipe):
 
 
 class SNLIBertPipe(MatchingBertPipe):
-    """处理 **SNLI** 数据。
+    """处理 **SNLI** 数据的 **Bert Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -216,7 +217,7 @@ class SNLIBertPipe(MatchingBertPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -226,7 +227,7 @@ class SNLIBertPipe(MatchingBertPipe):
 
 
 class QuoraBertPipe(MatchingBertPipe):
-    """处理 **Quora** 数据。
+    """处理 **Quora** 数据的 **Bert Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -238,7 +239,7 @@ class QuoraBertPipe(MatchingBertPipe):
     def process_from_file(self, paths):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -248,7 +249,7 @@ class QuoraBertPipe(MatchingBertPipe):
 
 
 class QNLIBertPipe(MatchingBertPipe):
-    """处理 **QNNLI** 数据。
+    """处理 **QNNLI** 数据的 **Bert Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -260,7 +261,7 @@ class QNLIBertPipe(MatchingBertPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -270,7 +271,7 @@ class QNLIBertPipe(MatchingBertPipe):
 
 
 class MNLIBertPipe(MatchingBertPipe):
-    """处理 **MNLI** 数据。
+    """处理 **MNLI** 数据的 **Bert Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -282,7 +283,7 @@ class MNLIBertPipe(MatchingBertPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -293,7 +294,9 @@ class MNLIBertPipe(MatchingBertPipe):
 
 class MatchingPipe(Pipe):
     r"""
-    **Matching** 任务的 Pipe，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
+    **Matching** 任务的 Pipe。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table::
        :header: "raw_words1", "raw_words2", "target", "words1", "words2", "seq_len1", "seq_len2"
@@ -423,7 +426,7 @@ class MatchingPipe(Pipe):
 
 
 class RTEPipe(MatchingPipe):
-    """处理 **RTE** 数据。
+    """处理 **RTE** 数据的 **Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -435,7 +438,7 @@ class RTEPipe(MatchingPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -445,7 +448,7 @@ class RTEPipe(MatchingPipe):
 
 
 class SNLIPipe(MatchingPipe):
-    """处理 **SNLI** 数据。
+    """处理 **SNLI** 数据的 **Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -457,7 +460,7 @@ class SNLIPipe(MatchingPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -467,7 +470,7 @@ class SNLIPipe(MatchingPipe):
 
 
 class QuoraPipe(MatchingPipe):
-    """处理 **Quora** 数据。
+    """处理 **Quora** 数据的 **Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -479,7 +482,7 @@ class QuoraPipe(MatchingPipe):
     def process_from_file(self, paths):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -489,7 +492,7 @@ class QuoraPipe(MatchingPipe):
 
 
 class QNLIPipe(MatchingPipe):
-    """处理 **QNLI** 数据。
+    """处理 **QNLI** 数据的 **Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -501,7 +504,7 @@ class QNLIPipe(MatchingPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -511,7 +514,7 @@ class QNLIPipe(MatchingPipe):
 
 
 class MNLIPipe(MatchingPipe):
-    """处理 **MNLI** 数据。
+    """处理 **MNLI** 数据的 **Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -523,7 +526,7 @@ class MNLIPipe(MatchingPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -533,7 +536,7 @@ class MNLIPipe(MatchingPipe):
 
 
 class LCQMCPipe(MatchingPipe):
-    """处理 **LCQMC** 数据。
+    """处理 **LCQMC** 数据的 **Pipe**。
 
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['cn-char']``，
         按字分词。
@@ -546,7 +549,7 @@ class LCQMCPipe(MatchingPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -559,7 +562,7 @@ class LCQMCPipe(MatchingPipe):
 
 
 class CNXNLIPipe(MatchingPipe):
-    """处理 **XNLI Chinese** 数据。
+    """处理 **XNLI Chinese** 数据的 **Pipe**。
 
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['cn-char']``，
         按字分词。
@@ -572,7 +575,7 @@ class CNXNLIPipe(MatchingPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -586,7 +589,7 @@ class CNXNLIPipe(MatchingPipe):
 
 
 class BQCorpusPipe(MatchingPipe):
-    """处理 **BQ Corpus** 数据。
+    """处理 **BQ Corpus** 数据的 **Pipe**。
 
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['cn-char']``，
         按字分词。
@@ -599,7 +602,7 @@ class BQCorpusPipe(MatchingPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -612,8 +615,8 @@ class BQCorpusPipe(MatchingPipe):
 
 
 class RenamePipe(Pipe):
-    """重命名数据集的 Pipe ，经过处理后会将数据集中的 ``chars``, ``raw_chars1`` 等 列重命名为 ``words``,
-    ``raw_words1``，反之亦然。
+    r"""重命名数据集的 Pipe 。经过处理后会将数据集中的 ``chars``、``raw_chars1``
+    等列重命名为 ``words``、``raw_words1``，反之亦然。
 
     :param task: 任务类型，可选 ``['cn-nli', 'cn-nli-bert']``。
     :param num_proc: 处理数据时使用的进程数目。
@@ -724,7 +727,7 @@ class GranularizePipe(Pipe):
 
 
 class LCQMCBertPipe(MatchingBertPipe):
-    """处理 **LCQMC** 数据.
+    """处理 **LCQMC** 数据的 **Bert Pipe**。
 
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['cn-char']``，
         按字分词。
@@ -737,7 +740,7 @@ class LCQMCBertPipe(MatchingBertPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -751,7 +754,7 @@ class LCQMCBertPipe(MatchingBertPipe):
 
 
 class BQCorpusBertPipe(MatchingBertPipe):
-    """处理 **BQ Corpus** 数据。
+    """处理 **BQ Corpus** 数据的 **Bert Pipe**。
 
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['cn-char']``，
         按字分词。
@@ -764,7 +767,7 @@ class BQCorpusBertPipe(MatchingBertPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -778,7 +781,7 @@ class BQCorpusBertPipe(MatchingBertPipe):
 
 
 class CNXNLIBertPipe(MatchingBertPipe):
-    """处理 **XNLI Chinese** 数据。
+    """处理 **XNLI Chinese** 数据的 **Bert Pipe**。
 
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['cn-char']``，
         按字分词。
@@ -791,7 +794,7 @@ class CNXNLIBertPipe(MatchingBertPipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -806,8 +809,10 @@ class CNXNLIBertPipe(MatchingBertPipe):
 
 
 class TruncateBertPipe(Pipe):
-    """对数据进行截断的 **Pipe**。该 **Pipe** 将会寻找每条数据中的第一个分隔符
-    ``[SEP]``，对其前后的数据分别进行截断。对于中文任务会将前后的文本分别截断至长度。
+    """对数据进行截断的 **Pipe**。
+
+    该 **Pipe** 将会寻找每条数据中的第一个分隔符 ``[SEP]``，对其前后的数据分别进行截
+    断。对于中文任务会将前后的文本分别截断至长度。
 
     **250**，对于英文任务会分别截断至 **215**。
 

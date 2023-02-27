@@ -128,7 +128,9 @@ def _split_dev(dataset_name,
 
 class AGsNewsLoader(CLSBaseLoader):
     """
-    **AG's News** 数据集的 **Loader**，如果您使用了这个数据集，请引用以下的文章
+    **AG's News** 数据集的 **Loader**。
+
+    如果您使用了这个数据集，请引用以下的文章：
 
         Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional
         Networks for Text Classification. Advances in Neural Information
@@ -146,7 +148,9 @@ class AGsNewsLoader(CLSBaseLoader):
 
 class DBPediaLoader(CLSBaseLoader):
     """
-    **DBpedia** 数据集的 **Loader**。如果您使用了这个数据集，请引用以下的文章
+    **DBpedia** 数据集的 **Loader**。
+
+    如果您使用了这个数据集，请引用以下的文章：
 
         Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional
         Networks for Text Classification. Advances in Neural Information
@@ -177,7 +181,9 @@ class DBPediaLoader(CLSBaseLoader):
 
 class IMDBLoader(CLSBaseLoader):
     r"""
-    **IMDb** 数据集的 **Loader**，如果您使用了这个数据集，请引用以下的文章
+    **IMDb** 数据集的 **Loader**。
+
+    如果您使用了这个数据集，请引用以下的文章：
 
         http://www.aclweb.org/anthology/P11-1015。
 
@@ -228,9 +234,11 @@ class IMDBLoader(CLSBaseLoader):
 
 class SSTLoader(Loader):
     r"""
-    **SST** 数据集的 **Loader**，如果您使用了这个数据集，请引用以下的文章
+    **SST** 数据集的 **Loader**。
 
-            https://nlp.stanford.edu/~socherr/EMNLP2013_RNTN.pdf
+    如果您使用了这个数据集，请引用以下的文章：
+
+        https://nlp.stanford.edu/~socherr/EMNLP2013_RNTN.pdf
 
     原始数据中内容应该为::
 
@@ -280,8 +288,9 @@ class SSTLoader(Loader):
 
 class YelpFullLoader(CLSBaseLoader):
     r"""
-    **Yelp Review Full** 数据集的 **Loader**，如果您使用了这个数据集，请引用以下的
-    文章
+    **Yelp Review Full** 数据集的 **Loader**。
+
+    如果您使用了这个数据集，请引用以下的文章：
 
         Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional
         Networks for Text Classification. Advances in Neural Information
@@ -312,8 +321,9 @@ class YelpFullLoader(CLSBaseLoader):
 
 class YelpPolarityLoader(CLSBaseLoader):
     r"""
-    **Yelp Review Polarity** 数据集的 **Loader**，如果您使用了这个数据集，请引用以
-    下的文章
+    **Yelp Review Polarity** 数据集的 **Loader**。
+
+    如果您使用了这个数据集，请引用以下的文章：
 
         Xiang Zhang, Junbo Zhao, Yann LeCun. Character-level Convolutional
         Networks for Text Classification. Advances in Neural Information
@@ -344,7 +354,9 @@ class YelpPolarityLoader(CLSBaseLoader):
 
 class SST2Loader(Loader):
     r"""
-    **SST-2** 数据集的 **Loader**，如果您使用了该数据集，请引用以下的文章
+    **SST-2** 数据集的 **Loader**。
+
+    如果您使用了该数据集，请引用以下的文章：
 
     https://nlp.stanford.edu/pubs/SocherBauerManningNg_ACL2013.pdf
 
@@ -416,7 +428,9 @@ class SST2Loader(Loader):
 
 class ChnSentiCorpLoader(Loader):
     r"""
-    **ChnSentiCorp** 数据集的 **Loader**，该数据取自：
+    **ChnSentiCorp** 数据集的 **Loader**。
+
+    该数据取自：
     https://github.com/pengming617/bert_classification/tree/master/data，在
     https://arxiv.org/pdf/1904.09223.pdf 与 https://arxiv.org/pdf/1906.08101.pdf 有使用。
 
@@ -475,7 +489,9 @@ class ChnSentiCorpLoader(Loader):
 
 class THUCNewsLoader(Loader):
     r"""
-    **THUCNews** 数据集的 **Loader**，该数据取自
+    **THUCNews** 数据集的 **Loader**。
+
+    该数据取自
     http://thuctc.thunlp.org/#%E4%B8%AD%E6%96%87%E6%96%87%E6%9C%AC%E5%88%86%E7%B1%BB%E6%95%B0%E6%8D%AE%E9%9B%86THUCNews
 
     数据用于 document-level 分类任务，新闻 10 分类。
@@ -524,6 +540,7 @@ class THUCNewsLoader(Loader):
 class WeiboSenti100kLoader(Loader):
     r"""
     **WeiboSenti100k** 数据集的 **Loader**。
+
     该数据取自 https://github.com/SophonPlus/ChineseNlpCorpus/，
     在 https://arxiv.org/abs/1906.08101 有使用。微博 sentiment classification，
     二分类。

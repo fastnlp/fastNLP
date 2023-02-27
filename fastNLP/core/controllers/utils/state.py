@@ -42,7 +42,8 @@ class State(dict):
 class TrainerState:
     r"""
     该类用于我们 fastNLP 自己内部为了训练流程所记录的一些状态，当然是要暴露给用户给用
-    户使用的；我们保存的 state 大部分上是 trainer 断点重训 需要重新加载的；专属于 :class:`~fastNLP.core.controllers.Trainer` 的状态记载的类；
+    户使用的；我们保存的 state 大部分上是 trainer 断点重训 需要重新加载的；专属于
+    :class:`.Trainer` 的状态记载的类；
 
     :param n_epochs: 训练过程中总共的 epoch 的数量；
     :param cur_epoch_idx: 当前正在运行第几个 epoch；

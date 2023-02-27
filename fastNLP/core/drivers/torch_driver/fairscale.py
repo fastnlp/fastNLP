@@ -27,7 +27,7 @@ __all__ = ['FairScaleDriver']
 class FairScaleDriver(TorchDDPDriver):
     r"""实现 ``fairscale`` 功能的 ``Driver``。
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数。
+    :param model: 传入给 :class:`.Trainer` 的 ``model`` 参数。
     :param parallel_device: 用于分布式训练的 ``gpu`` 设备。
     :param is_pull_by_torch_run: 标志当前的脚本的启动是否由 ``python -m
         torch.distributed.launch`` 启动的。
@@ -45,14 +45,13 @@ class FairScaleDriver(TorchDDPDriver):
         * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`torch.\
           amp.cuda.GradScaler` 的参数
     :kwargs:
-        * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
+        * *model_wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
           ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
-            core.utils.auto_param_call`。
+            关于该参数的详细说明，请参见 :class:`.Trainer` 和 :func:`~fastNLP.\
+            core.auto_param_call`。
 
         * *output_from_new_proc* (``str``) -- 应当为一个字符串，表示在多进程的
           driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一： ``["all",
@@ -167,9 +166,9 @@ class FairScaleDriver(TorchDDPDriver):
         r"""
         准备分布式环境，该函数主要做以下两件事情：
 
-            1. 开启多进程，每个 gpu 设备对应单独的一个进程；
-            2. 每个进程将模型迁移到自己对应的 ``gpu`` 设备上；然后使用
-               ``DistributedDataParallel`` 包裹模型；
+        1. 开启多进程，每个 gpu 设备对应单独的一个进程；
+        2. 每个进程将模型迁移到自己对应的 ``gpu`` 设备上；然后使用
+           ``DistributedDataParallel`` 包裹模型；
         """
         if self._has_setup:
             return
@@ -389,8 +388,8 @@ class FairScaleDriver(TorchDDPDriver):
             的文件。把 model 相关的内容放入到 ``FASTNLP_MODEL_FILENAME`` 文件中，
             将传入的 ``states`` 以及自身产生的其它状态一并保存在
             ``FASTNLP_CHECKPOINT_FILENAME`` 里面。
-        :param states: 由 :class:`~fastNLP.core.controllers.Trainer` 传入的一个
-            字典，其中已经包含了为了实现断点重训所需要保存的其它对象的状态。
+        :param states: 由 :class:`.Trainer` 传入的一个字典，其中已经包含了为了实现
+            断点重训所需要保存的其它对象的状态。
         :param dataloader: 正在使用的 dataloader。
         :param only_state_dict: 是否只保存模型的参数，当 ``should_save_model``
             为 ``False``，该参数无效。

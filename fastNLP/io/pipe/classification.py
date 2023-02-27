@@ -94,7 +94,7 @@ class CLSBasePipe(Pipe):
     def process_from_file(self, paths) -> DataBundle:
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -104,13 +104,15 @@ class CLSBasePipe(Pipe):
 
 class YelpFullPipe(CLSBasePipe):
     r"""
-    处理 **Yelp Review Full** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
+    处理 **Yelp Review Full** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table:: 下面是使用 YelpFullPipe 处理后的 DataSet 所具备的 field
         :header: "raw_words", "target", "words",  "seq_len"
 
         "I got 'new' tires from them and within...", 0 ,"[7, 110, 22, 107, 22, 499, 59, 140, 3,...]", 160
-        " Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
+        "Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
         "...", ., "[...]", .
 
     :param lower: 是否对输入进行小写化。
@@ -176,7 +178,7 @@ class YelpFullPipe(CLSBasePipe):
     def process_from_file(self, paths=None) -> DataBundle:
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -187,14 +189,15 @@ class YelpFullPipe(CLSBasePipe):
 
 class YelpPolarityPipe(CLSBasePipe):
     r"""
-    处理 **Yelp Review Polarity** 的数据，处理之后 :class:`~fastNLP.core.\
-    DataSet` 中的内容如下：
+    处理 **Yelp Review Polarity** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table:: 下面是使用YelpFullPipe处理后的DataSet所具备的field
         :header: "raw_words", "target", "words", "seq_len"
 
         "I got 'new' tires from them and within...", 0 ,"[7, 110, 22, 107, 22, 499, 59, 140, 3,...]", 160
-        " Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
+        "Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
         "...", ., "[...]", .
 
     :param lower: 是否对输入进行小写化。
@@ -214,7 +217,7 @@ class YelpPolarityPipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -225,14 +228,15 @@ class YelpPolarityPipe(CLSBasePipe):
 
 class AGsNewsPipe(CLSBasePipe):
     r"""
-    处理 **AG's News** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如
-    下：
+    处理 **AG's News** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table:: 下面是使用AGsNewsPipe处理后的DataSet所具备的field
         :header: "raw_words", "target", "words", "seq_len"
 
         "I got 'new' tires from them and within...", 0 ,"[7, 110, 22, 107, 22, 499, 59, 140, 3,...]", 160
-        " Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
+        "Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
         "...", ., "[...]", .
 
     :param lower: 是否对输入进行小写化。
@@ -252,7 +256,7 @@ class AGsNewsPipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -263,14 +267,15 @@ class AGsNewsPipe(CLSBasePipe):
 
 class DBPediaPipe(CLSBasePipe):
     r"""
-    处理 **DBPedia** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如
-    下：
+    处理 **DBPedia** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table:: 下面是使用DBPediaPipe处理后的DataSet所具备的field
         :header: "raw_words", "target", "words", "seq_len"
 
         "I got 'new' tires from them and within...", 0 ,"[7, 110, 22, 107, 22, 499, 59, 140, 3,...]", 160
-        " Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
+        "Don't waste your time.  We had two dif... ", 0, "[277, 17, 278, 38, 30, 112, 24, 85, 27...", 40
         "...", ., "[...]", .
 
     :param lower: 是否对输入进行小写化。
@@ -290,7 +295,7 @@ class DBPediaPipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -301,7 +306,9 @@ class DBPediaPipe(CLSBasePipe):
 
 class SSTPipe(CLSBasePipe):
     r"""
-    处理 **SST** 的数据，处理之后，:class:`~fastNLP.core.DataSet` 中的内容如下：
+    处理 **SST** 数据的 **Pipe**。
+
+    处理之后，:class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table:: 下面是使用SSTPipe处理后的DataSet所具备的field
         :header: "raw_words", "words", "target", "seq_len"
@@ -357,7 +364,7 @@ class SSTPipe(CLSBasePipe):
 
     def process(self, data_bundle: DataBundle) -> DataBundle:
         r"""
-        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` ` 应该至少拥有
+        ``data_bunlde`` 中的 :class:`~fastNLP.core.DataSet` 应该至少拥有
         ``raw_words`` 列，内容类似于：
 
         .. csv-table:: 下面是使用 SSTLoader 读取的 DataSet 所具备的 field
@@ -400,7 +407,7 @@ class SSTPipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -411,7 +418,9 @@ class SSTPipe(CLSBasePipe):
 
 class SST2Pipe(CLSBasePipe):
     r"""
-    处理 **SST-2** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
+    处理 **SST-2** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table::
        :header: "raw_words", "target", "words", "seq_len"
@@ -434,7 +443,7 @@ class SST2Pipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -445,7 +454,9 @@ class SST2Pipe(CLSBasePipe):
 
 class IMDBPipe(CLSBasePipe):
     r"""
-    处理 **IMDb** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
+    处理 **IMDb** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table:: 输出 DataSet 的 field
        :header: "raw_words", "target", "words", "seq_len"
@@ -509,7 +520,7 @@ class IMDBPipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -523,8 +534,9 @@ class IMDBPipe(CLSBasePipe):
 
 class ChnSentiCorpPipe(Pipe):
     r"""
-    处理 **ChnSentiCorp** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内
-    容为：
+    处理 **ChnSentiCorp** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容为：
 
     .. csv-table::
         :header: "raw_chars", "target", "chars", "seq_len"
@@ -628,7 +640,7 @@ class ChnSentiCorpPipe(Pipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -642,8 +654,9 @@ class ChnSentiCorpPipe(Pipe):
 
 class THUCNewsPipe(CLSBasePipe):
     r"""
-    处理 **THUCNews** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容
-    为：
+    处理 **THUCNews** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容为：
 
     .. csv-table::
         :header: "raw_chars", "target", "chars", "seq_len"
@@ -771,7 +784,7 @@ class THUCNewsPipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -785,8 +798,9 @@ class THUCNewsPipe(CLSBasePipe):
 
 class WeiboSenti100kPipe(CLSBasePipe):
     r"""
-    处理 **WeiboSenti100k** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的
-    内容为：
+    处理 **WeiboSenti100k** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容为：
 
     .. csv-table::
         :header: "raw_chars", "target", "chars", "seq_len"
@@ -888,7 +902,7 @@ class WeiboSenti100kPipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -901,7 +915,7 @@ class WeiboSenti100kPipe(CLSBasePipe):
 
 
 class MRPipe(CLSBasePipe):
-    """加载 **MR** 的数据。
+    """加载 **MR** 数据的 **Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -920,7 +934,7 @@ class MRPipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -933,7 +947,7 @@ class MRPipe(CLSBasePipe):
 
 
 class R8Pipe(CLSBasePipe):
-    """加载 **R8** 的数据。
+    """加载 **R8** 数据的 **Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -952,7 +966,7 @@ class R8Pipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -965,7 +979,7 @@ class R8Pipe(CLSBasePipe):
 
 
 class R52Pipe(CLSBasePipe):
-    """加载 **R52** 的数据。
+    """加载 **R52** 数据的 **Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -984,7 +998,7 @@ class R52Pipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -997,7 +1011,7 @@ class R52Pipe(CLSBasePipe):
 
 
 class OhsumedPipe(CLSBasePipe):
-    """加载 **Ohsumed** 的数据。
+    """加载 **Ohsumed** 数据的 **Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -1016,7 +1030,7 @@ class OhsumedPipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -1029,7 +1043,7 @@ class OhsumedPipe(CLSBasePipe):
 
 
 class NG20Pipe(CLSBasePipe):
-    """加载 **NG20** 的数据。
+    """加载 **NG20** 数据的 **Pipe**。
 
     :param lower: 是否对输入进行小写化。
     :param tokenizer: 使用哪种 tokenize 方式将数据切成单词。支持 ``['spacy',
@@ -1048,7 +1062,7 @@ class NG20Pipe(CLSBasePipe):
     def process_from_file(self, paths=None):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:

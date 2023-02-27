@@ -13,9 +13,14 @@ __all__ = ['CWSLoader']
 
 class CWSLoader(Loader):
     r"""
-    **Chinese word segmentor** 的 **Loader**。如果您使用了该数据集，请引用以下的
-    文章：Thomas Emerson, The Second International Chinese Word Segmentation
-    Bakeoff, 2005. 更多信息可以在 http://sighan.cs.uchicago.edu/bakeoff2005/ 查看。
+    **Chinese word segmentor** 的 **Loader**。
+
+    如果您使用了该数据集，请引用以下的文章：
+
+        Thomas Emerson, The Second International Chinese Word Segmentation
+        Bakeoff, 2005.
+
+    更多信息可以在 http://sighan.cs.uchicago.edu/bakeoff2005/ 查看。
 
     :class:`CWSLoader` 支持的数据格式为：一行一句话，不同词之间用空格隔开，例如::
 

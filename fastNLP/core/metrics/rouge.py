@@ -32,7 +32,7 @@ def _normalize_and_tokenize(
     :param text: 一个输入的句子。
     :param stemmer: Porter-stemmer实例来去除单词后缀以改进匹配。
     :param normalizer: 用户自己的规范化函数。
-        如果这值是``None``，则默认使用空格替换任何非字母数字字符。
+        如果这值是 ``None``，则默认使用空格替换任何非字母数字字符。
         这个函数必须输入一个 ``str`` 并且返回 ``str``。
     :param tokenizer: 分词函数，用户传入的函数，或者是类中包含的中英文分词函数。
     """
@@ -116,21 +116,22 @@ def _rougeN_score(pred: Sequence[str], reference: Sequence[str],
 
 
 class ROUGE(Metric):
-    """计算ROUGE的Metric。
+    """计算 **ROUGE** 的 ``Metric``。
 
-    :param rouge_keys (Union[List, Tuple,int,str]): 该参数包括要计算的各种类型的
-        ROUGE的名称。包括 ``L`` 和 ``1`` 到 ``9``。默认值是 (1,2,``L``)。
+    :param rouge_keys: 该参数包括要计算的各种类型的
+        ROUGE 的名称。包括 ``L`` 和 ``1`` 到 ``9``。默认值是 (1,2,``L``)。
     :param use_stemmer: 使用Porter词干器去除单词后缀以提高匹配。
     :param normalizer: 用户自己的规范化函数。
-        如果这值是``None``，则默认使用空格替换任何非字母数字字符。
+        如果这值是 ``None``，则默认使用空格替换任何非字母数字字符。
         这个函数必须输入一个 ``str`` 并且返回 ``str``。
     :param tokenizer: 用户可以传入 Callable 函数进行分词。
         如果是``str``，则按照传入的语言进行分词，默认选项有['en','cn','zh']，``en``
         代表英语，其他代表中文。如果是 ``None``，则会在第一次 update 时选择第一个
         sample 的语言进行选择。
     :param accumulate: 该参数在多 references 场景下使用。
-        - ``avg`` 获取与预测相关的所有引用的平均值。
-        - ``best`` 采用预测和多个对应参考之间获得的最佳fmmeasure得分。
+
+        - ``'avg'`` 获取与预测相关的所有引用的平均值。
+        - ``'best'`` 采用预测和多个对应参考之间获得的最佳 fmmeasure 得分。
 
     Examples:
 
@@ -222,17 +223,18 @@ class ROUGE(Metric):
         references: Union[str, Sequence[str],
                           Sequence[Sequence[str]]]) -> None:
         r"""
-
         :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
-        :param predictions: 预测的 ``sentence``，类型为``Sequence``，长度可变，假
-            设为 ``L``。可以为 :class:`str` 类型，也可以为 :class:`list` 类型。
-       :param references: 答案译文，type为``Sequence``，长度必须也为``L``，保持和
-            ``predictions`` 一致，每一个元素也是一个``Sequence``。
 
-           * references可以为str类型，但是该情况下predictions也必须为str类型。
-           * references 可以为 :class:`list[str]` 类型，如果 predictions 只有一条
-             数据，references数量不受限制；如果 predictions 数量超过一条，
-             references 的长度必须匹配 predictions 的数量。
+        :param predictions: 预测的 ``sentence``，类型为 ``Sequence``，长度可变，
+            假设为 ``L``。可以为 :class:`str` 类型，也可以为 :class:`list` 类型。
+        :param references: 答案译文，类型为 ``Sequence``，长度必须也为 ``L``，
+            保持和 ``predictions`` 一致，每一个元素也是一个 ``Sequence``。
+
+            * references 可以为 :class:`str` 类型，但是该情况下 predictions 也必
+              须为 :class:`str` 类型。
+            * references 可以为 :class:`list[str]` 类型，如果 predictions 只有一
+              条数据，references 数量不受限制；如果 predictions 数量超过一条，
+              references 的长度必须匹配 predictions 的数量。
        """
         if isinstance(references, list) and all(
                 isinstance(reference, str) for reference in references):

@@ -8,7 +8,7 @@ __all__ = ['Perplexity']
 
 
 class Perplexity(Metric):
-    r"""计算 perplexity 的 metric 。
+    r"""计算 **perplexity** 的 ``Metric`` 。
 
     在 ``Perplexity`` 中，我们希望传入的预测值 ``pred`` 为经过 ``softmax`` 的
     ``tensor``，所以 ``pred`` 应该为一个三维 ``tensor``，其中最后一维加起来概率为
@@ -21,8 +21,8 @@ class Perplexity(Metric):
         数时传入的参数决定具体的 backend ，大部分情况下直接使用 ``'auto'`` 即可。
     :param aggregate_when_get_metric: 在计算 metric 的时候是否自动将各个进程上的相
         同的 element 的数字聚合后再得到 metric，当 ``backend`` 不支持分布式时，该参
-        数无意义。如果为 ``None``，将在 :class:`~fastNLP.core.controllers.\
-        Evaluator` 中根据 ``sampler`` 是否使用分布式进行自动设置。
+        数无意义。如果为 ``None``，将在 :class:`.Evaluator` 中根据 ``sampler`` 是
+        否使用分布式进行自动设置。
     """
 
     def __init__(self,
@@ -52,10 +52,11 @@ class Perplexity(Metric):
     def update(self, pred, target) -> None:
         r"""
         :meth:`update` 函数将针对一个批次的预测结果做评价指标的累计。
+
         :param pred: 分配给序列中每个单词的概率，大小为 ``[batch_size, seq_len,
             vocab_size]``。其中，``pred`` 最后一维的数据必须是经过 softmax 之后
             的，符合 softmax 的数据特性，加起来为 **1**。
-        :param target: 序列的真实标签值，shape为[batch_size, seq_len]。
+        :param target: 序列的真实标签值，大小为 ``[batch_size, seq_len]``。
         """
         if len(pred.shape) != 3:
             raise ValueError(
@@ -89,7 +90,7 @@ class Perplexity(Metric):
     def get_metric(self) -> dict:
         r"""
         :meth:`get_metric` 函数将根据 :meth:`update` 函数累计的评价指标统计量来计
-            算最终的评价结果。
+        算最终的评价结果。
 
         :return: 包含以下内容的字典：``{"perplexity": float}``；
         """

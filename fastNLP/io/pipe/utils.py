@@ -14,8 +14,9 @@ __all__ = [
 
 def iob2(tags: List[str]) -> List[str]:
     r"""
-    检查数据是否是合法的 ``IOB`` 数据，如果是 ``IOB1`` 会被自动转换为 ``IOB2``。两
-    种格式的区别见
+    检查数据是否是合法的 ``IOB`` 数据，如果是 ``IOB1`` 会被自动转换为 ``IOB2``。
+
+    两种格式的区别见
     https://datascience.stackexchange.com/questions/37824/difference-between-iob-and-iob2-format
 
     :param tags: 需要转换的 tags

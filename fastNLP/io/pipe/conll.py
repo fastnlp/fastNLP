@@ -88,13 +88,15 @@ class _NERPipe(Pipe):
 
 class Conll2003NERPipe(_NERPipe):
     r"""
-    **Conll2003** 的 **NER** 任务的处理 **Pipe**，该Pipe会：
+    **Conll2003** 的 **NER** 任务的处理 **Pipe**。
 
-        1. 复制 ``raw_words`` 列，并命名为 ``words``；
-        2. 在 ``words`` , ``target`` 列建立词表，即创建 :class:`~fastNLP.core.\
-           Vocabulary` 对象，所以在返回的 :class:`~fastNLP.io.DataBundle` 中将有'
-           两个 ``Vocabulary``；
-        3. 将 ``words`` , ``target`` 列根据相应的词表转换为 index。
+    :class:`Conll2003NERPipe` 会：
+
+    1. 复制 ``raw_words`` 列，并命名为 ``words``；
+    2. 在 ``words`` , ``target`` 列建立词表，即创建 :class:`~fastNLP.core.\
+       Vocabulary` 对象，所以在返回的 :class:`~fastNLP.io.DataBundle` 中将有
+       两个 ``Vocabulary``；
+    3. 将 ``words`` , ``target`` 列根据相应的词表转换为 index。
 
     处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
@@ -121,7 +123,7 @@ class Conll2003NERPipe(_NERPipe):
     def process_from_file(self, paths) -> DataBundle:
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -135,8 +137,9 @@ class Conll2003NERPipe(_NERPipe):
 
 class Conll2003Pipe(Pipe):
     r"""
-    处理 **Conll2003** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如
-    下：
+    处理 **Conll2003** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table::
        :header: "raw_words" , "pos", "chunk", "ner", "words", "seq_len"
@@ -145,7 +148,7 @@ class Conll2003Pipe(Pipe):
        "[AL-AIN, United, Arab, ...]", "[1, 2...]", "[3, 4...]", "[3, 4...]", "[4, 5, 6,...]", 6
        "[...]", "[...]", "[...]", "[...]", "[...]", .
 
-    其中``words``, ``seq_len`` 是 input; ``pos``, ``chunk``, ``ner``,
+    其中 ``words``, ``seq_len`` 是 input; ``pos``, ``chunk``, ``ner``,
     ``seq_len`` 是 target
 
     :param chunk_encoding_type: ``chunk`` 列使用什么类型的 encoding 方式，支持
@@ -240,7 +243,7 @@ class Conll2003Pipe(Pipe):
     def process_from_file(self, paths):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -252,8 +255,9 @@ class Conll2003Pipe(Pipe):
 
 class OntoNotesNERPipe(_NERPipe):
     r"""
-    处理 **OntoNotes** 的 **NER** 数据，处理之后 :class:`~fastNLP.core.DataSet`
-    中的内容如下：
+    处理 **OntoNotes** 的 **NER** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table::
        :header: "raw_words", "target", "words", "seq_len"
@@ -273,7 +277,7 @@ class OntoNotesNERPipe(_NERPipe):
     def process_from_file(self, paths):
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -401,8 +405,9 @@ class _CNNERPipe(Pipe):
 
 class MsraNERPipe(_CNNERPipe):
     r"""
-    处理 **MSRA-NER** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中的内容如
-    下：
+    处理 **MSRA-NER** 数据的 **Pipe**。**Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table::
        :header: "raw_chars", "target", "chars", "seq_len"
@@ -435,7 +440,7 @@ class MsraNERPipe(_CNNERPipe):
     def process_from_file(self, paths=None) -> DataBundle:
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -446,8 +451,9 @@ class MsraNERPipe(_CNNERPipe):
 
 class PeopleDailyPipe(_CNNERPipe):
     r"""
-    处理 **People's Daily NER** 的 **ner** 的数据，处理之后 :class:`~fastNLP.\
-    core.DataSet` 中的内容如下：
+    处理 **People's Daily NER** 的 **ner** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table::
        :header: "raw_chars", "target", "chars", "seq_len"
@@ -480,7 +486,7 @@ class PeopleDailyPipe(_CNNERPipe):
     def process_from_file(self, paths=None) -> DataBundle:
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:
@@ -491,8 +497,9 @@ class PeopleDailyPipe(_CNNERPipe):
 
 class WeiboNERPipe(_CNNERPipe):
     r"""
-    处理 **Weibo** 的 **BER** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中
-    的内容如下：
+    处理 **Weibo** 的 **BER** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中的内容如下：
 
     .. csv-table::
        :header: "raw_chars", "chars", "target", "seq_len"
@@ -525,7 +532,7 @@ class WeiboNERPipe(_CNNERPipe):
     def process_from_file(self, paths=None) -> DataBundle:
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:

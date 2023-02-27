@@ -34,11 +34,11 @@ def initialize_torch_driver(driver: str,
     :param model: 训练或者评测的具体的模型
 
     :return: 下列类型之一的实例：
-        * :class:`~fastNLP.core.drivers.torch_driver.TorchSingleDriver`
-        * :class:`~fastNLP.core.drivers.torch_driver.TorchDDPDriver`
-        * :class:`~fastNLP.core.drivers.torch_driver.DeepSpeedDriver`
-        * :class:`~fastNLP.core.drivers.torch_driver.FairScaleDriver`
-        * :class:`~fastNLP.core.drivers.torch_driver.TorchFSDPDriver`
+        * :class:`.TorchSingleDriver`
+        * :class:`.TorchDDPDriver`
+        * :class:`.DeepSpeedDriver`
+        * :class:`.FairScaleDriver`
+        * :class:`.TorchFSDPDriver`
     """
     if parse_version(torch.__version__) < parse_version('1.6'):
         raise RuntimeError(

@@ -81,7 +81,10 @@ def _concat_clip(data_bundle, max_len, concat_field_name='raw_chars'):
 
 class CMRC2018BertPipe(Pipe):
     r"""
-    处理 **CMRC2018** 的数据，处理之后 :class:`~fastNLP.core.DataSet` 中新增的内容如下（原有的 field 仍然保留）：
+    处理 **CMRC2018** 数据的 **Pipe**。
+
+    处理之后 :class:`~fastNLP.core.DataSet` 中新增的内容如下（原有的 field 仍然保
+    留）：
 
     .. csv-table::
         :header: "context_len", "raw_chars",  "target_start", "target_end", "chars"
@@ -142,7 +145,7 @@ class CMRC2018BertPipe(Pipe):
     def process_from_file(self, paths=None) -> DataBundle:
         r"""
         传入文件路径，生成处理好的 :class:`~fastNLP.io.DataBundle` 对象。
-        ``paths`` 支持的路径形式可以参考 :meth:`fastNLP.io.Loader.load`
+        ``paths`` 支持的路径形式可以参考 :meth:`.Loader.load`
 
         :param paths:
         :return:

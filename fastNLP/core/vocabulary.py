@@ -1,8 +1,3 @@
-r"""
-.. todo::
-    doc
-"""
-
 import io
 from collections import Counter
 from functools import partial, wraps
@@ -75,7 +70,9 @@ def _check_build_status(func):
 
 class Vocabulary(object):
     r"""
-    用于构建， 存储和使用 `str` 到 `int` 的一一映射::
+    **fastNLP** 的词表对象，用于构建、存储和使用 `str` 到 `int` 的一一映射。
+
+    .. code:
 
         from fastNLP.core import Vocabulary
         vocab = Vocabulary()
@@ -85,16 +82,16 @@ class Vocabulary(object):
         vocab["word"] # str to int
         vocab.to_word(5) # int to str
 
-    :param max_size: `Vocabulary` 的最大大小， 即能存储词的最大数量
-        若为 ``None`` , 则不限制大小。
+    :param max_size: `Vocabulary` 的最大大小， 即能存储词的最大数量。若为
+        ``None`` 则不限制大小。
     :param min_freq: 能被记录下的词在文本中的最小出现频率， 应大于或等于 1。若小于该
         频率， 词语将被视为 `unknown`. 若为 ``None`` , 所有文本中的词都被记录。
-    :param padding: padding的字符。如果设置为 ``None``，则vocabulary中不考虑
+    :param padding: padding的字符。如果设置为 ``None``，则 vocabulary 中不考虑
         padding, 也不计入词表大小，为 ``None`` 的情况多在为 label 建立 Vocabulary
         的情况。
     :param unknown: unknown的字符，所有未被记录的词在转为 :class:`int` 时将被视为
-        `unknown`。如果设置为 ``None`` ,则 vocabulary 中不考虑 `unknown`, 也不计
-        入词表大小。为 ``None`` 的情况多在为 labe l建立 Vocabulary 的情况
+        `unknown`。如果设置为 ``None``，则 vocabulary 中不考虑 `unknown`, 也不计
+        入词表大小。为 ``None`` 的情况多在为 label 建立 Vocabulary 的情况
     """
 
     def __init__(self,
@@ -143,7 +140,7 @@ class Vocabulary(object):
             * 如果为 ``True`` -- 则不会有这个词语创建一个单独的 entry ，它将一直被
               指向 ``<UNK>`` 的表示；
             * 如果为 ``False`` -- 为这个词创建一个单独的 entry。如果这个词来自于验
-              证集或训练集，一般设置为True，如果来自于训练集一般设置为``False``；
+              证集或训练集，一般设置为True，如果来自于训练集一般设置为 ``False``；
 
             有以下两种情况: 如果新加入一个 word ，且 ``no_create_entry`` 为
             ``True``，但这个词之前已经在 Vocabulary 中且不是 ``no_create_entry``
@@ -167,7 +164,7 @@ class Vocabulary(object):
             * 如果为 ``True`` -- 则不会有这个词语创建一个单独的 entry ，它将一直被
               指向 ``<UNK>`` 的表示；
             * 如果为 ``False`` -- 为这个词创建一个单独的 entry。如果这个词来自于验
-              证集或训练集，一般设置为True，如果来自于训练集一般设置为``False``；
+              证集或训练集，一般设置为True，如果来自于训练集一般设置为 ``False``；
 
             有以下两种情况: 如果新加入一个 word ，且 ``no_create_entry`` 为
             ``True``，但这个词之前已经在 Vocabulary 中且不是 ``no_create_entry``
@@ -192,7 +189,7 @@ class Vocabulary(object):
             * 如果为 ``True`` -- 则不会有这个词语创建一个单独的 entry ，它将一直被
               指向 ``<UNK>`` 的表示；
             * 如果为 ``False`` -- 为这个词创建一个单独的 entry。如果这个词来自于验
-              证集或训练集，一般设置为True，如果来自于训练集一般设置为``False``；
+              证集或训练集，一般设置为True，如果来自于训练集一般设置为 ``False``；
 
         :return:
         """
@@ -216,7 +213,7 @@ class Vocabulary(object):
             * 如果为 ``True`` -- 则不会有这个词语创建一个单独的 entry ，它将一直被
               指向 ``<UNK>`` 的表示；
             * 如果为 ``False`` -- 为这个词创建一个单独的 entry。如果这个词来自于验
-              证集或训练集，一般设置为True，如果来自于训练集一般设置为``False``；
+              证集或训练集，一般设置为True，如果来自于训练集一般设置为 ``False``；
 
             有以下两种情况: 如果新加入一个 word ，且 ``no_create_entry`` 为
             ``True``，但这个词之前已经在 Vocabulary 中且不是 ``no_create_entry``
@@ -239,7 +236,7 @@ class Vocabulary(object):
             * 如果为 ``True`` -- 则不会有这个词语创建一个单独的 entry ，它将一直被
               指向 ``<UNK>`` 的表示；
             * 如果为 ``False`` -- 为这个词创建一个单独的 entry。如果这个词来自于验
-              证集或训练集，一般设置为True，如果来自于训练集一般设置为``False``；
+              证集或训练集，一般设置为True，如果来自于训练集一般设置为 ``False``；
 
             有以下两种情况: 如果新加入一个 word ，且 ``no_create_entry`` 为
             ``True``，但这个词之前已经在 Vocabulary 中且不是 ``no_create_entry``
@@ -339,9 +336,8 @@ class Vocabulary(object):
             vocab.index_dataset(
                 train_data, dev_data, test_data, field_name='words')
 
-        :param datasets: 其类型为 :class:`~fastNLP.core.dataset.DataSet` 或者
-            :class:`List` [ :class:`~fastNLP.core.dataset.DataSet` ]，即需要处理
-            的一个或多个数据集
+        :param datasets: 其类型为 :class:`.DataSet` 或者 :class:`List` [
+            :class:`.DataSet` ]，即需要处理的一个或多个数据集。
         :param field_name: 需要转为 index 的 field, 若有多个 DataSet, 每个
             DataSet 都必须有此 field 。目前支持 :class:`str` 和 :class:`List`
             [ :class:`str` ]
@@ -421,19 +417,18 @@ class Vocabulary(object):
                 train_data1, train_data2, field_name='words',
                 no_create_entry_dataset=[test_data1, test_data2])
 
-        :param datasets: 其类型为 :class:`~fastNLP.core.dataset.DataSet` 或者
-            List[:class:`~fastNLP.core.dataset.DataSet`]。
+        :param datasets: 其类型为 :class:`.DataSet` 或者 List[ :class:`.\
+            DataSet`]。
         :param field_name: 构建词典所使用的 field(s), 支持一个或多个 field，若有多
             个 DataSet, 每个 DataSet 都必须有这些 field。目前支持的 field 结构有
             ``str`` 和 ``List[str]``
-        :param no_create_entry_dataset: 可传入 :class:`~fastNLP.core.dataset.\
-            DataSet`, :class:`List` [ :class:`~fastNLP.core.dataset.DataSet` ]
-            或者 ``None`` （默认），建议直接将非训练数据都传入到这个参数。该选项用于
-            接下来的模型会使用预训练的 embedding （包括 ``glove``, ``word2vec`` ,
-            ``elmo`` 与 ``bert`` ）且会 finetune 的情况。如果仅使用来自于训练集的
-            数据建立词表，会导致测试集与验证集中的数据无法充分利用到来自于预训练
-            embedding 的信息，所以在建立词表的时候将测试集与验证集考虑进来会使得最终
-            的结果更好。
+        :param no_create_entry_dataset: 可传入 :class:`~fastNLP.core.DataSet`、
+            :class:`List` [ :class:`.DataSet` ] 或者 ``None`` （默认），建议直接
+            将非训练数据都传入到这个参数。该选项用于接下来的模型会使用预训练的
+            embedding （包括 ``glove``, ``word2vec`` ,``elmo`` 与 ``bert`` ）且
+            会 finetune 的情况。如果仅使用来自于训练集的数据建立词表，会导致测试集与
+            验证集中的数据无法充分利用到来自于预训练embedding 的信息，所以在建立词表
+            的时候将测试集与验证集考虑进来会使得最终的结果更好。
 
             * 如果一个词出现在了训练集中，但是没出现在预训练模型中，embedding
               会为它用 ``<UNK>`` 初始化；但如果它是单独的一个 vector ，并且

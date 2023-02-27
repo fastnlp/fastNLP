@@ -17,7 +17,8 @@ __all__ = [
 
 
 class ConllLoader(Loader):
-    r"""
+    r"""**Conll** 格式数据集的 **Loader**。
+
     :class:`ConllLoader` 支持读取的数据格式：以空行隔开两个 sample，除了分割行之外
     的每一行用空格或者制表符隔开不同的元素。如下例所示::
 
@@ -104,11 +105,11 @@ class ConllLoader(Loader):
 
 class Conll2003Loader(ConllLoader):
     r"""
-    用于读取 **conll2003** 任务的数据。数据的内容应该类似于以下的内容：第一列为
-    **raw_words**，第二列为 **pos**，第三列为 **chunking**，第四列为
-    **ner**。
-    数据中以 ``"-DOCSTART-"`` 开头的行将被忽略，因为该符号在 **conll2003** 中被用为
-    文档分割符。
+    用于读取 **conll2003** 任务的数据。
+
+    数据的内容应该类似于以下的内容：第一列为 **raw_words**，第二列为 **pos**，第三列
+    为 **chunking**，第四列为 **ner**。数据中以 ``"-DOCSTART-"`` 开头的行将被忽
+    略，因为该符号在 **conll2003** 中被用为文档分割符。
 
     Example::
 
@@ -235,7 +236,8 @@ class Conll2003NERLoader(ConllLoader):
 
 class OntoNotesNERLoader(ConllLoader):
     r"""
-    用以读取 **OntoNotes** 的 NER 数据，同时也是 **Conll2012** 的 NER 任务数据。、
+    用以读取 **OntoNotes** 的 NER 数据，同时也是 **Conll2012** 的 NER 任务数据。
+
     将 **OntoNote** 数据处理为 conll 格式的过程可以参考：
     https://github.com/yhcc/OntoNotes-5.0-NER。:class:`OntoNotesNERLoader` 将取
     第 **4** 列和第 **11** 列的内容。
@@ -318,9 +320,10 @@ class OntoNotesNERLoader(ConllLoader):
 
 class CTBLoader(Loader):
     r"""
-    **CTB** 数据集的 **Loader**。支持加载的数据应该具备以下格式，其中第二列为
-    **词语**，第四列为 **pos tag**，第七列为 **依赖树的 head**，第八列为 **依赖
-    树的 label**。
+    **CTB** 数据集的 **Loader**。
+
+    支持加载的数据应该具备以下格式，其中第二列为 **词语**，第四列为 **pos tag**，第
+    七列为 **依赖树的 head**，第八列为 **依赖树的 label**。
 
     Example::
 
@@ -377,6 +380,8 @@ class CTBLoader(Loader):
 
 class CNNERLoader(Loader):
     r"""
+    用于读取中文 NER 数据集的 **Loader**。
+
     支持加载形如以下格式的内容，一行两列，以空格隔开两个 sample
 
     Example::
@@ -421,7 +426,9 @@ class CNNERLoader(Loader):
 
 class MsraNERLoader(CNNERLoader):
     r"""
-    读取 **MSRA-NER** 数据，如果您要使用该数据，请引用以下的文章：
+    读取 **MSRA-NER** 数据。
+
+    如果您要使用该数据，请引用以下的文章：
 
     Gina-Anne Levow, 2006, The Third International Chinese Language Processing
     Bakeoff: Word Segmentation and Named Entity Recognition.
@@ -519,7 +526,9 @@ class MsraNERLoader(CNNERLoader):
 
 class WeiboNERLoader(CNNERLoader):
     r"""
-    读取 **WeiboNER** 数据，如果您要使用该数据，请引用以下的文章：
+    读取 **WeiboNER** 数据。
+
+    如果您要使用该数据，请引用以下的文章：
 
     Nanyun Peng and Mark Dredze, 2015, Named Entity Recognition for Chinese
     Social Media with Jointly Trained Embeddings.
@@ -536,13 +545,12 @@ class WeiboNERLoader(CNNERLoader):
 
     读取的 :class:`~fastNLP.core.DataSet` 将具备以下的数据结构：
 
-        .. csv-table::
+    .. csv-table::
+        :header: "raw_chars", "target"
 
-            :header: "raw_chars", "target"
-
-            "['老', '百', '姓']", "['B-PER.NOM', 'I-PER.NOM', 'I-PER.NOM']"
-            "['心']", "['O']"
-            "[...]", "[...]"
+        "['老', '百', '姓']", "['B-PER.NOM', 'I-PER.NOM', 'I-PER.NOM']"
+        "['心']", "['O']"
+        "[...]", "[...]"
 
         """
 
@@ -563,7 +571,9 @@ class WeiboNERLoader(CNNERLoader):
 
 class PeopleDailyNERLoader(CNNERLoader):
     r"""
-    加载 **People's Daily NER** 数据集的 **Loader**。支持加载的数据格式如下::
+    加载 **People's Daily NER** 数据集的 **Loader**。
+
+    支持加载的数据格式如下::
 
         中 B-ORG
         共 I-ORG

@@ -26,10 +26,10 @@ class MLP(nn.Module):
         为每一层是 hidden 数目。:class:`MLP` 的层数为 ``len(size_layer) - 1``
     :param activation: 隐藏层的激活函数，可以支持多种类型：
 
-            - 一个 :class:`str` 或函数 -- 所有隐藏层的激活函数都为 ``activation``
-              代表的函数；
-            - :class:`str` 或函数的列表 -- 每一个隐藏层的激活函数都为列表中对应的函
-              数，其中列表长度为隐藏层数；
+        - 一个 :class:`str` 或函数 -- 所有隐藏层的激活函数都为 ``activation`` 代表
+          的函数；
+        - :class:`str` 或函数的列表 -- 每一个隐藏层的激活函数都为列表中对应的函数，
+          其中列表长度为隐藏层数；
 
         对于字符串类型的输入，支持 ``['relu', 'tanh', 'sigmoid']`` 三种激活函数。
     :param output_activation: 输出层的激活函数。默认值为 ``None``，表示输出层没有

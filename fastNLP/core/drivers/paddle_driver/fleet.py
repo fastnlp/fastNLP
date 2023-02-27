@@ -11,13 +11,12 @@ r"""
 
 **fastNLP** 支持三种启动分布式训练的方式（假设执行训练的文件名为 ``train.py``）：
 
-    A. 用户自己不进行分布式的任何操作，直接使用我们的 :class:`~fastNLP.core.\
-       Trainer` 进行训练，此时将参数 ``device`` 设置为一个列表，然后使用 ``python
-       train.py`` 的方式开始训练；
-    B. 用户自己不进行分布式的任何操作，但是使用
-       ``python -m paddle.distributed.launch train.py`` 开始训练；
-    C. 用户自己在外面初始化分布式环境，并且通过
-       ``python -m paddle.distributed.launch train.py`` 开始训练；
+A. 用户自己不进行分布式的任何操作，直接使用我们的 :class:`.Trainer` 进行训练，此时将
+   参数 ``device`` 设置为一个列表，然后使用 ``python train.py`` 的方式开始训练；
+B. 用户自己不进行分布式的任何操作，但是使用 ``python -m paddle.distributed.launch
+   train.py`` 开始训练；
+C. 用户自己在外面初始化分布式环境，并且通过 ``python -m paddle.distributed.launch
+   train.py`` 开始训练；
 
 .. note::
 
@@ -33,11 +32,11 @@ r"""
 2,...``）。
 在这个过程中，我们发现由于 **PaddlePaddle** 框架的特性，会出现下面的问题：
 
-    1. **fastNLP** 中，初始化模型一定会在初始化 ``Driver`` 之前，因此调用
-       :func:`fleet.init` 的时机会在初始化模型之后；此时子进程中模型将无法正常地初始
-       化，提示无法找到设备 ``gpu:0``；
-    2. 在训练的过程中，会出现训练一个 ``batch`` 后程序卡住或程序会占用所有可见显卡的
-       情况；
+1. **fastNLP** 中，初始化模型一定会在初始化 ``Driver`` 之前，因此调用
+   :func:`fleet.init` 的时机会在初始化模型之后；此时子进程中模型将无法正常地初始化，
+   提示无法找到设备 ``gpu:0``；
+2. 在训练的过程中，会出现训练一个 ``batch`` 后程序卡住或程序会占用所有可见显卡的情
+   况；
 
 考虑到这些问题，我们为 **PaddlePaddle** 的分布式训练制定了这样的约束：在导入
 **fastNLP** 之前，必须设置环境变量 ``FASTNLP_BACKEND`` 为 ``paddle``。执行方法有两
@@ -71,10 +70,10 @@ r"""
     时，情况A与情况BC设置设备的方式会有所不同。情况A应设置为实际设备相对可见设备的索
     引，而情况BC应设置为实际的设备号：
 
-        1. 情况A中，``CUDA_VISIBLE_DEVICES=3,4,5,6`` 且参数 ``device=[0,2,3]``
-           代表使用 **3号、5号和6号** 显卡；
-        2. 情况BC中，``CUDA_VISIBLE_DEVICES=3,4,5,6`` 且参数 ``--gpu=3,5,6`` 代
-           表使用 **3号、5号和6号** 显卡；
+    1. 情况A中，``CUDA_VISIBLE_DEVICES=3,4,5,6`` 且参数 ``device=[0,2,3]`` 代表
+       使用 **3号、5号和6号** 显卡；
+    2. 情况BC中，``CUDA_VISIBLE_DEVICES=3,4,5,6`` 且参数 ``--gpu=3,5,6`` 代表使
+       用 **3号、5号和6号** 显卡；
 
 .. note::
 
@@ -124,6 +123,59 @@ __all__ = [
 
 class PaddleFleetDriver(PaddleDriver):
     r"""
+    **PaddlePaddle** 框架下使用 ``fleet`` 分布式训练 API 进行集群式
+    （*collective*）多卡训练的 Driver。
+
+    **fastNLP** 支持三种启动分布式训练的方式（假设执行训练的文件名为
+    ``train.py``）：
+
+    A. 用户自己不进行分布式的任何操作，直接使用我们的 :class:`.Trainer` 进行训练，
+       此时将参数 ``device`` 设置为一个列表，然后使用 ``python train.py`` 的方式开
+       始训练；
+    B. 用户自己不进行分布式的任何操作，但是使用
+       ``python -m paddle.distributed.launch train.py`` 开始训练；
+    C. 用户自己在外面初始化分布式环境，并且通过
+       ``python -m paddle.distributed.launch train.py`` 开始训练；
+
+    .. note::
+
+        在后两种启动方式中，您需要通过参数 ``--gpus`` 来指定训练使用的设备，在
+        ``trainer`` 中设置的参数是无效的。
+
+    在使用该 Driver 进行分布式训练时需要在导入 ``fastNLP`` 之前将 **环境变量
+    FASTNLP_BACKEND 设置为 paddle**：
+
+    >>> import os
+    >>> os.environ["FASTNLP_BACKEND"] = "paddle" # 设置环境变量
+    >>> import fastNLP # 设置之后才可以导入 fastNLP
+
+    或是在执行脚本（假设文件名为 ``train.py`` ）时设置::
+
+        FASTNLP_BACKEND=paddle python train.py
+        FASTNLP_BACKEND=paddle python -m paddle.distributed.launch train.py
+
+    .. note::
+
+        由于一些原因，在 paddle 的分布式训练中 ``fastNLP`` 需要多卡训练的参数
+        ``device`` 一定要以 **0** 开始，否则会无法正常地启动。如果您希望调整使用的第
+        一张显卡，请使用 ``CUDA_VISIBLE_DEVICES`` 进行限制。
+
+    .. note::
+
+        根据 **PaddlePaddle** 的说明，设置 ``CUDA_VISIBLE_DEVICES`` 之后启动分布
+        式训练时，情况A与情况BC设置设备的方式会有所不同。情况A应设置为实际设备相对可
+        见设备的索引，而情况BC应设置为实际的设备号：
+
+        1. 情况A中，``CUDA_VISIBLE_DEVICES=3,4,5,6`` 且参数 ``device=[0,2,3]``
+           代表使用 **3号、5号和6号** 显卡；
+        2. 情况BC中，``CUDA_VISIBLE_DEVICES=3,4,5,6`` 且参数 ``--gpu=3,5,6`` 代
+           使用 **3号、5号和6号** 显卡；
+
+    .. note::
+
+        多机的启动强制要求用户在每一台机器上使用 ``python -m paddle.distributed.
+        launch`` 启动；因此我们不会在 ``PaddleFleetDriver`` 中保存任何当前有多少台
+        机器的信息。
 
     :param model: 训练使用的模型。
 
@@ -134,30 +186,29 @@ class PaddleFleetDriver(PaddleDriver):
     :param parallel_device: 多卡训练时使用的设备，必须是一个列表。
         当使用 ``python -m paddle.distributed.launch`` 启动时，该参数无效。
     :param is_pull_by_paddle_run: 标记当前进程是否为通过 ``python -m
-        paddle.distributed.launch`` 启动的。这个参数仅在 :class:`~fastNLP.core.\
-        controllers.Trainer` 中初始化 driver 时使用
+        paddle.distributed.launch`` 启动的。这个参数仅在 :class:`.Trainer` 中初始
+        化 driver 时使用
     :param fp16: 是否开启混合精度训练
     :param paddle_kwargs:
         * *fleet_kwargs* -- 用于在使用 ``PaddleFleetDriver`` 时指定
           ``DataParallel`` 和 ``fleet`` 初始化时的参数，包括：
 
-            * *is_collective* -- 是否使用 paddle 集群式的分布式训练方法，目前仅支
-              持为 ``True`` 的情况。
-            * *role_maker* -- 初始化 ``fleet`` 分布式训练 API 时使用的
-              ``RoleMaker``。
-            * 其它用于初始化 ``DataParallel`` 的参数。
+          * *is_collective* -- 是否使用 paddle 集群式的分布式训练方法，目前仅支
+            持为 ``True`` 的情况。
+          * *role_maker* -- 初始化 ``fleet`` 分布式训练 API 时使用的
+            ``RoleMaker``。
+          * 其它用于初始化 ``DataParallel`` 的参数。
         * *gradscaler_kwargs* -- 用于 ``fp16=True`` 时，提供给 :class:`paddle.\
           amp.GradScaler` 的参数
 
     :kwargs:
-        * *wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
+        * *model_wo_auto_param_call* (``bool``) -- 是否关闭在训练时调用我们的
           ``auto_param_call`` 函数来自动匹配 batch 和前向函数的参数的行为
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
-            core.utils.auto_param_call`。
+            关于该参数的详细说明，请参见 :class:`.Trainer` 和 :func:`~fastNLP.\
+            core.auto_param_call`。
 
         * *output_from_new_proc* (``str``) -- 应当为一个字符串，表示在多进程的
           driver 中其它进程的输出流应当被做如何处理；其值应当为以下之一： ``["all",

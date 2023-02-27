@@ -93,7 +93,7 @@ class MultiHeadAttention(nn.Module):
         :param key_mask: ``[batch, seq]`` 用于指示哪些 ``key`` 不要 attend 到；
             注意到 mask 为 **1** 的地方是要attend到的
         :param attn_mask: ``[seq, seq]``, 用于 mask 掉 attention map。主要是用在
-            训练时 decoder 端的 :class:`SelfAttention`，下三角为 1。
+            训练时 decoder 端的 :class:`.SelfAttention`，下三角为 1。
         :param state: 过去的信息，在 inference 的时候会用到，比如 encoder output、
             decoder 的 prev kv。这样可以减少计算。
         :return:
@@ -298,7 +298,7 @@ class BiAttention(nn.Module):
 
 class SelfAttention(nn.Module):
     r"""
-    这是一个基于论文 `A structured self-attentive sentence embedding
+    基于论文 `A structured self-attentive sentence embedding
     <https://arxiv.org/pdf/1703.03130.pdf>`_ 的 **Self Attention Module**。
 
     :param  input_size: 输入 tensor 的 hidden 维度

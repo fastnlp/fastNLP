@@ -1,7 +1,3 @@
-r"""
-
-"""
-
 from functools import partial
 from typing import Optional
 
@@ -31,12 +27,13 @@ def _get_model_device(model):
 
 
 class SequenceGenerator:
-    r"""给定一个 :class:`~fastNLP.modules.torch.decoder.Seq2SeqDecoder`，decode
-    出句子。输入的 decoder 对象需要有 :meth:`decode` 函数，接受的第一个参数为
-    decode 的到目前位置的所有输出，第二个参数为 state :class:`SequenceGenerator`
-    不会对 state 进行任何操作。
+    r"""给定一个 :class:`.Seq2SeqDecoder`，decode 出句子。
 
-    :param decoder: Decoder对象
+    输入的 decoder 对象需要有 :meth:`decode` 函数，接受的第一个参数为 decode 的到目
+    前位置的所有输出，第二个参数为 state :class:`SequenceGenerator` 不会对 state
+    进行任何操作。
+
+    :param decoder: Decoder 对象
     :param max_length: 生成句子的最大长度，每句话的 decode 长度为 ``max_length +
         max_len_a * src_len``
     :param max_len_a: 每句话的 decode 长度为 ``max_length + max_len_a *
@@ -116,7 +113,7 @@ class SequenceGenerator:
         :param tokens: 开始的 token，形状为 ``[batch_size, length]``。如果为
             ``None``，则默认添加 ``bos_token`` 作为开头的 token 进行生成。
         :return: 生成的 token 序列，形状为 ``[bsz, max_length]``。如果
-            ``eos_token_id`` 不为 ``None`` ,，每个 sequence 的结尾一定是
+            ``eos_token_id`` 不为 ``None`` ，每个 sequence 的结尾一定是
             ``eos_token_id``
         """
 

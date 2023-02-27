@@ -86,13 +86,18 @@ def _get_dtype(ele_dtype, dtype, class_name):
 
 
 class OneflowNumberPadder(Padder):
-    r"""可以将形如 ``[1, 2, 3]`` 这类的数据转为 ``oneflow.Tensor([1, 2, 3])``。
+    r"""**oneflow** 处理数字型 batch 的 ``Padder``。
+
+    可以通过如下方式使用：
+
+        >>> OneflowNumberPadder.pad([1, 2, 3], pad_val=-100, dtype=flow.float)
+        tensor([1., 2., 3.], dtype=oneflow.float32)
 
     :param pad_val: 该值无意义；
     :param ele_dtype: 用于检测当前 field 的元素类型是否能转换为 :class:`oneflow.\
         Tensor` 类型；
-    :param dtype: 输出的数据的 dtype，。如 :class:`oneflow.long`,
-        :class:`oneflow.float32`, :class:`int`, :class:`float` 等；
+    :param dtype: 输出的数据的 dtype 。如 :class:`oneflow.long`、
+        :class:`oneflow.float32` 等；
     """
 
     def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
@@ -107,20 +112,27 @@ class OneflowNumberPadder(Padder):
 
         :param batch_field: 输入的某个 field 的 batch 数据。
         :param pad_val: 需要填充的值
-        :param dtype: 数据的类型
+        :param dtype: 输出的数据的 dtype 。如 :class:`oneflow.long`、
+            :class:`oneflow.float32` 等；
         """
         return oneflow.tensor(batch_field, dtype=dtype)
 
 
 class OneflowSequencePadder(Padder):
-    r"""将类似于 ``[[1], [1, 2]]`` 的内容 pad 为 ``oneflow.Tensor([[1, 0], [1,
-    2]])``，可以 pad 多重嵌套的数据。
+    r"""**oneflow** 处理数字型 batch 的 ``Padder``，可以 pad 多重嵌套的数据。
+
+    可以通过如下方式使用：
+
+        >>> OneflowSequencePadder.pad(
+        ...     [[1], [2, 3]], pad_val=-100, dtype=flow.float)
+        tensor([[   1., -100.],
+                [   2.,    3.]], dtype=oneflow.float32)
 
     :param pad_val: 需要 pad 的值；
     :param ele_dtype: 用于检测当前 field 的元素类型是否能转换为 :class:`oneflow.\
         Tensor` 类型；
-    :param type: 输出的数据的 dtype，。如 :class:`oneflow.long`,
-        :class:`oneflow.float32`, :class:`int`, :class:`float` 等；
+    :param dtype: 输出的数据的 dtype 。如 :class:`oneflow.long`、
+        :class:`oneflow.float32` 等；
     """
 
     def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
@@ -135,7 +147,8 @@ class OneflowSequencePadder(Padder):
 
         :param batch_field: 输入的某个 field 的 batch 数据。
         :param pad_val: 需要填充的值
-        :param dtype: 数据的类型
+        :param dtype: 输出的数据的 dtype 。如 :class:`oneflow.long`、
+            :class:`oneflow.float32` 等；
         """
         tensor = get_padded_oneflow_tensor(
             batch_field, dtype=dtype, pad_val=pad_val)
@@ -143,21 +156,24 @@ class OneflowSequencePadder(Padder):
 
 
 class OneflowTensorPadder(Padder):
-    r"""目前支持 ``[oneflow.tensor([3, 2], oneflow.tensor([1])]`` 类似的输入，若
-    内部元素不为 :class:`oneflow.Tensor`，则必须含有 :meth:`tolist` 方法。
+    r"""**oneflow** 处理张量 batch 的 ``Padder``。若内部元素不为
+    :class:`oneflow.Tensor`，则必须含有 :meth:`tolist` 方法。
 
-        >>> OneflowTensorPadder.pad([np.array([3, 4]), np.array([1])], pad_val=-100)
-        [[   3.    4.]
-         [   1. -100.]]
-        >>> OneflowTensorPadder.pad([oneflow.LongTensor([3, 4]), oneflow.LongTensor([1])], pad_val=-100)
+        >>> OneflowTensorPadder.pad(
+        ...     [np.array([3, 4]), np.array([1])], pad_val=-100)
+        tensor([[   3.,    4.],
+                [   1., -100.]], dtype=oneflow.float32)
+        >>> OneflowTensorPadder.pad(
+        ...     [oneflow.LongTensor([3, 4]), oneflow.LongTensor([1])],
+        ...     pad_val=-100)
         tensor([[   3,    4],
-                [   1, -100]])
+                [   1, -100]], dtype=oneflow.int64)
 
     :param pad_val: 需要 pad 的值。
     :param ele_dtype: 用于检测当前 field 的元素类型是否能转换为 :class:`oneflow.\
         Tensor` 类型。
-    :param dtype: 输出的数据的 dtype，。如 :class:`oneflow.long`,
-        :class:`oneflow.float32`, :class:`int`, :class:`float` 等；
+    :param dtype: 输出的数据的 dtype 。如 :class:`oneflow.long`、
+        :class:`oneflow.float32` 等；
     """
 
     def __init__(self, pad_val=0, ele_dtype=None, dtype=None):
@@ -171,7 +187,8 @@ class OneflowTensorPadder(Padder):
 
         :param batch_field: 输入的某个 field 的 batch 数据。
         :param pad_val: 需要填充的值
-        :param dtype: 数据的类型
+        :param dtype: 输出的数据的 dtype 。如 :class:`oneflow.long`、
+            :class:`oneflow.float32` 等；
         """
         device = None
         try:
@@ -247,7 +264,7 @@ def get_padded_oneflow_tensor(batch_field, dtype=None, pad_val=0):
 
     :param batch_field: 需要 pad 的对象。需要保证应该是可以进行 pad 的。支持
         **1d** （多为句子长度）/ **2d** （多为文本序列）/ **3d** （多为字符序列）
-        /4d（多为图片）；
+        / **4d** （多为图片）；
     :param dtype: 目标类别是什么
     :param pad_val: pad 的 value
     :return:

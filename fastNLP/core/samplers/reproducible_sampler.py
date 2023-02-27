@@ -1,15 +1,3 @@
-r"""
-:class:`ReproducibleSampler` 是 **fastNLP** 提供的一种特殊 Sampler，它可以记录采
-样过程中每一次采样和 epoch 的信息，方便在保存-加载后能够从上一次采样结束的地方继续进行
-采样，实现 **断点重训**。
-
-.. note::
-
-    DataLoader 中只要存在 :class:`ReproducibleSampler` 或 :class:`~fastNLP.\
-    core.samplers.reproducible_batch_sampler.ReproducibleBatchSampler` 中的一个便可以实现断点重训复现的功能。
-
-"""
-
 import math
 from typing import Dict, List, Union
 
@@ -25,8 +13,17 @@ __all__ = [
 
 
 class ReproducibleSampler:
-    """
+    r"""
     **可复现** 的 Sampler 对象。
+
+    ``ReproducibleSampler`` 是 **fastNLP** 提供的一种特殊 Sampler，它可以记
+    录采样过程中每一次采样和 epoch 的信息，方便在保存-加载后能够从上一次采样结束的地
+    方继续进行采样，实现 **断点重训**。
+
+    .. note::
+
+        DataLoader 中只要存在 :class:`.ReproducibleSampler` 或 :class:`.\
+        ReproducibleBatchSampler` 中的一个便可以实现断点重训复现的功能。
 
     注意所有继承 :class:`ReproducibleSampler` 的类的 :meth:`__init__` 方法中都需
     要加入参数 `**kwargs`，用来使我们再断点重训时重新实例化这个 Sampler 注意，所有
@@ -84,11 +81,11 @@ class ReproducibleSampler:
 
 
 class RandomSampler(ReproducibleSampler):
-    """随机顺序的 Sampler 。
+    """随机顺序的 ``Sampler`` 。
 
-    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
-        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
-        jittor 框架的 :class:`Dataset` 对象。
+    :param dataset: 实现了 :meth:`__len__` 方法的数据容器，如 :class:`.DataSet`、
+        huggingface 的数据集对象或 pytorch、paddle、oneflow、jittor 框架的
+        :class:`Dataset` 对象。
     :param shuffle: 是否在每次 iterate 的时候打乱顺序
     :param seed: 随机数种子
     :param kwargs: fastNLP 内部使用的参数
@@ -265,12 +262,14 @@ class RandomSampler(ReproducibleSampler):
 
 
 class SequentialSampler(RandomSampler):
-    """按照顺序读取 ``dataset``。在多卡情况下，间隔读取，例如，在两卡情况下，卡 0 取 ``[0,2,4,..]``, 卡 1 取
+    r"""按照顺序读取 ``dataset`` 的 ``Sampler``。
+
+    在多卡情况下会间隔读取，例如，在两卡情况下，卡 0 取 ``[0,2,4,..]``, 卡 1 取
     ``[1,3,5...]``。
 
-    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
-        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
-        jittor 框架的 :class:`Dataset` 对象。
+    :param dataset: 实现了 :meth:`__len__` 方法的数据容器，如 :class:`.DataSet`、
+        huggingface 的数据集对象或 pytorch、paddle、oneflow、jittor 框架的
+        :class:`Dataset` 对象。
     :param kwargs:
     """
 
@@ -346,22 +345,21 @@ class SequentialSampler(RandomSampler):
 
 
 class SortedSampler(SequentialSampler):
-    """将 ``dataset`` 中的数据根据 ``length`` 从长到短进行迭代。在多卡情况下，由于 ``padding``，最后一个
-    ``sample`` 可能是最长 的那个 ``sample``。
+    r"""将 ``dataset`` 中的数据根据 ``length`` 从长到短进行迭代。在多卡情况下由于
+    ``padding``，最后一个 ``sample`` 可能是最长的那个 ``sample``。
 
-    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
-        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
-        jittor 框架的 :class:`Dataset` 对象。
+    :param dataset: 实现了 :meth:`__len__` 方法的数据容器，如 :class:`.DataSet`、
+        huggingface 的数据集对象或 pytorch、paddle、oneflow、jittor 框架的
+        :class:`Dataset` 对象。
     :param length: 每条数据的长度：
 
-        * 为 ``List[int]`` 时
+        * 为 ``List[int]`` 时，
           应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
-        * 为 ``str`` 时
-          仅当传入的 ``dataset`` 是 :class:`~fastNLP.core.dataset.DataSet` 时，
-          允许传入 :class:`str`，该 :class:`str` 将被认为是 ``dataset`` 中的
-          ``field``。若 field 中的元素为 :class:`int`，则认为该值是 sample 的长
-          度；若不为 :class:`int`，则尝试使用 :func:`len` 方法获取该 ``field`` 中
-          每个元素的长度。
+        * 为 ``str`` 时，
+          仅当传入的 ``dataset`` 是 :class:`.DataSet` 时允许传入 :class:`str`。
+          该 :class:`str` 将被认为是 ``dataset`` 中的 ``field``。若 field 中的元
+          素为 :class:`int`，则认为该值是 sample 的长度；若不为 :class:`int`，则尝
+          试使用 :func:`len` 方法获取该 ``field`` 中每个元素的长度。
 
     :param seed: 设置的随机数种子
     :param kwargs: fastNLP 内部使用的参数

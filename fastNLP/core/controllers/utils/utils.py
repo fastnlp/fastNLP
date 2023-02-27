@@ -10,9 +10,9 @@ __all__ = []  # type: ignore
 class TrainerEventTrigger:
     r"""
     为了避免在训练流程中调用 callback 函数中写成类似 `'trainer.callback_manager.
-    on_train_begin'` 的形式，我们选择单独为 ``Trainer`` 抽象一层，然后一些特殊的操
-    作可以在这里进行，例如我们通过 :meth:`on_validate_end` 来通知所有的
-    ``CheckpointCallback`` 实例在当前的 step 后保存模型。
+    on_train_begin'` 的形式，我们选择单独为 :class:`.Trainer` 抽象一层，然后一些特
+    殊的操作可以在这里进行，例如我们通过 :meth:`on_validate_end` 来通知所有的
+    :class:`.CheckpointCallback` 实例在当前的 step 后保存模型。
     """
     callback_manager: CallbackManager
     trainer_state: TrainerState

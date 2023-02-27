@@ -1,8 +1,3 @@
-r"""
-.. todo::
-    doc
-"""
-
 from typing import Sequence, Union
 
 import torch
@@ -19,18 +14,18 @@ __all__ = ['CNNText']
 class CNNText(torch.nn.Module):
     r"""
     使用 **CNN** 进行文本分类的模型。
+
     论文参考 `Yoon Kim. 2014. Convolution Neural Networks for Sentence
     Classification <https://arxiv.org/abs/1408.5882>`_ 。
 
     :param embed: 单词词典，支持以下几种输入类型：
 
-            - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个
-              词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
-            - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对
-              象，此时就以传入的对象作为 embedding；
-            - :class:`numpy.ndarray`，将使用传入的 ndarray 作为 Embedding 初始
-              化；
-            - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+        - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的
+          维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+        - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时
+          就以传入的对象作为 embedding；
+        - :class:`numpy.ndarray`，将使用传入的 ndarray 作为 Embedding 初始化；
+        - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
 
     :param num_classes: 一共有多少类
     :param kernel_nums: 输出 channel 的 kernel 数目。

@@ -16,10 +16,11 @@ __all__ = ['Seq2SeqDecoder', 'TransformerSeq2SeqDecoder', 'LSTMSeq2SeqDecoder']
 class Seq2SeqDecoder(nn.Module):
     r"""
     **Sequence-to-Sequence Decoder** 的基类。一定需要实现 :meth:`forward` 和
-    :meth:`decode` 函数，剩下的函数根据需要实现。每个 ``Seq2SeqDecoder`` 都应该有
-    相应的 :class:`~fastNLP.modules.torch.decoder.State` 对象用来承载该
-    ``Decoder`` 所需要的 ``Encoder`` 输出、``Decoder`` 需要记录的历史信（例如
-    :class:`~fastNLP.modules.torch.encoder.LSTM` 的 hidden 信息）。
+    :meth:`decode` 函数，剩下的函数根据需要实现。
+
+    每个 ``Seq2SeqDecoder`` 都应该有相应的 :class:`.State` 对象用来承载该
+    ``Decoder`` 所需要的 ``Encoder`` 输出、``Decoder`` 需要记录的历史信息（例如
+    :class:`.LSTM` 的 hidden 信息）。
     """
 
     def __init__(self):
@@ -50,15 +51,14 @@ class Seq2SeqDecoder(nn.Module):
 
     def init_state(self, encoder_output: Union[torch.Tensor, list, tuple],
                    encoder_mask: Union[torch.Tensor, list, tuple]):
-        r"""初始化一个 :class:`~fastNLP.modules.torch.decoder.State` 对象，用来
-        记录 ``encoder`` 的输出以及 ``decode`` 已经完成的部分。
+        r"""初始化一个 :class:`.State` 对象，用来记录 ``encoder`` 的输出以及
+        ``decode`` 已经完成的部分。
 
         :param encoder_output: 如果不为 ``None``，内部元素需要为 :class:`torch.\
             Tensor`，默认其中第一维是 batch_size 维度
         :param encoder_mask: 如果不为 ``None``，内部元素需要为 :class:`torch.\
             Tensor`，默认其中第一维是 batch_size 维度
-        :return: 一个 :class:`~fastNLP.modules.torch.decoder.State` 对象，记录
-            了 ``encoder`` 的输出
+        :return: 一个 :class:`.State` 对象，记录了 ``encoder`` 的输出
         """
         state = State(encoder_output, encoder_mask)
         return state
@@ -122,21 +122,20 @@ class LSTMSeq2SeqDecoder(Seq2SeqDecoder):
 
     :param embed: ``decoder`` 输入的 embedding，支持以下几种输入类型：
 
-            - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个
-              词的维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
-            - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对
-              象，此时就以传入的对象作为 embedding；
-            - :class:`numpy.ndarray`，将使用传入的 ndarray 作为 Embedding 初始
-              化；
-            - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
+        - ``tuple(num_embedings, embedding_dim)``，即 embedding 的大小和每个词的
+          维度，此时将随机初始化一个 :class:`torch.nn.Embedding` 实例；
+        - :class:`torch.nn.Embedding` 或 **fastNLP** 的 ``Embedding`` 对象，此时
+          就以传入的对象作为 embedding；
+        - :class:`numpy.ndarray`，将使用传入的 ndarray 作为 Embedding 初始化；
+        - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
     :param num_layers: LSTM 的层数
     :param hidden_size: 隐藏层大小，该值也被认为是 ``encoder`` 的输出维度大小
     :param dropout: Dropout 的大小
     :param bind_decoder_input_output_embed: ``decoder`` 的输出 embedding 是否与
         其输入 embedding 是一样的权重（即为同一个），若 ``embed`` 为
-        :class:`~fastNLP.embeddings.StaticEmbedding`，则 ``StaticEmbedding``
-        的 ``vocab`` 不能包含 ``no_create_entry`` 的 token ，同时
-        ``StaticEmbedding`` 初始化时 ``lower`` 为 ``False``，``min_freq=1``。
+        :class:`~fastNLP.embeddings.torch.StaticEmbedding`，则其 ``vocab`` 不能
+        包含 ``no_create_entry`` 的 token ，同时 ``StaticEmbedding`` 初始化时
+        ``lower`` 为 ``False``，``min_freq=1``。
     :param attention: 是否使用attention
     """
 
@@ -182,7 +181,7 @@ class LSTMSeq2SeqDecoder(Seq2SeqDecoder):
 
         :param tokens: ``[batch_size, max_len]``
         :param state: 保存 ``encoder`` 输出和 ``decode`` 状态的
-            :class:`~fastNLP.modules.torch.decoder.LSTMState` 对象
+            :class:`~fastNLP.modules.torch.LSTMState` 对象
         :param return_attention: 是否返回 attention 的 score
         :return: 形状为 ``[batch_size, max_len, vocab_size]`` 的结果。如果
             ``return_attention=True`` 则返回一个元组，一个元素为结果，第二个结果为
@@ -248,8 +247,8 @@ class LSTMSeq2SeqDecoder(Seq2SeqDecoder):
               cell))``，其中 ``encoder_output`` 形状为  ``[batch_size, max_len,
               hidden_size]``，``hidden`` 形状为 ``[batch_size, hidden_size]``，
               ``cell`` 形状为 ``[batch_size, hidden_size]``，一般使用
-              :class:`~fastNLP.modules.torch.encoder.LSTMSeq2SeqEncoder` 最后一
-              层的 ``hidden state`` 和 ``cell state`` 来赋值这两个值。
+              :class:`.LSTMSeq2SeqEncoder` 最后一层的 ``hidden state`` 和
+              ``cell state`` 来赋值这两个值。
             - 只有形状为 ``[batch_size, max_len, hidden_size]`` 的
               ``encoder_output``。这种情况下 ``hidden`` 和 ``cell`` 使用 **0**
               初始化。
@@ -389,16 +388,15 @@ class TransformerSeq2SeqDecoder(Seq2SeqDecoder):
         - :class:`torch.Tensor`，此时将使用传入的值作为 Embedding 初始化；
     :param pos_embed: 位置 embedding
     :param d_model: 输入、输出的维度
-    :param num_layers: :class:`TransformerSeq2SeqDecoderLayer` 的层数
+    :param num_layers: :class:`.TransformerSeq2SeqDecoderLayer` 的层数
     :param n_head: **多头注意力** head 的数目，需要能被 ``d_model`` 整除
     :param dim_ff: FFN 中间映射的维度
-    :param dropout: :class:`~fastNLP.modules.torch.decoder.SelfAttention` 和
-        FFN 中的 dropout 的大小
+    :param dropout: :class:`.SelfAttention` 和 FFN 中的 dropout 的大小
     :param bind_decoder_input_output_embed: ``decoder`` 的输出 embedding 是否与
         其输入 embedding 是一样的权重（即为同一个），若 ``embed`` 为
-        :class:`~fastNLP.embeddings.StaticEmbedding`，则 ``StaticEmbedding``
-        的 ``vocab`` 不能包含 ``no_create_entry`` 的 token ，同时
-        ``StaticEmbedding`` 初始化时 ``lower`` 为 ``False``，``min_freq=1``。
+        :class:`~fastNLP.embeddings.torch.StaticEmbedding`，则其 ``vocab`` 不能
+        包含 ``no_create_entry`` 的 token ，同时 ``StaticEmbedding`` 初始化时
+        ``lower`` 为 ``False``，``min_freq=1``。
     """
 
     def __init__(self,

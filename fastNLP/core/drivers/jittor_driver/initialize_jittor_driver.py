@@ -26,8 +26,7 @@ def initialize_jittor_driver(driver: str, device: Optional[Union[str, int,
     :param model: 训练或者评测的具体的模型
     :param kwargs:
 
-    :return: :class:`~fastNLP.core.JittorSingleDriver` 或 :class:`~fastNLP.\
-        core.JittorMPIDriver` 实例；
+    :return: :class:`.JittorSingleDriver` 或 :class:`.JittorMPIDriver` 实例；
     """
 
     if driver not in {'jittor'}:

@@ -1,16 +1,3 @@
-r"""
-:class:`ReproducibleBatchSampler` 是 **fastNLP** 提供的一种特殊 BatchSampler，它
-可以记录采样过程中每一次采样和 epoch 的信息，方便在保存-加载后能够从上一次采样结束的地
-方继续进行采样，实现 **断点重训**。
-
-.. note::
-
-    DataLoader 中只要存在 :class:`~fastNLP.core.samplers.reproducible_sampler.\
-    ReproducibleSampler` 或 :class:`ReproducibleBatchSampler` 中的一个便可以实现
-    断点重训复现的功能。
-
-"""
-
 import math
 from abc import abstractmethod
 from copy import deepcopy
@@ -29,8 +16,17 @@ __all__ = [
 
 
 class ReproducibleBatchSampler:
-    """
-    **可复现**的 BatchSampler 对象。
+    r"""
+    **可复现** 的 BatchSampler 对象。
+
+    ``ReproducibleBatchSampler`` 是 **fastNLP** 提供的一种特殊 BatchSampler，它
+    可以记录采样过程中每一次采样和 epoch 的信息，方便在保存-加载后能够从上一次采样结
+    束的地方继续进行采样，实现 **断点重训**。
+
+    .. note::
+
+        DataLoader 中只要存在 :class:`.ReproducibleSampler` 或 :class:`.\
+        ReproducibleBatchSampler` 中的一个便可以实现断点重训复现的功能。
 
     注意所有继承 :class:`ReproducibleBatchSampler` 的类的 :meth:`__init__` 方法中
     都需要加入参数 `**kwargs`，用来使我们再断点重训时重新实例化这个 BatchSampler 注
@@ -90,7 +86,7 @@ class ReproduceBatchSampler(ReproducibleBatchSampler):
     """可以使得 ``batch_sampler`` 对象状态恢复的 wrapper 。
 
     :param batch_sampler: 可迭代出 **数字** 或 **数字列表** 的可迭代对象。
-        :class:`ReproduceBatchSampler` 将首先遍历一边该对象，然后将迭代出来的序号
+        :class:`ReproduceBatchSampler` 将首先遍历一遍该对象，然后将迭代出来的序号
         暂存起来，使用时按照 ``batch_size`` 的 batch 大小吐出序号列表。
     :param batch_size: 每个 batch 的大小是多少
     :param drop_last: 如果最后一个 batch 无法构成 ``batch_size`` 个 sample ，是否
@@ -208,11 +204,11 @@ class ReproduceBatchSampler(ReproducibleBatchSampler):
 
 
 class RandomBatchSampler(ReproducibleBatchSampler):
-    """随机分 batch 的 batch_sampler 。
+    """随机分 batch 的 ``BatchSampler`` 。
 
-    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
-        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
-        jittor 框架的 `Dataset` 对象。
+    :param dataset: 实现了 :meth:`__len__` 方法的数据容器，如 :class:`.DataSet`、
+        huggingface 的数据集对象或 pytorch、paddle、oneflow、jittor 框架的
+        :class:`Dataset` 对象。
     :param batch_size: 每个 batch 的大小
     :param shuffle: 如果为 ``True``，将不进行打乱操作，实际上数据会以从长到短的方式
         输出
@@ -459,25 +455,24 @@ class RandomBatchSampler(ReproducibleBatchSampler):
 
 
 class BucketedBatchSampler(ReproducibleBatchSampler):
-    r"""首先按 ``sample`` 的长度排序，然后按照 *batch_size*num_batch_per_bucket*
+    r"""按数据长度排序将数据分桶采样的 ``BatchSampler`` 。
+
+    首先按 ``sample`` 的长度排序，然后按照 *batch_size*num_batch_per_bucket*
     为一个桶的大小，``sample`` 只会在这个桶内进行组 合，这样每个 ``batch`` 中的
-    ``padding`` 数量会比较少。
+    ``padding`` 数量会比较少（因为桶内的数据的长度都接近）。
 
-    （因为桶内的数据的长度都接近）。
-
-    :param dataset: 实现了 __len__ 方法的数据容器，如 :class:`~fastNLP.core.\
-        dataset.DataSet`、huggingface 的数据集对象或 pytorch、paddle、oneflow、
-        jittor 框架的 :class:`Dataset` 对象。
+    :param dataset: 实现了 :meth:`__len__` 方法的数据容器，如 :class:`.DataSet`、
+        huggingface 的数据集对象或 pytorch、paddle、oneflow、jittor 框架的
+        :class:`Dataset` 对象。
     :param length: 每条数据的长度。
 
-        * 为 ``List[int]`` 时
+        * 为 ``List[int]`` 时，
           应当与 dataset 有一样的长度，表示 dataset 中每个元素的数量；
-        * 为 ``str`` 时
-          仅当传入的 ``dataset`` 是 :class:`~fastNLP.core.dataset.DataSet` 时，
-          允许传入 :class:`str`，该 :class:`str` 将被认为是 ``dataset`` 中的
-          ``field``。若 field 中的元素为 :class:`int`，则认为该值是 sample 的长
-          度；若不为 :class:`int`，则尝试使用 :func:`len` 方法获取该 ``field`` 中
-          每个元素的长度。
+        * 为 ``str`` 时，
+          仅当传入的 ``dataset`` 是 :class:`.DataSet` 时允许传入 :class:`str`。
+          该 :class:`str` 将被认为是 ``dataset`` 中的 ``field``。若 field 中的元
+          素为 :class:`int`，则认为该值是 sample 的长度；若不为 :class:`int`，则尝
+          试使用 :func:`len` 方法获取该 ``field`` 中每个元素的长度。
 
     :param batch_size: 每个 batch 的大小
     :param num_batch_per_bucket: 多少个 ``batch`` 组成一个桶，数据只会在一个桶内进

@@ -20,21 +20,21 @@ def prepare_dataloader(dataset,
                        num_workers: int = 0,
                        backend: str = 'auto'):
     r"""
-    自动创建合适的 ``DataLoader`` 对象。例如，检测当当前环境是 ``torch`` 的，则返
-    回 ``TorchDataLoader`` ，是 ``paddle`` 的则返回 ``PaddleDataLoader``。如果有
-    更多需要定制的参数，请直接使用对应的 ``prepare`` 函数，例如 :func:`~fastNLP.\
-    core.dataloaders.prepare_torch_dataloader` 或 :func:`~fastNLP.core.\
-    dataloaders.prepare_paddle_dataloader` 等。
+    根据环境或 ``backend`` 自动创建合适的 ``DataLoader`` 对象。
+
+    例如，检测当当前环境是 ``torch`` 的，则返回 :class:`.TorchDataLoader`，是
+    :class:`.PaddleDataLoader`。如果有更多需要定制的参数请使用对应的 ``prepare``
+    函数，例如 :func:`.prepare_torch_dataloader` 或 :func:`~fastNLP.core.\
+    prepare_paddle_dataloader` 等。
 
     :param dataset: 需要遍历的数据集。有下列几种情况：
 
-        * 为单个数据集对象， ``dataset`` 可以是 :class:`~fastNLP.core.\
-          dataset.DataSet`、hugginface 的数据集或 pytorch、paddle、jittor、
-          oneflow 框架的 :class:`Dataset` 对象，以及一切实现了 :meth:`__len__`
-          和 :meth:`__getitem__` 方法的数据集对象。此时返回一个 DataLoader 。
+        * 为单个数据集对象， ``dataset`` 可以是 :class:`.DataSet`、 hugginface 的
+          数据集或 pytorch、paddle、jittor、oneflow 框架的 :class:`Dataset` 对
+          象，以及一切实现了 :meth:`__len__` 和 :meth:`__getitem__` 方法的数据集对
+          象。此时返回一个 DataLoader 。
         * 为数据集对象序列时，返回一个序列的 DataLoader 。
-        * 为字典型 或 :class:`~fastNLP.io.DataBundle` 数据时，返回
-          :class:`Dict` 类型的数据。
+        * 为字典型 或 :class:`.DataBundle` 数据时，返回 :class:`Dict` 类型的数据。
 
     :param batch_size: 批次大小。
     :param shuffle: 是否打乱数据集，默认为 ``None``, 如果传入的 ``ds_or_db`` 可以
@@ -43,8 +43,7 @@ def prepare_dataloader(dataset,
     :param collate_fn: 用于处理一个 batch 的函数，一般包括 padding 和转为 tensor。
         有以下三种取值：
 
-        * 为 ``auto`` 时，使用 :class:`~fastNLP.Collator` 进行 padding 和 转
-          tensor 。
+        * 为 ``auto`` 时，使用 :class:`.Collator` 进行 padding 和转 tensor 。
         * 为 :class:`Callable` 时，应当接受一个 ``batch`` 的数据作为参数，同时输出
           一个对象 。
         * 为 ``None`` 时，使用各个框架的 DataLoader 的默认 ``collate_fn``。
@@ -56,14 +55,10 @@ def prepare_dataloader(dataset,
           有设置则通过当前 :mod:`sys.modules` 中已经 import 的 ``backend`` 进行判
           定。如果以上均无法判定，则报错。如果找到了 ``backend``，则按照下述的方式处
           理。
-        * 为 ``torch`` 时，使用
-          :func:`~fastNLP.core.dataloaders.prepare_torch_dataloader`。
-        * 为 ``paddle`` 时，
-          使用 :func:`~fastNLP.core.dataloaders.prepare_paddle_dataloader`。
-        * 为 ``jittor`` 时，使用
-          :func:`~fastNLP.core.dataloaders.prepare_jittor_dataloader`。
-        * 为 ``oneflow`` 时，使用
-          :func:`~fastNLP.core.dataloaders.prepare_oneflow_dataloader`。
+        * 为 ``torch`` 时，使用 :func:`.prepare_torch_dataloader` 。
+        * 为 ``paddle`` 时，使用 :func:`.prepare_paddle_dataloader` 。
+        * 为 ``jittor`` 时，使用 :func:`.prepare_jittor_dataloader` 。
+        * 为 ``oneflow`` 时，使用 :func:`.prepare_oneflow_dataloader` 。
 
     :return
     """

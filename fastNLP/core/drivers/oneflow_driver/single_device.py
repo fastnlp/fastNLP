@@ -21,9 +21,9 @@ __all__ = ['OneflowSingleDriver']
 
 class OneflowSingleDriver(OneflowDriver):
     r"""
-    用于执行 ``oneflow`` 动态图 cpu 和 单卡 gpu 运算的 ``driver``。
+    用于执行 ``oneflow`` 动态图 cpu 和 单卡 gpu 运算的 ``Driver``。
 
-    :param model: 传入给 ``Trainer`` 的 ``model`` 参数
+    :param model: 传入给 :class:`.Trainer` 的 ``model`` 参数
     :param device: oneflow.device，当前进程所使用的设备
     :param fp16: 是否开启 fp16；目前动态图的单卡下该参数无效。
     :param oneflow_kwargs:
@@ -33,9 +33,8 @@ class OneflowSingleDriver(OneflowDriver):
 
         .. note::
 
-            关于该参数的详细说明，请参见 :class:`~fastNLP.core.controllers.\
-            Trainer` 中的描述；函数 ``auto_param_call`` 详见 :func:`fastNLP.\
-            core.utils.auto_param_call`。
+            关于该参数的详细说明，请参见 :class:`.Trainer` 和 :func:`~fastNLP.\
+            core.auto_param_call`。
 
     """
 

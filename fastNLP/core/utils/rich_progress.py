@@ -1,6 +1,6 @@
 r"""该文件用于为 **fastNLP** 提供一个统一的 ``progress bar`` 管理，通过共用一个
-``Task`` 对象，:class:`~fastNLP.core.Trainer` 中的 ``progress bar`` 和
-:class:`~fastNLP.core.Evaluator` 中的 ``progress bar`` 才能不冲突。"""
+``Task`` 对象，:class:`.Trainer` 中的 ``progress bar`` 和 :class:`.Evaluator`
+中的 ``progress bar`` 才能不冲突。"""
 import sys
 from typing import Any, Optional, Union
 

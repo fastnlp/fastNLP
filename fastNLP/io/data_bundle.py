@@ -1,8 +1,3 @@
-r"""
-:class:`DataBundle` 是 **fastNLP** 提供的用于方便快捷地管理多个数据集的工具，并有诸
-多接口来进行批量的数据处理。
-"""
-
 from typing import Callable, Dict, Iterable, List, Tuple
 
 from fastNLP.core import logger
@@ -16,9 +11,12 @@ __all__ = [
 
 class DataBundle:
     r"""
-    经过处理的数据信息，包括一系列数据集（比如：分开的训练集、验证集和测试集）以及各
-    个 field 对应的 vocabulary。该对象一般由 fastNLP 中各种 :class:`~fastNLP.\
-    io.loader.Loader` 的 :meth:`load` 函数生成，可以通过以下的方法获取里面的内容::
+    **fastNLP** 提供的用于方便快捷地管理多个数据集的工具，并有诸多接口来进行批量的数
+    据处理。
+
+    包括一系列数据集（比如：分开的训练集、验证集和测试集）以及各个 field 对应的
+    vocabulary。该对象一般由 fastNLP 中各种 :class:`.Loader` 的 :meth:`.Loader.\
+    load` 函数生成，可以通过以下的方法获取里面的内容::
 
         data_bundle = YelpLoader().load(
             {'train':'/path/to/train', 'dev': '/path/to/dev'})
@@ -26,12 +24,10 @@ class DataBundle:
         train_data = data_bundle.datasets['train']
         dev_data = data_bundle.datasets['train']
 
-    :param vocabs: 从名称（字符串）到 :class:`~fastNLP.core.Vocabulary` 类型的字
-        典
-    :param datasets: 从名称（字符串）到 :class:`~fastNLP.core.dataset.DataSet`
-        类型的字典。建议不要将相同的 ``DataSet`` 对象重复传入，否则可能会在使用
-        :class:`~fastNLP.io.pipe.Pipe` 处理数据的时候遇到问题，若多个数据集确需一
-        致，请手动 ``deepcopy`` 后传入。
+    :param vocabs: 从名称（字符串）到 :class:`.Vocabulary` 类型的字典。
+    :param datasets: 从名称（字符串）到 :class:`.DataSet` 类型的字典。建议不要将相
+        同的 :class:`.DataSet` 对象重复传入，否则可能会在使用 :class:`.Pipe` 处理
+        数据的时候遇到问题，若多个数据集确需一致，请手动 ``deepcopy`` 后传入。
     """
 
     def __init__(self, vocabs=None, datasets=None):
@@ -48,7 +44,7 @@ class DataBundle:
                 raise TypeError(
                     'Every dataset must be of `fastNLP.DataSet` type, '
                     'but dataset named \'{}\' is of {} type.'.format(
-                        ds_name, type(ds_name)))
+                        ds_name, type(ds)))
 
     @property
     def datasets(self) -> Dict:
@@ -74,8 +70,7 @@ class DataBundle:
     def set_dataset(self, dataset: DataSet, name: str):
         r"""
 
-        :param dataset: 传递给 :class:`DataBundle` 的 :class:`~fastNLP.core.\
-            dataset.DataSet`
+        :param dataset: 传递给 :class:`DataBundle` 的 :class:`.DataSet`
         :param name: ``dataset`` 的名称
         :return: self
         """
@@ -263,8 +258,8 @@ class DataBundle:
                     progress_desc: str = '',
                     progress_bar: str = 'rich'):
         r"""
-        对 :class:`DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.core.\
-        dataset.DataSet.apply_field` 方法
+        对 :class:`DataBundle` 中所有的 dataset 使用 :meth:`.DataSet.\
+        apply_field` 方法
 
         :param func: 对指定 field 进行处理的函数，其输入应为 ``instance`` 中名为
             ``field_name`` 的 field 的内容，返回值将被写入至 ``new_field_name``
@@ -315,13 +310,12 @@ class DataBundle:
                          progress_bar: str = 'rich',
                          progress_desc: str = ''):
         r"""
-        对 :class:`DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.core.\
-        DataSet.apply_field_more` 方法
+        对 :class:`DataBundle` 中所有的 dataset 使用 :meth:`.DataSet.\
+        apply_field_more` 方法
 
         .. note::
-            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :meth:`fastNLP.\
-            core.DataSet.apply_more` 中关于 ``apply_more`` 与 ``apply`` 区别的介
-            绍。
+            ``apply_field_more`` 与 ``apply_field`` 的区别参考 :meth:`.DataSet.\
+            apply_more` 中关于 ``apply_more`` 与 ``apply`` 区别的介绍。
 
         :param func: 对指定 field 进行处理的函数，注意其输入应为 ``instance`` 中名
             为 ``field_name`` 的 field 的内容；返回值是一个字典，key 是field 的名
@@ -370,8 +364,8 @@ class DataBundle:
               progress_desc: str = '',
               progress_bar: bool = True):
         r"""
-        对 :class:`~DataBundle` 中所有的 dataset 使用 :meth:`~fastNLP.core.\
-        DataSet.apply` 方法
+        对 :class:`DataBundle` 中所有的 dataset 使用 :meth:`.DataSet.\
+        apply_field_more` 方法
 
         :param func: 参数是 ``DataSet`` 中的 ``Instance``，返回值将被写入至
             ``new_field_name`` 中。
@@ -411,12 +405,13 @@ class DataBundle:
                    progress_desc: str = '',
                    progress_bar: str = 'rich'):
         r"""
-        对 :class:`~fastNLP.io.DataBundle` 中所有的 dataset 使用
-        :meth:`~fastNLP.DataSet.apply_more` 方法
+        对 :class:`DataBundle` 中所有的 dataset 使用 :meth:`.DataSet.\
+        apply_field_more` 方法
+
 
         .. note::
-            ``apply_more`` 与 ``apply`` 的区别参考 :meth:`fastNLP.core.DataSet.\
-            apply_more` 中关于 ``apply_more`` 与 ``apply`` 区别的介绍。
+            ``apply_more`` 与 ``apply`` 的区别参考 :meth:`.DataSet.apply_more`
+            中关于 ``apply_more`` 与 ``apply`` 区别的介绍。
 
         :param func: 参数是 ``DataSet`` 中的 ``Instance``，返回值是一个字典，key
             是 field 的名字，value 是对应的结果
@@ -501,7 +496,7 @@ class DataBundle:
                 dtype=None,
                 backend=None,
                 pad_fn=None) -> 'DataBundle':
-        """如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
+        r"""如果需要对某个 field 的内容进行特殊的调整，请使用这个函数。
 
         :param field_name: 需要调整的 field 的名称。如果 :meth:`Dataset.\
             __getitem__` 方法返回的是字典类型，则可以直接使用对应的 field 的 key 来
@@ -536,19 +531,18 @@ class DataBundle:
         return self
 
     def set_ignore(self, *field_names) -> 'DataBundle':
-        r"""``DataSet`` 中想要对绑定的 collator 进行调整可以调用此函数。
-        ``collator`` 为 :class:`~fastNLP.core.collators.Collator` 时该函数才有
-        效。调用该函数可以设置忽略输出某些 field 的内容，被设置的 field 将在 batch
-        的输出中被忽略::
+        r"""如果想要对所有 dataset 绑定的 collator 进行调整可以调用此函数。只有当
+        ``collator`` 为 :class:`.Collator` 时该函数才有效。调用该函数可以设置忽略
+        输出某些 field 的内容，被设置的 field 将在 batch 的输出中被忽略::
 
             databundle.set_ignore('field1', 'field2')
 
-        :param field_names: field_name: 需要调整的 field 的名称。如果
-            :meth:`Dataset.__getitem__` 方法返回的是字典类型，则可以直接使用对应的
-            field 的 key 来表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如
-            ``{'a': {'b': 1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.\
-            __getitem__` 返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表
-            示序列中第 **0** 个和第 **1** 个元素。
+        :param field_names: 需要调整的 field 的名称。如果 :meth:`Dataset.\
+            __getitem__` 方法返回的是字典类型，则可以直接使用对应的 field 的 key 来
+            表示，如果是嵌套字典，可以使用元组表示多层次的 key，例如 ``{'a': {'b':
+            1}}`` 中可以使用 ``('a', 'b')``；如果 :meth:`Dataset.__getitem__`
+            返回的是 Sequence 类型，则可以使用 ``'_0'``, ``'_1'`` 表示序列中第
+            **0** 个和第 **1** 个元素。
         :return: self
         """
         for _, ds in self.iter_datasets():

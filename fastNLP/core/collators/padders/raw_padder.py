@@ -30,8 +30,7 @@ def _get_dtype(ele_dtype, dtype, class_name):
 
 
 class RawNumberPadder(Padder):
-    r"""可以将形如 ``[1, 2, 3]`` 这类的数据转为 ``[1, 2, 3]``。实际上该 padder 无
-    意义。
+    r"""处理数字型 batch 的 ``Padder``。实际上该 padder 无意义。
 
     :param pad_val:
     :param ele_dtype:
@@ -51,8 +50,12 @@ class RawNumberPadder(Padder):
 
 
 class RawSequencePadder(Padder):
-    r"""将类似于 ``[[1], [1, 2]]`` 的内容 pad 为 ``[[1, 0], [1, 2]]``。可以
-    pad 多重嵌套的数据。
+    r"""处理列表 batch 的 ``Padder``。可以 pad 多重嵌套的数据。
+
+    可以通过如下方式使用：
+
+        >>> RawSequencePadder.pad([[1], [2, 3]], pad_val=-100, dtype=float)
+        [[1.0, -100.0], [2.0, 3.0]]
 
     :param pad_val: pad 的值；
     :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`np.\
@@ -78,8 +81,14 @@ class RawSequencePadder(Padder):
 
 
 class RawTensorPadder(Padder):
-    r"""将类似于 ``[[1], [1, 2]]`` 的内容 pad 为 ``[[1, 0], [1, 2]]``。可以
-    pad 多重嵌套的数据。
+    r"""处理张量或数组 batch 的 ``Padder``，内部的元素必须实现了 :meth:`tolist`
+    函数。
+
+    可以按如下方式使用：
+
+        >>> RawTensorPadder.pad(
+        ...     [np.array([1]), np.array([2, 3])], pad_val=-100, dtype=float)
+        [[1.0, -100.0], [2.0, 3.0]]
 
     :param pad_val: pad 的值；
     :param ele_dtype: 用于检测当前 field 的元素类型是否可以转换为 :class:`np.\
