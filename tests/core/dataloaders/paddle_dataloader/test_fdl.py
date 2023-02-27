@@ -130,7 +130,7 @@ class TestPaddle:
             'x': [[1, 2], [2, 3, 4], [4, 5, 6, 7]] * 10,
             'y': [1, 0, 1] * 10
         })
-        dbl1 = DataBundle(datasets={'train': ds2, 'val': ds3})
+        dbl1 = DataBundle(datasets={'train': ds1, 'val': ds3})
         dl_bundle1 = prepare_paddle_dataloader(dbl1)
         assert isinstance(dl_bundle1['train'], PaddleDataLoader)
         assert isinstance(dl_bundle1['val'], PaddleDataLoader)

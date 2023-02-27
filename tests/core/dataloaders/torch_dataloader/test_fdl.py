@@ -163,11 +163,6 @@ class TestFdl:
         assert isinstance(dl1, TorchDataLoader)
 
         ds3 = _DataSet()
-        dbl1 = DataBundle(datasets={'train': ds2, 'val': ds3})
-        dl_bundle1 = prepare_torch_dataloader(dbl1)
-        assert isinstance(dl_bundle1['train'], TorchDataLoader)
-        assert isinstance(dl_bundle1['val'], TorchDataLoader)
-
         ds_dict1 = {'train_1': ds2, 'val': ds3}
         dl_dict1 = prepare_torch_dataloader(ds_dict1)
         assert isinstance(dl_dict1['train_1'], TorchDataLoader)

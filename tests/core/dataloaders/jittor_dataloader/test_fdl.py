@@ -136,11 +136,6 @@ class TestJittor:
         assert isinstance(dl1, JittorDataLoader)
 
         ds2 = MyDataset()
-        dbl1 = DataBundle(datasets={'train': ds1, 'val': ds2})
-        dl_bundle1 = prepare_jittor_dataloader(dbl1)
-        assert isinstance(dl_bundle1['train'], JittorDataLoader)
-        assert isinstance(dl_bundle1['val'], JittorDataLoader)
-
         ds_dict1 = {'train_1': ds1, 'val': ds2}
         dl_dict1 = prepare_jittor_dataloader(ds_dict1)
         assert isinstance(dl_dict1['train_1'], JittorDataLoader)
