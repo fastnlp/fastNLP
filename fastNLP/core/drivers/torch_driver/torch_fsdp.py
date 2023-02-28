@@ -238,7 +238,7 @@ class TorchFSDPDriver(TorchDDPDriver):
         :param only_state_dict: 是否只保存权重；在 ``TorchFSDPDriver`` 中只能为
             ``True``。
         :kwargs:
-            * *on_rank0* (``bool``) - 是否将所有 rank 上的模型参数全部聚合到。
+            * *on_rank0* (``bool``) -- 是否将所有 rank 上的模型参数全部聚合到。
               rank0 上，注意这样可能会造成 OOM，默认为 ``False``。
         :return:
         """
@@ -283,8 +283,8 @@ class TorchFSDPDriver(TorchDDPDriver):
         :param load_state_dict: 保存的内容是否只是权重；在 ``TorchFSDPDriver`` 中
             只能为 ``True``。
         :kwargs:
-            * *on_rank0* (``bool``) - 加载的权重是否是聚合了所有 rank 的权重。默认
-              为 ``False``。
+            * *on_rank0* (``bool``) -- 加载的权重是否是聚合了所有 rank 的权重。默
+              认为 ``False``。
         :return:
         """
         if only_state_dict is False:
@@ -349,7 +349,7 @@ class TorchFSDPDriver(TorchDDPDriver):
             断点重训所需要保存的其它对象的状态。
         :param dataloader: 正在使用的 dataloader。
         :param only_state_dict: 是否只保存模型的参数。在 ``TorchFSDPDriver`` 中该
-            参数仅能为 ``True。
+            参数仅能为 ``True``。
         :param should_save_model: 是否应该保存模型，如果为 ``False``，Driver 将不
             负责 model 的保存。
         :kwargs:
