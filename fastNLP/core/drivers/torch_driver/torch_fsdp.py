@@ -11,12 +11,11 @@ from fastNLP.envs import (FASTNLP_CHECKPOINT_FILENAME,
                           FASTNLP_MODEL_FILENAME, rank_zero_call)
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _TORCH_GREATER_EQUAL_1_12
 from .ddp import TorchDDPDriver
-from .utils import optimizer_state_to_device
 
 if _TORCH_GREATER_EQUAL_1_12:
     from torch.distributed.fsdp import (FullStateDictConfig,
-                                        FullyShardedDataParallel,
-                                        OptimStateKeyType, StateDictType)
+                                        FullyShardedDataParallel as FSDP,
+                                        StateDictType)
 
 if _NEED_IMPORT_TORCH:
     import torch
@@ -35,24 +34,12 @@ class TorchFSDPDriver(TorchDDPDriver):
     r"""
     实现对于 pytorch 自己实现的 ``fully sharded data parallel``；请阅读
     `该文档 <https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.full_optim_state_dict>`_
-    了解更多：
+    了解更多。
 
     .. note::
 
         ``TorchFSDPDriver`` 大部分行为与 :class:`.TorchDDPDriver` 相同，如果您不
         了解 DDP 的过程，可以查看 :class:`.TorchDDPDriver` 的文档。
-    .. warning::
-
-        ``TorchFSDPDriver`` 现在还不支持断点重训功能，但是支持保存模型和加载模型；
-
-        注意当您在加载和保存模型的 checkpointcallback 的时候，您可以通过在初始化
-        ``Trainer`` 时传入 ``torch_kwargs={"fsdp_kwargs": {'save_on_rank0':
-        True/False, 'load_on_rank0': True/False}}`` 来指定保存模型的行为：
-
-        1. ``save/load_on_rank0 = True``：表示在加载和保存模型时将所有 rank 上的模
-           型参数全部聚合到 rank0 上，注意这样可能会造成 OOM；
-        2. ``save/load_on_rank0 = False``：表示每个 rank 分别保存加载自己独有的模
-           型参数；
 
     :param model: 传入给 :class:`.Trainer` 的 ``model`` 参数
     :param parallel_device: 用于分布式训练的 ``gpu`` 设备
@@ -133,7 +120,7 @@ class TorchFSDPDriver(TorchDDPDriver):
                 'fastnlp_torch_launch_not_ddp' not in os.environ:
             # 如果用户自己在外面初始化了 DDP，那么我们要求用户传入的模型一定是已经
             # 由 DistributedDataParallel 包裹后的模型；
-            if not isinstance(model, FullyShardedDataParallel):
+            if not isinstance(model, FSDP):
                 raise RuntimeError(
                     'It is not allowed to input a normal model instead of '
                     '`FullyShardedDataParallel` when you initialize the ddp '
@@ -180,24 +167,9 @@ class TorchFSDPDriver(TorchDDPDriver):
         self.global_rank = 0
 
         self._fsdp_kwargs = self._torch_kwargs.get('fsdp_kwargs', {})
-        self._save_on_rank0 = self._fsdp_kwargs.get('save_on_rank0', False)
-        if 'save_on_rank0' in self._fsdp_kwargs:
-            self._fsdp_kwargs.pop('save_on_rank0')
-        self._load_on_rank0 = self._fsdp_kwargs.get('load_on_rank0', False)
-        if 'load_on_rank0' in self._fsdp_kwargs:
-            self._fsdp_kwargs.pop('load_on_rank0')
 
-        if self._save_on_rank0 != self._load_on_rank0:
-            logger.warning(
-                f'Notice the behavior between ``save`` and ``load`` is not '
-                'matched, you choose '
-                f"{'save on rank0' if self._save_on_rank0 else 'save on each rank'}, but "
-                f"{'load on rank0' if self._save_on_rank0 else 'load on each rank'}!"
-            )
-
-        check_user_specific_params(self._fsdp_kwargs,
-                                   FullyShardedDataParallel.__init__,
-                                   FullyShardedDataParallel.__name__)
+        check_user_specific_params(self._fsdp_kwargs, FSDP.__init__,
+                                   FSDP.__name__)
         if 'cpu_offload' in self._fsdp_kwargs and kwargs[
                 'accumulation_steps'] != 1:
             logger.warning(
@@ -225,8 +197,8 @@ class TorchFSDPDriver(TorchDDPDriver):
 
     def configure_ddp(self):
         torch.cuda.set_device(self.model_device)
-        if not isinstance(self.model, FullyShardedDataParallel):
-            self.model = FullyShardedDataParallel(
+        if not isinstance(self.model, FSDP):
+            self.model = FSDP(
                 # 注意这里的 self.model_device 是 `torch.device` type，
                 # 因此 self.model_device.index；
                 _DDPWrappingModel(self.model),
@@ -265,38 +237,40 @@ class TorchFSDPDriver(TorchDDPDriver):
         :param filepath: 文件路径
         :param only_state_dict: 是否只保存权重；在 ``TorchFSDPDriver`` 中只能为
             ``True``。
-        :param kwargs:
+        :kwargs:
+            * *on_rank0* (``bool``) - 是否将所有 rank 上的模型参数全部聚合到。
+              rank0 上，注意这样可能会造成 OOM，默认为 ``False``。
         :return:
         """
+        if not only_state_dict:
+            raise RuntimeError(
+                'When using `TorchFSDPDriver`, only `only_state_dict=True` '
+                'is allowed.')
+        on_rank0 = kwargs.get('on_rank0', False)
         filepath = Path(filepath)
         prefix = filepath.parent
         filename = filepath.name
         _filename = filename.split('.')
         filename, suffix = _filename[0], '.'.join(_filename[1:])
-        if only_state_dict:
-            if self._save_on_rank0:
-                full_state_dict_config = FullStateDictConfig(
-                    offload_to_cpu=True, rank0_only=True)
-                with FullyShardedDataParallel.state_dict_type(
-                        self.model, StateDictType.FULL_STATE_DICT,
-                        full_state_dict_config):
-                    state_dict = self.model.state_dict()
-                rank_zero_call(torch.save)(state_dict, filepath)
-            else:
-                # 添加 'rank0/1' 字段来区分全部聚集到 rank0 保存的方式；
-                _filename = filename.split('_')
-                filename = '{}_rank{}_{}'.format(
-                    _filename[0], int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)),
-                    _filename[1])
-                filepath = prefix.joinpath(filename + '.' + suffix)
-                with FullyShardedDataParallel.state_dict_type(
-                        self.model, StateDictType.LOCAL_STATE_DICT):
-                    state_dict = self.model.state_dict()
-                torch.save(state_dict, filepath)
+        if on_rank0:
+            full_state_dict_config = FullStateDictConfig(
+                offload_to_cpu=True, rank0_only=True)
+            with FSDP.state_dict_type(self.model,
+                                      StateDictType.FULL_STATE_DICT,
+                                      full_state_dict_config):
+                state_dict = self.model.state_dict()
+            rank_zero_call(torch.save)(state_dict, filepath)
         else:
-            raise RuntimeError(
-                'When using `TorchFSDPDriver`, only `only_state_dict=True` '
-                'is allowed.')
+            # 添加 'rank0/1' 字段来区分全部聚集到 rank0 保存的方式；
+            _filename = filename.split('_')
+            filename = '{}_rank{}_{}'.format(
+                _filename[0], int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)),
+                _filename[1])
+            filepath = prefix.joinpath(filename + '.' + suffix)
+            with FSDP.state_dict_type(self.model,
+                                      StateDictType.LOCAL_STATE_DICT):
+                state_dict = self.model.state_dict()
+            torch.save(state_dict, filepath)
 
     def load_model(  # type: ignore[override]
             self,
@@ -308,20 +282,23 @@ class TorchFSDPDriver(TorchDDPDriver):
         :param filepath: 加载权重或模型的路径
         :param load_state_dict: 保存的内容是否只是权重；在 ``TorchFSDPDriver`` 中
             只能为 ``True``。
-        :param kwargs:
+        :kwargs:
+            * *on_rank0* (``bool``) - 加载的权重是否是聚合了所有 rank 的权重。默认
+              为 ``False``。
         :return:
         """
         if only_state_dict is False:
             raise RuntimeError(
                 'When using `TorchFSDPDriver`, only `only_state_dict=True` '
                 'is allowed.')
+        on_rank0 = kwargs.get('on_rank0', False)
         filepath = Path(filepath)
         prefix = filepath.parent
         filename = filepath.name
         _filename = filename.split('.')
         filename, suffix = _filename[0], '.'.join(_filename[1:])
 
-        if not self._load_on_rank0:
+        if not on_rank0:
             _filename = filename.split('_')
             filename = '{}_rank{}_{}'.format(
                 _filename[0], int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)),
@@ -342,13 +319,13 @@ class TorchFSDPDriver(TorchDDPDriver):
         if not isinstance(states, Mapping):
             states = states.state_dict()
 
-        if self._load_on_rank0:
-            with FullyShardedDataParallel.state_dict_type(
-                    self.model, StateDictType.FULL_STATE_DICT):
+        if on_rank0:
+            with FSDP.state_dict_type(self.model,
+                                      StateDictType.FULL_STATE_DICT):
                 self.model.load_state_dict(states)
         else:
-            with FullyShardedDataParallel.state_dict_type(
-                    self.model, StateDictType.LOCAL_STATE_DICT):
+            with FSDP.state_dict_type(self.model,
+                                      StateDictType.LOCAL_STATE_DICT):
                 self.model.load_state_dict(states)
 
     def save_checkpoint(self,
@@ -358,67 +335,33 @@ class TorchFSDPDriver(TorchDDPDriver):
                         only_state_dict: bool = True,
                         should_save_model: bool = True,
                         **kwargs):
-        raise RuntimeError(
-            '``TorchFSDPDriver`` does not support ``save_checkpoint`` '
-            'function for now, there is some technical issues that needs '
-            'to solve. You can implement your own breakpoint retraining '
-            'by rewriting this function. The important thing is how to save '
-            "and load the optimizers' state dict, you can see "
-            '``https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.full_optim_state_dict``.'
-        )
+        r"""
+        断点重训的保存函数，该函数会负责保存 **优化器** 和 **sampler** 的状态，以及
+        **模型** （若 ``should_save_model`` 为 ``True``）
 
-    def load_checkpoint(self,
-                        folder: Union[str, Path],
-                        dataloader,
-                        only_state_dict: bool = True,
-                        should_load_model: bool = True,
-                        **kwargs) -> Dict:
-        raise RuntimeError(
-            '``TorchFSDPDriver`` does not support ``load_checkpoint`` '
-            'function for now, there is some technical issues that needs '
-            'to solve. You can implement your own breakpoint retraining '
-            'by rewriting this function. The important thing is how to save '
-            "and load the optimizers' state dict, you can see "
-            '``https://pytorch.org/docs/stable/fsdp.html#torch.distributed.fsdp.FullyShardedDataParallel.full_optim_state_dict``.'
-        )
-
-    # todo 这些加了 __ 的函数是目前还不支持；
-    #  这是因为 1.12 的 pytorch fsdp 的关于如何保存和加载 optimizer state dict 的
-    # 接口有点过于反人类，无法在 fastNLP 的框架中进行调和使用；
-    def __get_optimizer_state(self):
-        optimizers_state_dict = {}
-        for i in range(len(self.optimizers)):
-            # 注意这里其余 rank 拿到的是一个空字典，因此在真正保存的时候需要保证
-            # 只有 rank0 在工作；
-            optimizer_state = FullyShardedDataParallel.full_optim_state_dict(
-                self.model, self.optimizers[i])
-            if self._save_on_rank0:
-                with FullyShardedDataParallel.summon_full_params(self.model):
-                    if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
-                        unwrapped_model = self.model.module.module
-                        optimizer_state = FullyShardedDataParallel.rekey_optim_state_dict(
-                            optimizer_state, OptimStateKeyType.PARAM_ID,
-                            unwrapped_model)
-                if int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)) == 0:
-                    optimizer_state['state'] = optimizer_state_to_device(
-                        optimizer_state['state'], torch.device('cpu'))
-            # 注意这里没有使用 deepcopy，测试是不需要的；
-            optimizers_state_dict[f'optimizer{i}'] = optimizer_state
-        return optimizers_state_dict
-
-    # 这里单独拿出来是因为对于 fsdp 来说，每一个进程都需要运行此函数，
-    # 因此不能包裹 rank_zero_call；
-    def __save_checkpoint(self,
-                          folder: Path,
-                          states: Dict,
-                          dataloader,
-                          only_state_dict: bool = True,
-                          should_save_model: bool = True,
-                          **kwargs):
+        :param folder: 保存断点重训的状态的文件夹；:meth:`save_checkpoint` 函数应
+            该在该路径下面下面新增名为 ``FASTNLP_CHECKPOINT_FILENAME`` 与
+            ``FASTNLP_MODEL_FILENAME`` （若 ``should_save_model`` 为 ``True``）
+            的文件。把 model 相关的内容放入到 ``FASTNLP_MODEL_FILENAME`` 文件中，
+            将传入的 ``states`` 以及自身产生的其它状态一并保存在
+            ``FASTNLP_CHECKPOINT_FILENAME`` 里面。
+        :param states: 由 :class:`.Trainer` 传入的一个字典，其中已经包含了为了实现
+            断点重训所需要保存的其它对象的状态。
+        :param dataloader: 正在使用的 dataloader。
+        :param only_state_dict: 是否只保存模型的参数。在 ``TorchFSDPDriver`` 中该
+            参数仅能为 ``True。
+        :param should_save_model: 是否应该保存模型，如果为 ``False``，Driver 将不
+            负责 model 的保存。
+        :kwargs:
+            * *on_rank0* (``bool``) -- 保存模型时是否将所有权重聚合到 rank0 上。可
+              能会导致 OOM，默认为 ``False``。
+        """
         if not only_state_dict:
             raise RuntimeError(
                 'When using `TorchFSDPDriver`, only `only_state_dict=True` '
                 'is allowed.')
+
+        on_rank0 = kwargs.get('on_rank0', False)
 
         # 1. sampler 的状态；
         num_consumed_batches = states.pop('num_consumed_batches')
@@ -427,10 +370,11 @@ class TorchFSDPDriver(TorchDDPDriver):
 
         # 2. 保存模型的状态；
         if should_save_model:
-            if not os.path.exists(folder):
-                os.mkdir(folder)
+            os.makedirs(folder, exist_ok=True)
+            self.barrier()
             model_path = folder.joinpath(FASTNLP_MODEL_FILENAME)
-            self.save_model(model_path, only_state_dict=True)
+            self.save_model(
+                model_path, only_state_dict=only_state_dict, on_rank0=on_rank0)
 
         # 3. 保存 optimizers 的状态；
         states['optimizers_state_dict'] = self.get_optimizer_state()
@@ -445,52 +389,89 @@ class TorchFSDPDriver(TorchDDPDriver):
         rank_zero_call(torch.save)(
             states, Path(folder).joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
-    def __load_optimizer_state(self, states):
-        assert len(states) == len(self.optimizers), \
-            f'The number of optimizers is:{len(self.optimizers)}, ' \
-            f'while in checkpoint it is:{len(states)}'
+    def load_checkpoint(  # type: ignore[override]
+            self,
+            folder: Path,
+            dataloader,
+            only_state_dict: bool = True,
+            should_load_model: bool = True,
+            **kwargs) -> Dict:
+        r"""
+        断点重训的加载函数，该函数会负责读取数据，并且恢复 **优化器** 、**sampler**
+        的状态和 **模型** （如果 ``should_load_model`` 为 True）以及其它在
+        :meth:`save_checkpoint` 函数中执行的保存操作，然后将一个 state 字典返回给
+        :class:`.Trainer` 字典的内容为函数 :meth:`save_checkpoint` 接受到的
+        ``states`` ）。
 
-        with FullyShardedDataParallel.summon_full_params(self.model):
-            unwrapped_model = self.model.module.module
+        该函数应该在所有 rank 上执行。
 
-            for i in range(len(self.optimizers)):
-                optimizer_state = states[f'optimizer{i}']
-                if self._load_on_rank0:
-                    optimizer_state = FullyShardedDataParallel.rekey_optim_state_dict(
-                        optimizer_state, OptimStateKeyType.PARAM_NAME,
-                        unwrapped_model)
-                optimizer_state = FullyShardedDataParallel.shard_full_optim_state_dict(
-                    optimizer_state, unwrapped_model)
-                optimizer: torch.optim.Optimizer = type(
-                    self.optimizers[i])(unwrapped_model.parameters(),
-                                        **self.optimizers[i].defaults)
-                optimizer.load_state_dict(optimizer_state)
-                self.optimizers[i] = optimizer
+        :param folder: 读取该 folder 下的 ``FASTNLP_CHECKPOINT_FILENAME`` 文件
+            与 ``FASTNLP_MODEL_FILENAME`` （如果 should_load_model 为True）。
+        :param dataloader: 当前给定 dataloader，需要根据保存的 dataloader 状态合
+            理设置。若该值为 ``None``，则不需要返回 ``'dataloader'`` 以及
+            ``'batch_idx_in_epoch'`` 这两个值。
+        :param only_state_dict: 是否仅读取模型的 state_dict ，当
+            ``should_save_model`` 为 ``False``，该参数无效。如果为 ``True``，说明
+            保存的内容为权重；如果为 ``False`` 说明保存的是模型，但也是通过当前
+            Driver 的模型去加载保存的模型的权重，而不是使用保存的模型替换当前模型。
+        :param should_load_model: 是否应该加载模型，如果为 ``False``，Driver 将不
+            负责加载模型。若该参数为 ``True``，但在保存的状态中没有找到对应的模型状
+            态，则报错。
+        :kwargs:
+            * *on_rank0* (``bool``) -- 加载的模型权重是否是已经全部聚合到 rank0 的
+              权重，默认为 ``False``。
+            * *optim_shard_strategy* (``str``) -- 加载 ``optimizers`` 的状态时，
+              决定如何分发 ``state_dict`` 的策略，默认为 ``shard``：
 
-        logger.debug('Load optimizer state dict.')
+              - 为 ``shard`` 时，每个 rank 会先加载完整的 ``state_dict``，然后各自
+                进行分片，需要一定存储空间，即 `FSDP.shard_full_optim_state_dict
+                <https://pytorch.org/docs/stable/fsdp.html#torch.distributed.\
+                fsdp.FullyShardedDataParallel.shard_full_optim_state_dict>`_
+              - 为 ``scatter`` 时，仅 rank0 会加载完整的 ``state_dict``，然后分发
+                至各个 rank，需要通信成本，即 `FSDP.scatter_full_optim_state_dict
+                <https://pytorch.org/docs/stable/fsdp.html#torch.distributed.\
+                fsdp.FullyShardedDataParallel.scatter_full_optim_state_dict>`_
+        :return: :meth:`save_checkpoint` 函数输入的 ``states`` 内容。除此之外，还
+            返回的内容有：
 
-    def __load_checkpoint(self,
-                          folder: Path,
-                          dataloader,
-                          only_state_dict: bool = True,
-                          should_load_model: bool = True,
-                          **kwargs) -> Dict:
+            * *dataloader* -- 根据传入的 ``dataloader`` 与读取出的状态设置为合理状
+              态的 dataloader。在当前 ``dataloader`` 样本数与读取出的 sampler 样
+              本数不一致时报错。
+            * *batch_idx_in_epoch* -- :class:`int` 类型的数据，表明当前 epoch 进
+              行到了第几个 batch 。请注意，该值不能仅通过保存的数据中读取的，因为前
+              后两次运行的 ``batch_size`` 可能有变化，而应该符合以下等式::
+
+                返回的 dataloader 还会产生的 batch 数量 + batch_idx_in_epoch =
+                原来不断点训练时的 batch 的总数
+
+              由于 **返回的 dataloader 还会产生的 batch 数** 在 ``batch_size``
+              与 ``drop_last`` 参数给定的情况下无法改变，因此只能通过调整
+              ``batch_idx_in_epoch`` 这个值来使等式成立。一个简单的计算原则如下：
+
+              * drop_last 为 ``True`` 时，等同于 floor(sample_in_this_rank/
+                batch_size) - floor(num_left_samples/batch_size)；
+              * drop_last 为 ``False`` 时，等同于 ceil(sample_in_this_rank/
+                batch_size) - ceil(num_left_samples/batch_size)。
+        """
         if not only_state_dict:
             raise RuntimeError(
                 'When using `TorchFSDPDriver`, only `only_state_dict=True` '
                 'is allowed.')
+        on_rank0 = kwargs.get('on_rank0', False)
+        optim_shard_strategy = kwargs.get('optim_shard_strategy', 'strategy')
 
         states = torch.load(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
         # 1. 加载 optimizers 的状态；
         optimizers_state_dict = states.pop('optimizers_state_dict')
-        self.load_optimizer_state(optimizers_state_dict)
+        self.load_optimizer_state(optimizers_state_dict, optim_shard_strategy)
 
         # 2. 加载模型状态；
         if should_load_model:
             self.load_model(
                 filepath=folder.joinpath(FASTNLP_MODEL_FILENAME),
-                only_state_dict=only_state_dict)
+                only_state_dict=only_state_dict,
+                on_rank0=on_rank0)
 
         # 3. 加载 fp16 的状态
         if 'grad_scaler_state_dict' in states:
@@ -510,3 +491,30 @@ class TorchFSDPDriver(TorchDDPDriver):
         states.update(states_ret)
 
         return states
+
+    def get_optimizer_state(self):
+        optimizers_state_dict = {}
+        for i in range(len(self.optimizers)):
+            optimizer_state = FSDP.full_optim_state_dict(
+                self.model, self.optimizers[i])
+            optimizers_state_dict[f'optimizer{i}'] = optimizer_state
+            print('get', optimizer_state)
+        return optimizers_state_dict
+
+    def load_optimizer_state(self, states, strategy='shard'):
+        # strategy: shard or scatter
+        assert strategy in {'shard', 'scatter'}
+        assert len(states) == len(self.optimizers), \
+            f'The number of optimizers is:{len(self.optimizers)}, ' \
+            f'while in checkpoint it is:{len(states)}'
+
+        for i in range(len(self.optimizers)):
+            optimizer_state = states[f'optimizer{i}']
+            if strategy == 'shard':
+                dist_state = FSDP.shard_full_optim_state_dict(
+                    optimizer_state, self.model)
+            else:  # scatter
+                dist_state = FSDP.scatter_full_optim_state_dict(
+                    optimizer_state, self.model)
+            print('dist_state', dist_state)
+            self.optimizers[i].load_state_dict(dist_state)

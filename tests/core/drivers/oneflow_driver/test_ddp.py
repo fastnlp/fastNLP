@@ -594,6 +594,11 @@ class TestSaveLoad:
                     break
                 already_seen_x_set.update(batch['x'].reshape(-1, ).tolist())
                 already_seen_y_set.update(batch['y'].reshape(-1, ).tolist())
+                batch = driver1.move_data_to_device(batch)
+                res1 = driver1.model.train_step(**batch)
+                driver1.backward(res1['loss'])
+                driver1.zero_grad()
+                driver1.step()
 
             # 同步
             comm.barrier()
@@ -705,6 +710,11 @@ class TestSaveLoad:
                     break
                 already_seen_x_set.update(batch['x'].reshape(-1, ).tolist())
                 already_seen_y_set.update(batch['y'].reshape(-1, ).tolist())
+                batch = driver1.move_data_to_device(batch)
+                res1 = driver1.model.train_step(**batch)
+                driver1.backward(res1['loss'])
+                driver1.zero_grad()
+                driver1.step()
 
             # 同步
             comm.barrier()

@@ -33,7 +33,7 @@ class PaddleNormalXYDataset(Dataset):
     def __getitem__(self, item):
         return {
             'x': paddle.to_tensor([self._data[item]], dtype='float32'),
-            'y': paddle.to_tensor([self._data[item]], dtype='float32')
+            'y': paddle.to_tensor([self._data[item]], dtype='int64')
         }
 
 

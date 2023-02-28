@@ -35,7 +35,7 @@ class TorchNormalXYDataset(Dataset):
     def __getitem__(self, item):
         return {
             'x': torch.tensor([self._data[item]], dtype=torch.float),
-            'y': torch.tensor([self._data[item]], dtype=torch.float)
+            'y': torch.tensor(self._data[item], dtype=torch.int64)
         }
 
 

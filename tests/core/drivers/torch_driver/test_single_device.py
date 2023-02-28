@@ -577,6 +577,11 @@ def test_save_and_load_with_randombatchsampler(only_state_dict, fp16):
                 break
             already_seen_x_set.update(batch['x'].reshape(-1, ).tolist())
             already_seen_y_set.update(batch['y'].reshape(-1, ).tolist())
+            batch = driver1.move_data_to_device(batch)
+            res1 = driver1.model.train_step(**batch)
+            driver1.backward(res1['loss'])
+            driver1.zero_grad()
+            driver1.step()
 
         sampler_states = dataloader.batch_sampler.state_dict()
         save_states = {'num_consumed_batches': num_consumed_batches}
@@ -657,6 +662,11 @@ def test_save_and_load_with_randomsampler(only_state_dict, fp16):
                 break
             already_seen_x_set.update(batch['x'].reshape(-1, ).tolist())
             already_seen_y_set.update(batch['y'].reshape(-1, ).tolist())
+            batch = driver1.move_data_to_device(batch)
+            res1 = driver1.model.train_step(**batch)
+            driver1.backward(res1['loss'])
+            driver1.zero_grad()
+            driver1.step()
 
         sampler_states = dataloader.batch_sampler.sampler.state_dict()
         save_states = {'num_consumed_batches': num_consumed_batches}

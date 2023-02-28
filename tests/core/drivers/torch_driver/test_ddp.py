@@ -604,7 +604,6 @@ class TestSaveLoad:
                 res1 = driver1.model(
                     batch,
                     fastnlp_fn=driver1.model.module.model.evaluate_step,
-                    # Driver.model -> DataParallel.module -> _FleetWrappingModel.model
                     fastnlp_signature_fn=None,
                     wo_auto_param_call=False,
                 )
@@ -635,8 +634,8 @@ class TestSaveLoad:
             num_replicas = len(device)
 
             driver1, driver2 = \
-                generate_driver(20, 1, device=device, fp16=fp16), \
-                generate_driver(20, 1, device=device, fp16=False)
+                generate_driver(100, 1, device=device, fp16=fp16), \
+                generate_driver(100, 1, device=device, fp16=False)
             dataloader = dataloader_with_bucketedbatchsampler(
                 self.dataset,
                 length=[10 for i in range(len(self.dataset))],
@@ -657,6 +656,15 @@ class TestSaveLoad:
                     break
                 already_seen_x_set.update(batch['x'].reshape(-1, ).tolist())
                 already_seen_y_set.update(batch['y'].reshape(-1, ).tolist())
+                res1 = driver1.model(
+                    batch,
+                    fastnlp_fn=driver1.model.module.model.train_step,
+                    fastnlp_signature_fn=None,
+                    wo_auto_param_call=False,
+                )
+                driver1.backward(res1['loss'])
+                driver1.zero_grad()
+                driver1.step()
 
             # 同步
             dist.barrier()
@@ -724,7 +732,6 @@ class TestSaveLoad:
                 res1 = driver1.model(
                     batch,
                     fastnlp_fn=driver1.model.module.model.evaluate_step,
-                    # Driver.model -> DataParallel.module -> _FleetWrappingModel.model
                     fastnlp_signature_fn=None,
                     wo_auto_param_call=False,
                 )
@@ -764,8 +771,8 @@ class TestSaveLoad:
 
             num_replicas = len(device)
 
-            driver1 = generate_driver(20, 1, device=device, fp16=fp16)
-            driver2 = generate_driver(20, 1, device=device, fp16=False)
+            driver1 = generate_driver(100, 1, device=device, fp16=fp16)
+            driver2 = generate_driver(100, 1, device=device, fp16=False)
 
             dataloader = dataloader_with_randomsampler(
                 self.dataset, 4, True, False, unrepeated=False)
@@ -783,6 +790,15 @@ class TestSaveLoad:
                     break
                 already_seen_x_set.update(batch['x'].reshape(-1, ).tolist())
                 already_seen_y_set.update(batch['y'].reshape(-1, ).tolist())
+                res1 = driver1.model(
+                    batch,
+                    fastnlp_fn=driver1.model.module.model.train_step,
+                    fastnlp_signature_fn=None,
+                    wo_auto_param_call=False,
+                )
+                driver1.backward(res1['loss'])
+                driver1.zero_grad()
+                driver1.step()
 
             # 同步
             dist.barrier()
@@ -849,7 +865,6 @@ class TestSaveLoad:
                 res1 = driver1.model(
                     batch,
                     fastnlp_fn=driver1.model.module.model.evaluate_step,
-                    # Driver.model -> DataParallel.module -> _FleetWrappingModel.model
                     fastnlp_signature_fn=None,
                     wo_auto_param_call=False,
                 )

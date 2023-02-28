@@ -70,7 +70,9 @@ class CheckpointCallback(Callback):
         在保存 topk 模型的文件夹中将额外保存一个 ``fastnlp_evaluate_results.json``
         文件，记录当前的 results。仅在设置了 ``topk`` 的场景下有用，默认为
         ``True``。
-    :param kwargs:
+    :kwargs: 包含以下额外参数，以及更多需要传递给 :meth:`.Trainer.save_checkpoint`
+        或者 :meth:`.Trainer.save_model` 接口的参数。
+
         * *use_timestamp_folder* (``bool``) 类型 -- 是否创建以脚本的启动时间命名的
           文件夹，默认为 ``True``。
     """

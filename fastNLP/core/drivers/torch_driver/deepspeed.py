@@ -8,6 +8,7 @@ from fastNLP.core.log import logger
 from fastNLP.core.utils import nullcontext
 from fastNLP.envs import FASTNLP_CHECKPOINT_FILENAME, FASTNLP_DISTRIBUTED_CHECK
 from fastNLP.envs.imports import _NEED_IMPORT_DEEPSPEED, _NEED_IMPORT_TORCH
+from fastNLP.envs.distributed import all_rank_call_context
 from .ddp import TorchDDPDriver
 from .torch_driver import TorchDriver
 from .utils import _create_default_config, _DeepSpeedWrappingModel
@@ -558,9 +559,10 @@ class DeepSpeedDriver(TorchDDPDriver):
                 '`DeepSpeedDriver`, so we will still save the model '
                 'for you.')
 
-        self.model.save_checkpoint(
-            Path(folder).joinpath(FASTNLP_CHECKPOINT_FILENAME),
-            client_state=states)
+        with all_rank_call_context():
+            self.model.save_checkpoint(
+                Path(folder).joinpath(FASTNLP_CHECKPOINT_FILENAME),
+                client_state=states)
 
     def load_checkpoint(  # type: ignore[override]
             self,
