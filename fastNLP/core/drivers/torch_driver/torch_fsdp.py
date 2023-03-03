@@ -100,7 +100,7 @@ class TorchFSDPDriver(TorchDDPDriver):
         if not is_pull_by_torch_run and parallel_device is None:
             raise ValueError(
                 'Parameter `parallel_device` can not be None when using '
-                '`TorchDDPDriver`. This error is caused when your value of '
+                '`TorchFSDPDriver`. This error is caused when your value of '
                 'parameter `device` is `None` in your `Trainer` instance.')
 
         # 注意我们在 initialize_torch_driver 中的逻辑就是如果是

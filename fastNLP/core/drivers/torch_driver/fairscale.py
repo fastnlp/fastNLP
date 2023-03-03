@@ -34,6 +34,9 @@ class FairScaleDriver(TorchDDPDriver):
     :param fp16: 是否开启 fp16 训练。
     :param fairscale_kwargs:
 
+        * *fs_type* -- 使用 ``fairscale`` 进行分布式训练的模式，包括 ``['ddp',
+          'sdp', 'fsdp']`` 三种模式，分别代表 ``DistributedDataParallel``、
+          ``ShardedDataParallel`` 和 ``FullyShardedDataParallel``。
         * *oss_kwargs* --
         * *sdp_kwargs* --
         * *fsdp_kwargs* --
@@ -92,7 +95,7 @@ class FairScaleDriver(TorchDDPDriver):
         # 仅在 ddp 和 sdp 下有使用到
         self._oss_kwargs = self._fairscale_kwargs.get('oss_kwargs', {})
         self._sdp_kwargs = self._fairscale_kwargs.get('sdp_kwargs', {})
-        self._fdsp_kwargs = self._fairscale_kwargs.get('fsdp_kwargs', {})
+        self._fsdp_kwargs = self._fairscale_kwargs.get('fsdp_kwargs', {})
         self._ddp_kwargs = self._fairscale_kwargs.get('ddp_kwargs', {})
 
         if self.fs_type == 'ddp' or fp16 is False:
@@ -200,18 +203,18 @@ class FairScaleDriver(TorchDDPDriver):
                     rank=self.global_rank,
                     world_size=self.world_size)
             # 用户在这个 trainer 前面又初始化了一个 trainer，并且
-            # 使用的是 TorchDDPDriver；
+            # 使用的是 FairScaleDriver；
             else:
-                # 如果 `dist.is_initialized() is True`，那么说明 TorchDDPDriver
+                # 如果 `dist.is_initialized() is True`，那么说明 FairScaleDriver
                 # 在之前已经初始化并且已经 setup 过一次，那么我们需要保证现在使用的
-                # （即之后的）TorchDDPDriver 的设置和第一个 TorchDDPDriver 是完全
-                # 一样的；
+                # （即之后的）FairScaleDriver 的设置和第一个 FairScaleDriver 是完
+                # 全一样的；
                 pre_num_processes = int(os.environ[FASTNLP_DISTRIBUTED_CHECK])
                 if pre_num_processes != len(self.parallel_device):
                     raise RuntimeError(
-                        'Notice you are using `TorchDDPDriver` after one '
-                        'instantiated `TorchDDPDriver`, it is not allowed '
-                        'that your second `TorchDDPDriver` has a new setting '
+                        'Notice you are using `FairScaleDriver` after one '
+                        'instantiated `FairScaleDriver`, it is not allowed '
+                        'that your second `FairScaleDriver` has a new setting '
                         'of parameters `num_nodes` and `num_processes`.')
                 self.world_size = dist.get_world_size()
                 self.global_rank = dist.get_rank()
@@ -277,7 +280,7 @@ class FairScaleDriver(TorchDDPDriver):
             assert len(optimizer.param_groups) == 1, \
                 'Cannot assign parameter specific optimizer parameter ' \
                 "for 'fsdp'."
-            fsdp_kwargs = self._fdsp_kwargs
+            fsdp_kwargs = self._fsdp_kwargs
             fsdp_kwargs['mixed_precision'] = self.fp16
             fsdp_kwargs['state_dict_on_rank_0_only'] = fsdp_kwargs.get(
                 'state_dict_on_rank_0_only', True)
@@ -428,6 +431,7 @@ class FairScaleDriver(TorchDDPDriver):
                     optimizer)
             elif self.fs_type == 'sdp':
                 optimizer.consolidate_state_dict(recipient_rank=0)
+                optimizer_state = optimizer.state_dict()
             else:
                 optimizer_state = optimizer.state_dict()
             if self.local_rank == 0:
