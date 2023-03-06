@@ -107,6 +107,7 @@ def dataloader_with_randomsampler(dataset,
         dataset, sampler=sampler, drop_last=drop_last, batch_size=batch_size)
     return dataloader
 
+
 def compare_dict(d1, d2):
     assert len(d1) == len(d2)
     for k in d1.keys():
@@ -120,6 +121,7 @@ def compare_dict(d1, d2):
             assert torch.equal(v1, v2)
         else:
             assert v1 == v2
+
 
 @pytest.mark.skipif(
     not _TORCH_GREATER_EQUAL_1_12, reason='fsdp 需要 torch 版本在 1.12 及以上')

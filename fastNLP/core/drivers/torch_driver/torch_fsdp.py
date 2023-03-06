@@ -8,8 +8,8 @@ from fastNLP.core.log import logger
 from fastNLP.core.utils import (check_user_specific_params,
                                 insert_rank_to_filename)
 from fastNLP.envs import (FASTNLP_CHECKPOINT_FILENAME,
-                          FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_RANK,
-                          FASTNLP_MODEL_FILENAME, rank_zero_call)
+                          FASTNLP_DISTRIBUTED_CHECK, FASTNLP_MODEL_FILENAME,
+                          rank_zero_call)
 from fastNLP.envs.imports import _NEED_IMPORT_TORCH, _TORCH_GREATER_EQUAL_1_12
 from .ddp import TorchDDPDriver
 
@@ -23,7 +23,7 @@ if _NEED_IMPORT_TORCH:
     import torch.distributed as dist
     from torch.nn.parallel import DistributedDataParallel
 
-FASTNLP_FSDP_OPTIM_FILENAME="fastnlp_fsdp_optim.pkl.tar"
+FASTNLP_FSDP_OPTIM_FILENAME = 'fastnlp_fsdp_optim.pkl.tar'
 """
 参考文档：
 1. https://pytorch.org/blog/introducing-pytorch-fully-sharded-data-parallel-api/
@@ -226,8 +226,8 @@ class TorchFSDPDriver(TorchDDPDriver):
         型只是整体模型的一部分。"""
         try:
             _module = self.model.module.module
-        except AttributeError as e:
-            # 在 torch1.12 中，包裹顺序为 FSDP -> FlattenParamsWrapper 
+        except AttributeError:
+            # 在 torch1.12 中，包裹顺序为 FSDP -> FlattenParamsWrapper
             # -> DDPWrapping，而在 torch1.13 中 FSDP 下就直接是我们的 DDPWrapping
             # 故使用 try-except 来处理
             _module = self.model.module
@@ -489,7 +489,7 @@ class TorchFSDPDriver(TorchDDPDriver):
         states.update(states_ret)
 
         return states
-    
+
     def save_optimizer(self, filepath: Path, on_rank0=False):
         state_dict = self.get_optimizer_state(on_rank0)
         if on_rank0:

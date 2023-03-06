@@ -752,9 +752,9 @@ def get_launch_time() -> str:
     """
     return os.getenv(FASTNLP_LAUNCH_TIME, '')
 
+
 def insert_rank_to_filename(filename: Path) -> Path:
-    """
-    向 ``filename`` 中最后插入 rank 信息。
+    """向 ``filename`` 中最后插入 rank 信息。
 
         >>> from pathlib import Path
         >>> insert_rank_to_filename(Path('fastnlp_fsdp_optim.pkl.tar'))
@@ -764,8 +764,8 @@ def insert_rank_to_filename(filename: Path) -> Path:
     name = filename.name
     _filename = name.split('.')
     name, suffix = _filename[0], '.'.join(_filename[1:])
-    name = '{}_rank{}'.format(
-        name, int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)))
+    name = '{}_rank{}'.format(name,
+                              int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)))
     filepath = prefix.joinpath(name + '.' + suffix)
-    
+
     return filepath
