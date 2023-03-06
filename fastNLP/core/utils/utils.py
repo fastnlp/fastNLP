@@ -14,14 +14,14 @@ from typing import (Any, AnyStr, Callable, Dict, List, Mapping, Optional,
                     Sequence, Tuple, Union)
 
 from prettytable import PrettyTable
-from fastNLP.envs.env import FASTNLP_LAUNCH_TIME
+from fastNLP.envs.env import FASTNLP_LAUNCH_TIME, FASTNLP_GLOBAL_RANK
 from fastNLP.core.log import logger
 
 __all__ = [
     'get_fn_arg_names', 'auto_param_call', 'check_user_specific_params',
     'dataclass_to_dict', 'match_and_substitute_params', 'apply_to_collection',
     'nullcontext', 'pretty_table_printer', 'Option', 'deprecated',
-    'flat_nest_dict'
+    'flat_nest_dict', 'insert_rank_to_filename'
 ]
 
 
@@ -751,3 +751,21 @@ def get_launch_time() -> str:
     :return:
     """
     return os.getenv(FASTNLP_LAUNCH_TIME, '')
+
+def insert_rank_to_filename(filename: Path) -> Path:
+    """
+    向 ``filename`` 中最后插入 rank 信息。
+
+        >>> from pathlib import Path
+        >>> insert_rank_to_filename(Path('fastnlp_fsdp_optim.pkl.tar'))
+        PosixPath('fastnlp_fsdp_optim_rank0.pkl.tar')
+    """
+    prefix = filename.parent
+    name = filename.name
+    _filename = name.split('.')
+    name, suffix = _filename[0], '.'.join(_filename[1:])
+    name = '{}_rank{}'.format(
+        name, int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)))
+    filepath = prefix.joinpath(name + '.' + suffix)
+    
+    return filepath

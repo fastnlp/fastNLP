@@ -5,7 +5,8 @@ from typing import Dict, List, Mapping, Optional, Union
 from fastNLP.core.drivers.torch_driver.utils import (DummyGradScaler,
                                                      _DDPWrappingModel)
 from fastNLP.core.log import logger
-from fastNLP.core.utils import check_user_specific_params
+from fastNLP.core.utils import (check_user_specific_params,
+                                insert_rank_to_filename)
 from fastNLP.envs import (FASTNLP_CHECKPOINT_FILENAME,
                           FASTNLP_DISTRIBUTED_CHECK, FASTNLP_GLOBAL_RANK,
                           FASTNLP_MODEL_FILENAME, rank_zero_call)
@@ -21,6 +22,8 @@ if _NEED_IMPORT_TORCH:
     import torch
     import torch.distributed as dist
     from torch.nn.parallel import DistributedDataParallel
+
+FASTNLP_FSDP_OPTIM_FILENAME="fastnlp_fsdp_optim.pkl.tar"
 """
 参考文档：
 1. https://pytorch.org/blog/introducing-pytorch-fully-sharded-data-parallel-api/
@@ -221,7 +224,15 @@ class TorchFSDPDriver(TorchDDPDriver):
         如果您想要通过该函数来获取原模型实际的参数，是不可以的，因为在
         FullyShardedDataParallel 中模型被切分成了多个部分，而对于每个 gpu 上 的模
         型只是整体模型的一部分。"""
-        _module = self.model.module.module
+        try:
+            _module = self.model.module.module
+        except AttributeError as e:
+            # 在 torch1.12 中，包裹顺序为 FSDP -> FlattenParamsWrapper 
+            # -> DDPWrapping，而在 torch1.13 中 FSDP 下就直接是我们的 DDPWrapping
+            # 故使用 try-except 来处理
+            _module = self.model.module
+        except BaseException as e:
+            raise e
         if isinstance(_module, _DDPWrappingModel):
             return _module.model
         else:
@@ -248,10 +259,6 @@ class TorchFSDPDriver(TorchDDPDriver):
                 'is allowed.')
         on_rank0 = kwargs.get('on_rank0', False)
         filepath = Path(filepath)
-        prefix = filepath.parent
-        filename = filepath.name
-        _filename = filename.split('.')
-        filename, suffix = _filename[0], '.'.join(_filename[1:])
         if on_rank0:
             full_state_dict_config = FullStateDictConfig(
                 offload_to_cpu=True, rank0_only=True)
@@ -262,11 +269,7 @@ class TorchFSDPDriver(TorchDDPDriver):
             rank_zero_call(torch.save)(state_dict, filepath)
         else:
             # 添加 'rank0/1' 字段来区分全部聚集到 rank0 保存的方式；
-            _filename = filename.split('_')
-            filename = '{}_rank{}_{}'.format(
-                _filename[0], int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)),
-                _filename[1])
-            filepath = prefix.joinpath(filename + '.' + suffix)
+            filepath = insert_rank_to_filename(filepath)
             with FSDP.state_dict_type(self.model,
                                       StateDictType.LOCAL_STATE_DICT):
                 state_dict = self.model.state_dict()
@@ -293,17 +296,9 @@ class TorchFSDPDriver(TorchDDPDriver):
                 'is allowed.')
         on_rank0 = kwargs.get('on_rank0', False)
         filepath = Path(filepath)
-        prefix = filepath.parent
-        filename = filepath.name
-        _filename = filename.split('.')
-        filename, suffix = _filename[0], '.'.join(_filename[1:])
 
         if not on_rank0:
-            _filename = filename.split('_')
-            filename = '{}_rank{}_{}'.format(
-                _filename[0], int(os.environ.get(FASTNLP_GLOBAL_RANK, 0)),
-                _filename[1])
-            filepath = prefix.joinpath(filename + '.' + suffix)
+            filepath = insert_rank_to_filename(filepath)
             states = torch.load(filepath)
         else:
             states = torch.load(filepath, map_location='cpu')
@@ -353,8 +348,8 @@ class TorchFSDPDriver(TorchDDPDriver):
         :param should_save_model: 是否应该保存模型，如果为 ``False``，Driver 将不
             负责 model 的保存。
         :kwargs:
-            * *on_rank0* (``bool``) -- 保存模型时是否将所有权重聚合到 rank0 上。可
-              能会导致 OOM，默认为 ``False``。
+            * *on_rank0* (``bool``) -- 保存模型和优化器时是否将权重都聚合到 rank0
+              上。可能会导致 OOM，默认为 ``False``。
         """
         if not only_state_dict:
             raise RuntimeError(
@@ -377,7 +372,8 @@ class TorchFSDPDriver(TorchDDPDriver):
                 model_path, only_state_dict=only_state_dict, on_rank0=on_rank0)
 
         # 3. 保存 optimizers 的状态；
-        states['optimizers_state_dict'] = self.get_optimizer_state()
+        optim_path = folder.joinpath(FASTNLP_FSDP_OPTIM_FILENAME)
+        self.save_optimizer(optim_path, on_rank0=on_rank0)
         logger.debug('Save optimizer state dict.')
 
         # 4. 保存fp16的状态
@@ -418,10 +414,11 @@ class TorchFSDPDriver(TorchDDPDriver):
             负责加载模型。若该参数为 ``True``，但在保存的状态中没有找到对应的模型状
             态，则报错。
         :kwargs:
-            * *on_rank0* (``bool``) -- 加载的模型权重是否是已经全部聚合到 rank0 的
-              权重，默认为 ``False``。
+            * *on_rank0* (``bool``) -- 加载的模型和优化器权重是否是已经全部聚合到
+              rank0 的权重，默认为 ``False``。
             * *optim_shard_strategy* (``str``) -- 加载 ``optimizers`` 的状态时，
-              决定如何分发 ``state_dict`` 的策略，默认为 ``shard``：
+              决定如何分发 ``state_dict`` 的策略，仅当 ``on_rank0`` 为 ``False``
+              时有效。默认为 ``shard``：
 
               - 为 ``shard`` 时，每个 rank 会先加载完整的 ``state_dict``，然后各自
                 进行分片，需要一定存储空间，即 `FSDP.shard_full_optim_state_dict
@@ -463,8 +460,9 @@ class TorchFSDPDriver(TorchDDPDriver):
         states = torch.load(folder.joinpath(FASTNLP_CHECKPOINT_FILENAME))
 
         # 1. 加载 optimizers 的状态；
-        optimizers_state_dict = states.pop('optimizers_state_dict')
-        self.load_optimizer_state(optimizers_state_dict, optim_shard_strategy)
+        self.load_optimizer(
+            folder.joinpath(FASTNLP_FSDP_OPTIM_FILENAME), on_rank0,
+            optim_shard_strategy)
 
         # 2. 加载模型状态；
         if should_load_model:
@@ -491,17 +489,32 @@ class TorchFSDPDriver(TorchDDPDriver):
         states.update(states_ret)
 
         return states
+    
+    def save_optimizer(self, filepath: Path, on_rank0=False):
+        state_dict = self.get_optimizer_state(on_rank0)
+        if on_rank0:
+            rank_zero_call(torch.save)(state_dict, filepath)
+        else:
+            torch.save(state_dict, insert_rank_to_filename(filepath))
 
-    def get_optimizer_state(self):
+    def load_optimizer(self, filepath: Path, on_rank0=False, strategy='shard'):
+        if not on_rank0:
+            filepath = insert_rank_to_filename(filepath)
+        states = torch.load(filepath)
+        self.load_optimizer_state(states, on_rank0, strategy)
+
+    def get_optimizer_state(self, on_rank0=False):
         optimizers_state_dict = {}
         for i in range(len(self.optimizers)):
-            optimizer_state = FSDP.full_optim_state_dict(
-                self.model, self.optimizers[i])
+            if on_rank0:
+                optimizer_state = FSDP.full_optim_state_dict(
+                    self.model, self.optimizers[i])
+            else:
+                optimizer_state = self.optimizers[i].state_dict()
             optimizers_state_dict[f'optimizer{i}'] = optimizer_state
-            print('get', optimizer_state)
         return optimizers_state_dict
 
-    def load_optimizer_state(self, states, strategy='shard'):
+    def load_optimizer_state(self, states, on_rank0=False, strategy='shard'):
         # strategy: shard or scatter
         assert strategy in {'shard', 'scatter'}
         assert len(states) == len(self.optimizers), \
@@ -510,11 +523,13 @@ class TorchFSDPDriver(TorchDDPDriver):
 
         for i in range(len(self.optimizers)):
             optimizer_state = states[f'optimizer{i}']
-            if strategy == 'shard':
-                dist_state = FSDP.shard_full_optim_state_dict(
-                    optimizer_state, self.model)
-            else:  # scatter
-                dist_state = FSDP.scatter_full_optim_state_dict(
-                    optimizer_state, self.model)
-            print('dist_state', dist_state)
+            if on_rank0:
+                if strategy == 'shard':
+                    dist_state = FSDP.shard_full_optim_state_dict(
+                        optimizer_state, self.model)
+                else:  # scatter
+                    dist_state = FSDP.scatter_full_optim_state_dict(
+                        optimizer_state, self.model)
+            else:
+                dist_state = optimizer_state
             self.optimizers[i].load_state_dict(dist_state)

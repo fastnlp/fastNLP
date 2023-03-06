@@ -390,6 +390,10 @@ class DeepSpeedDriver(TorchDDPDriver):
     def setup_config(self):
 
         self.config = self._ds_kwargs.get('config')
+        # 设置成 max_int 防止 deepspeed 的输出干扰 fastnlp 的输出
+        self.config.setdefault('steps_per_print', 2147483647)
+        self.config.setdefault('train_micro_batch_size_per_gpu',
+                               self.train_micro_batch_size)
         if self.config is not None:
             logger.rank_zero_warning(
                 'Notice that you have defined a configuration for deepspeed '
@@ -426,11 +430,8 @@ class DeepSpeedDriver(TorchDDPDriver):
         else:
             raise ValueError(f'Unknown deepspeed strategy {self.strategy}.')
 
-        # 设置成 max_int 防止 deepspeed 的输出干扰 fastnlp 的输出
-        self.config.setdefault('steps_per_print', 2147483647)
-        self.config['gradient_accumulation_steps'] = self.accumulation_steps
-        self.config.setdefault('train_micro_batch_size_per_gpu',
-                               self.train_micro_batch_size)
+        # TODO 暂时注释掉，经过测试如果设置了的话会导致 step 次数不对
+        # self.config['gradient_accumulation_steps'] = self.accumulation_steps
 
         if self.fp16:
             if 'fp16' not in self.config:
@@ -500,7 +501,8 @@ class DeepSpeedDriver(TorchDDPDriver):
             logger.rank_zero_warning(
                 'Only saving state dict is not allowed for `DeepSpeedDriver`. '
                 'We will save its checkpoint for you instead.')
-        self.model.save_checkpoint(filepath, **kwargs)
+        with all_rank_call_context():
+            self.model.save_checkpoint(filepath, **kwargs)
 
     def load_model(  # type: ignore[override]
             self,
@@ -518,8 +520,9 @@ class DeepSpeedDriver(TorchDDPDriver):
         """
         if not only_state_dict:
             logger.rank_zero_warning(
-                'Only loading state dict is not allowed for `DeepSpeedDriver`. We will load its '
-                'checkpoint for you instead.')
+                'Only loading state dict is not allowed for '
+                '`DeepSpeedDriver`. We will load its checkpoint '
+                'for you instead.')
         self.model.load_checkpoint(filepath, **kwargs)
 
     def save_checkpoint(self,

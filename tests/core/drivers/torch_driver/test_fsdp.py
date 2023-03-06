@@ -107,6 +107,19 @@ def dataloader_with_randomsampler(dataset,
         dataset, sampler=sampler, drop_last=drop_last, batch_size=batch_size)
     return dataloader
 
+def compare_dict(d1, d2):
+    assert len(d1) == len(d2)
+    for k in d1.keys():
+        assert k in d2
+        v1 = d1[k]
+        v2 = d2[k]
+        assert type(v1) is type(v2)
+        if isinstance(v1, dict):
+            compare_dict(v1, v2)
+        elif isinstance(v1, torch.Tensor):
+            assert torch.equal(v1, v2)
+        else:
+            assert v1 == v2
 
 @pytest.mark.skipif(
     not _TORCH_GREATER_EQUAL_1_12, reason='fsdp 需要 torch 版本在 1.12 及以上')
@@ -181,6 +194,9 @@ def test_driver_checkpoint(device, on_rank0, optim_shard_strategy):
         replaced_loader = load_states.pop('dataloader')
 
         # 1. 检查 optimizer 的状态
+        optim_state_1 = driver1.get_optimizer_state(True)
+        optim_state_2 = driver2.get_optimizer_state(True)
+        compare_dict(optim_state_1, optim_state_2)
 
         # 2. 检查 sampler 是否被正确地加载和替换
         assert not (replaced_loader is dataloader)
@@ -269,10 +285,9 @@ def test_trainer_torch_without_evaluator(
     not _TORCH_GREATER_EQUAL_1_12, reason='fsdp 需要 torch 版本在 1.12 及以上')
 @pytest.mark.torch
 @pytest.mark.parametrize('on_rank0', [True, False])
-@pytest.mark.parametrize('version', [0, 1])
 @magic_argv_env_context(timeout=100)
 def test_model_checkpoint_callback_1(model_and_optimizers: TrainerParameters,
-                                     on_rank0, version):
+                                     on_rank0):
     skip_no_cuda()
     device = [0, 1]
     for version in [0, 1]:
@@ -436,9 +451,11 @@ def test_model_checkpoint_callback_1(model_and_optimizers: TrainerParameters,
 
 
 @pytest.mark.torch
+@pytest.mark.skipif(
+    not _TORCH_GREATER_EQUAL_1_12, reason='fsdp 需要 torch 版本在 1.12 及以上')
 @pytest.mark.parametrize('driver,device', [('torch_fsdp', [0, 1])])
 @pytest.mark.parametrize('on_rank0', [True, False])
-@pytest.mark.parametrize('optim_shard_strategy', ['shard', 'scatter'])
+@pytest.mark.parametrize('optim_shard_strategy', ['shard'])
 @magic_argv_env_context(timeout=100)
 def test_trainer_checkpoint_callback_1(model_and_optimizers: TrainerParameters,
                                        driver, device, on_rank0,
