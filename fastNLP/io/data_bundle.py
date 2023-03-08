@@ -365,7 +365,7 @@ class DataBundle:
               progress_bar: bool = True):
         r"""
         对 :class:`DataBundle` 中所有的 dataset 使用 :meth:`.DataSet.\
-        apply_field_more` 方法
+        apply` 方法
 
         :param func: 参数是 ``DataSet`` 中的 ``Instance``，返回值将被写入至
             ``new_field_name`` 中。
@@ -406,8 +406,7 @@ class DataBundle:
                    progress_bar: str = 'rich'):
         r"""
         对 :class:`DataBundle` 中所有的 dataset 使用 :meth:`.DataSet.\
-        apply_field_more` 方法
-
+        apply_more` 方法
 
         .. note::
             ``apply_more`` 与 ``apply`` 的区别参考 :meth:`.DataSet.apply_more`

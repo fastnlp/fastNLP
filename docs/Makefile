@@ -8,7 +8,7 @@ SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = fastNLP
 SPHINXEXCLUDE = ../fastNLP/transformers/*
 SOURCEDIR     = source
-BUILDDIR      = temp/
+BUILDDIR      = fastNLP
 PORT          = 8000
 
 # Put it first so that "make" without argument is like "make help".
@@ -16,7 +16,7 @@ help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS)
 
 server:
-	cd @$(BUILDDIR)/html && python -m http.server $(PORT)
+	cd $(BUILDDIR)/html && python -m http.server $(PORT)
 
 versions:
 	sphinx-multiversion "$(SOURCEDIR)" "$(BUILDDIR)"

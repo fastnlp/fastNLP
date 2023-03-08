@@ -249,8 +249,8 @@ class TorchFSDPDriver(TorchDDPDriver):
         :param only_state_dict: 是否只保存权重；在 ``TorchFSDPDriver`` 中只能为
             ``True``。
         :kwargs:
-            * *on_rank0* (``bool``) -- 是否将所有 rank 上的模型参数全部聚合到。
-              rank0 上，注意这样可能会造成 OOM，默认为 ``False``。
+            * *on_rank0* (``bool``) -- 是否将所有 rank 上的模型参数全部聚合到
+              rank0 上，注意这样可能会造成 OOM，``on_rank0`` 默认为 ``False``。
         :return:
         """
         if not only_state_dict:
@@ -286,8 +286,8 @@ class TorchFSDPDriver(TorchDDPDriver):
         :param load_state_dict: 保存的内容是否只是权重；在 ``TorchFSDPDriver`` 中
             只能为 ``True``。
         :kwargs:
-            * *on_rank0* (``bool``) -- 加载的权重是否是聚合了所有 rank 的权重。默
-              认为 ``False``。
+            * *on_rank0* (``bool``) -- 加载的权重是否是聚合了所有 rank 的权重。
+              ``on_rank0`` 默认为 ``False``。
         :return:
         """
         if only_state_dict is False:
@@ -349,7 +349,7 @@ class TorchFSDPDriver(TorchDDPDriver):
             负责 model 的保存。
         :kwargs:
             * *on_rank0* (``bool``) -- 保存模型和优化器时是否将权重都聚合到 rank0
-              上。可能会导致 OOM，默认为 ``False``。
+              上。可能会导致 OOM，``on_rank0`` 默认为 ``False``。
         """
         if not only_state_dict:
             raise RuntimeError(
@@ -415,7 +415,7 @@ class TorchFSDPDriver(TorchDDPDriver):
             态，则报错。
         :kwargs:
             * *on_rank0* (``bool``) -- 加载的模型和优化器权重是否是已经全部聚合到
-              rank0 的权重，默认为 ``False``。
+              rank0 的权重，``on_rank0`` 默认为 ``False``。
             * *optim_shard_strategy* (``str``) -- 加载 ``optimizers`` 的状态时，
               决定如何分发 ``state_dict`` 的策略，仅当 ``on_rank0`` 为 ``False``
               时有效。默认为 ``shard``：
