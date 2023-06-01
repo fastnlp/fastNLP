@@ -396,6 +396,10 @@ class Vocabulary(object):
         def construct_vocab(ins, no_create_entry=False):
             for fn in field_name:
                 field = ins[fn]
+                 # 如果 field 为空或者 None， 那么直接跳过即可。
+                if field is None or len(field) == 0:
+                    logger.warning(f"instance: {ins} has null field. Skip now!") 
+                    continue
                 if isinstance(field, str) or not _is_iterable(field):
                     self.add_word(field, no_create_entry=no_create_entry)
                 else:
